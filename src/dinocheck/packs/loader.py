@@ -8,7 +8,7 @@ Supports:
 from collections.abc import Iterator
 from pathlib import Path
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from dinocheck.core.interfaces import Pack
 from dinocheck.core.types import Rule
