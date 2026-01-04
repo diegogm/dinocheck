@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from dinocrit.core.config import DinocritConfig
-from dinocrit.core.types import Issue, IssueLevel, Location
-from dinocrit.providers.mock import MockProvider
+from dinocheck.core.config import DinocheckConfig
+from dinocheck.core.types import Issue, IssueLevel, Location
+from dinocheck.providers.mock import MockProvider
 
 
 @pytest.fixture
@@ -41,7 +41,7 @@ def mock_provider():
 @pytest.fixture
 def sample_config(tmp_path):
     """Sample configuration for testing."""
-    return DinocritConfig(
+    return DinocheckConfig(
         packs=["python", "django"],
         model="mock/test-model",
         max_llm_calls=3,

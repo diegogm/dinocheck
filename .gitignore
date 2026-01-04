@@ -49,7 +49,7 @@ htmlcov/
 .env.*.local
 
 # Project specific
-.dinocrit/
+.dinocheck/
 dino.yaml
 
 # OS

@@ -1,26 +1,26 @@
 <p align="center">
-  <img src="dinocrit.png" alt="Dinocrit Logo" width="300">
+  <img src="dinocheck.png" alt="Dinocheck Logo" width="300">
 </p>
 
-<h1 align="center">Dinocrit</h1>
+<h1 align="center">Dinocheck</h1>
 
 <p align="center">
   <strong>Your vibe coding companion - LLM-powered code critic</strong>
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/dinocrit/"><img src="https://img.shields.io/pypi/v/dinocrit.svg" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/dinocheck/"><img src="https://img.shields.io/pypi/v/dinocheck.svg" alt="PyPI version"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 
 ---
 
-Dinocrit is an AI-powered code linter designed for **vibe coding**. It doesn't do pattern matching - that's what traditional linters are for. Instead, it uses GPT, Claude, or local models to understand your code **semantically** and provide intelligent feedback.
+Dinocheck is an AI-powered code linter designed for **vibe coding**. It doesn't do pattern matching - that's what traditional linters are for. Instead, it uses GPT, Claude, or local models to understand your code **semantically** and provide intelligent feedback.
 
-## Why Dinocrit?
+## Why Dinocheck?
 
-Traditional linters catch syntax errors and style issues. Dinocrit catches **logic bugs, security issues, and architectural problems** that only an AI can understand:
+Traditional linters catch syntax errors and style issues. Dinocheck catches **logic bugs, security issues, and architectural problems** that only an AI can understand:
 
 - Detects N+1 queries that would kill your database
 - Spots missing authorization checks before they become CVEs
@@ -29,13 +29,13 @@ Traditional linters catch syntax errors and style issues. Dinocrit catches **log
 
 ## Philosophy
 
-Dinocrit is a **linter, not a fixer**. It's designed to be your coding companion:
+Dinocheck is a **linter, not a fixer**. It's designed to be your coding companion:
 
 - Reviews your code with LLM intelligence
 - Points out issues and explains **why** they matter
 - Lets **you** decide how to fix them
 
-This fits the vibe coding workflow: you write code with AI assistance, and Dinocrit provides a second opinion.
+This fits the vibe coding workflow: you write code with AI assistance, and Dinocheck provides a second opinion.
 
 ## Features
 
@@ -53,9 +53,9 @@ This fits the vibe coding workflow: you write code with AI assistance, and Dinoc
 ### Installation
 
 ```bash
-pip install dinocrit
+pip install dinocheck
 # or with uv
-uv add dinocrit
+uv add dinocheck
 ```
 
 ### Configuration
@@ -63,7 +63,7 @@ uv add dinocrit
 Create `dino.yaml` in your project:
 
 ```yaml
-dinocrit:
+dinocheck:
   packs:
     - python
     - django
@@ -148,13 +148,11 @@ dino logs cost
 | `text` | Colored terminal output (default) |
 | `json` | Full JSON for tooling integration |
 | `jsonl` | JSON Lines for streaming |
-| `sarif` | SARIF for GitHub Code Scanning |
-| `github` | GitHub Actions annotations |
 
 ## GitHub Actions Integration
 
 ```yaml
-name: Dinocrit
+name: Dinocheck
 on: [pull_request]
 
 jobs:
@@ -164,7 +162,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
 
-      - run: uv add dinocrit
+      - run: uv add dinocheck
       - run: uv run dino check --diff --format sarif -o results.sarif
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -177,7 +175,7 @@ jobs:
 ## Configuration Reference
 
 ```yaml
-dinocrit:
+dinocheck:
   version: "1.0"
 
   packs:
@@ -198,7 +196,7 @@ dinocrit:
 
   cache:
     enabled: true
-    database: .dinocrit_cache/cache.db
+    database: .dinocheck_cache/cache.db
     ttl_hours: 168              # 7 days
 
   packs_config:
@@ -224,8 +222,8 @@ See [LiteLLM docs](https://docs.litellm.ai/docs/providers) for 100+ supported pr
 
 ```bash
 # Clone and install
-git clone https://github.com/your-org/dinocrit.git
-cd dinocrit
+git clone https://github.com/your-org/dinocheck.git
+cd dinocheck
 uv sync --dev
 
 # Run tests
@@ -245,5 +243,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 <p align="center">
-  Made with care by the Dinocrit contributors
+  Made with care by the Dinocheck contributors
 </p>

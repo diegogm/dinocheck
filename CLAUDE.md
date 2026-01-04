@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Dinocrit is an LLM-powered code critic for vibe coding. It's a linter that uses AI (GPT, Claude, Ollama) to review code semantically - not pattern matching.
+Dinocheck is an LLM-powered code critic for vibe coding. It's a linter that uses AI (GPT, Claude, Ollama) to review code semantically - not pattern matching.
 
 ## Key Commands
 
@@ -22,7 +22,7 @@ fab publish                    # Publish to PyPI (runs predeploy first)
 ## Architecture
 
 ```
-src/dinocrit/
+src/dinocheck/
 ├── cli/
 │   ├── main.py              # Typer CLI entry point
 │   └── formatters/          # Output formatters (one per file)

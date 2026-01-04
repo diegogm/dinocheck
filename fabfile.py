@@ -1,4 +1,4 @@
-"""Development tasks for Dinocrit.
+"""Development tasks for Dinocheck.
 
 Usage:
     fab test          # Run all tests
@@ -23,10 +23,10 @@ console = Console()
 # Constants
 PYTHON_VERSION = "3.12"
 SOURCE_DIRS = "src/ tests/"
-PACKAGE_DIR = "src/dinocrit/"
+PACKAGE_DIR = "src/dinocheck/"
 TESTS_DIR = "tests/"
 BUILD_ARTIFACTS = "dist/ build/ *.egg-info/ .pytest_cache/ .mypy_cache/ .ruff_cache/"
-COVERAGE_SOURCE = "src/dinocrit"
+COVERAGE_SOURCE = "src/dinocheck"
 
 # Ensure ~/.local/bin is in PATH for uv
 UV_PATH = os.path.expanduser("~/.local/bin")

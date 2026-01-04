@@ -5,7 +5,7 @@ import json
 import pytest
 from typer.testing import CliRunner
 
-from dinocrit.cli.main import app
+from dinocheck.cli.main import app
 
 runner = CliRunner()
 
@@ -18,7 +18,7 @@ class TestVersionCommand:
         result = runner.invoke(app, ["version"])
 
         assert result.exit_code == 0
-        assert "dinocrit" in result.stdout.lower() or "0." in result.stdout
+        assert "dinocheck" in result.stdout.lower() or "0." in result.stdout
 
 
 class TestPacksCommand:

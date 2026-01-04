@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from dinocrit.core.scoring import ScoreCalculator, calculate_score, check_gate
-from dinocrit.core.types import Issue, IssueLevel, Location
+from dinocheck.core.scoring import ScoreCalculator, calculate_score, check_gate
+from dinocheck.core.types import Issue, IssueLevel, Location
 
 
 def make_issue(level: IssueLevel) -> Issue:

@@ -631,7 +631,7 @@ wheels = [
 ]
 
 [[package]]
-name = "dinocrit"
+name = "dinocheck"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

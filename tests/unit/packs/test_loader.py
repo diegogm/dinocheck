@@ -3,10 +3,10 @@
 
 import pytest
 
-from dinocrit.core.types import IssueLevel
-from dinocrit.packs.django.pack import DjangoPack
-from dinocrit.packs.loader import get_all_packs, get_pack, get_packs, load_custom_rules
-from dinocrit.packs.python.pack import PythonPack
+from dinocheck.core.types import IssueLevel
+from dinocheck.packs.django.pack import DjangoPack
+from dinocheck.packs.loader import get_all_packs, get_pack, get_packs, load_custom_rules
+from dinocheck.packs.python.pack import PythonPack
 
 
 class TestPackLoader:

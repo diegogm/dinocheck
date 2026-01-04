@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "dinocrit"
+name = "dinocheck"
 version = "0.1.0"
 description = "Your vibe coding companion - LLM-powered code critic for AI-assisted development"
 readme = "README.md"
@@ -61,14 +61,14 @@ dev = [
 ]
 
 [project.scripts]
-dino = "dinocrit.cli.main:app"
+dino = "dinocheck.cli.main:app"
 
 [project.urls]
-Homepage = "https://github.com/diegogm/dinocrit"
-Documentation = "https://github.com/diegogm/dinocrit#readme"
-Repository = "https://github.com/diegogm/dinocrit"
-Issues = "https://github.com/diegogm/dinocrit/issues"
-Changelog = "https://github.com/diegogm/dinocrit/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/diegogm/dinocheck"
+Documentation = "https://github.com/diegogm/dinocheck#readme"
+Repository = "https://github.com/diegogm/dinocheck"
+Issues = "https://github.com/diegogm/dinocheck/issues"
+Changelog = "https://github.com/diegogm/dinocheck/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -79,7 +79,7 @@ include = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/dinocrit"]
+packages = ["src/dinocheck"]
 sources = ["src"]
 
 [tool.ruff]
@@ -91,7 +91,7 @@ select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF"]
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["dinocrit"]
+known-first-party = ["dinocheck"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -107,7 +107,7 @@ pythonpath = ["src"]
 addopts = "-v --tb=short"
 
 [tool.coverage.run]
-source = ["src/dinocrit"]
+source = ["src/dinocheck"]
 branch = true
 
 [tool.coverage.report]

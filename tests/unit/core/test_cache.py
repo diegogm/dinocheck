@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from dinocrit.core.cache import SQLiteCache
-from dinocrit.core.types import Issue, IssueLevel, Location
-from dinocrit.utils.hashing import ContentHasher
+from dinocheck.core.cache import SQLiteCache
+from dinocheck.core.types import Issue, IssueLevel, Location
+from dinocheck.utils.hashing import ContentHasher
 
 
 @pytest.fixture

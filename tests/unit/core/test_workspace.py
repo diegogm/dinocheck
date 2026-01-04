@@ -3,7 +3,7 @@
 
 import pytest
 
-from dinocrit.core.workspace import GitWorkspaceScanner
+from dinocheck.core.workspace import GitWorkspaceScanner
 
 
 class TestWorkspaceScanner:

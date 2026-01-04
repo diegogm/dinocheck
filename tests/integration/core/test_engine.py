@@ -4,16 +4,16 @@ from pathlib import Path
 
 import pytest
 
-from dinocrit.core.config import DinocritConfig
-from dinocrit.core.engine import Engine
-from dinocrit.core.types import IssueLevel
-from dinocrit.providers.mock import MockProvider
+from dinocheck.core.config import DinocheckConfig
+from dinocheck.core.engine import Engine
+from dinocheck.core.types import IssueLevel
+from dinocheck.providers.mock import MockProvider
 
 
 @pytest.fixture
 def engine_config(tmp_path):
     """Create engine configuration for testing."""
-    return DinocritConfig(
+    return DinocheckConfig(
         packs=["python", "django"],
         model="mock/test-model",
         max_llm_calls=2,
@@ -23,7 +23,7 @@ def engine_config(tmp_path):
 @pytest.fixture
 def sample_issues():
     """Sample issues for testing scoring."""
-    from dinocrit.core.types import Issue, Location
+    from dinocheck.core.types import Issue, Location
     return [
         Issue(
             rule_id="django/n-plus-one",
@@ -214,7 +214,7 @@ class TestEngineScoring:
     @pytest.mark.asyncio
     async def test_score_reflects_issues(self, engine_config, tmp_path, sample_issues):
         """Score should decrease with issues."""
-        from dinocrit.core.scoring import calculate_score
+        from dinocheck.core.scoring import calculate_score
 
         score_no_issues = calculate_score([])
         score_with_issues = calculate_score(sample_issues)
@@ -225,8 +225,8 @@ class TestEngineScoring:
     @pytest.mark.asyncio
     async def test_gate_fails_on_blocker(self, sample_issues):
         """Gate should fail on blocker issues."""
-        from dinocrit.core.scoring import check_gate
-        from dinocrit.core.types import Issue, IssueLevel, Location
+        from dinocheck.core.scoring import check_gate
+        from dinocheck.core.types import Issue, IssueLevel, Location
 
         # Create a blocker issue
         blocker = Issue(

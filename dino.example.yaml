@@ -1,8 +1,8 @@
-# Dinocrit Configuration
+# Dinocheck Configuration
 # Your vibe coding companion - LLM-powered code critic
 #
 # Copy this file to dino.yaml and customize for your project
-# Documentation: https://github.com/diegogm/dinocrit
+# Documentation: https://github.com/diegogm/dinocheck
 
 # Enable language/framework packs
 packs:

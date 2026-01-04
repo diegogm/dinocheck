@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from dinocrit.cli.formatters import get_formatter
-from dinocrit.cli.formatters.json_formatter import JSONFormatter
-from dinocrit.cli.formatters.jsonl_formatter import JSONLFormatter
-from dinocrit.cli.formatters.text_formatter import TextFormatter
-from dinocrit.core.types import AnalysisResult, Issue, IssueLevel, Location
+from dinocheck.cli.formatters import get_formatter
+from dinocheck.cli.formatters.json_formatter import JSONFormatter
+from dinocheck.cli.formatters.jsonl_formatter import JSONLFormatter
+from dinocheck.cli.formatters.text_formatter import TextFormatter
+from dinocheck.core.types import AnalysisResult, Issue, IssueLevel, Location
 
 
 def strip_ansi(text: str) -> str:
