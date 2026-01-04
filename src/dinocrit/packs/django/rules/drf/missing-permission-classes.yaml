@@ -1,0 +1,48 @@
+id: django/api-authorization
+name: API Authorization Review
+level: critical
+category: security
+description: |
+  Reviews DRF views and viewsets for proper authorization.
+  Missing permission_classes is just one issue - semantic analysis
+  is needed to verify the permissions are appropriate for the
+  data being accessed and operations being performed.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "ViewSet"
+    - "APIView"
+    - "@api_view"
+    - "permission_classes"
+
+checklist:
+  - Are permission classes explicitly defined or relying on defaults?
+  - Do permissions match the sensitivity of the data/operation?
+  - Are object-level permissions needed (user can only edit own data)?
+  - Could a lower-privileged user access this endpoint?
+  - Are custom permissions properly implemented?
+
+fix: |
+  Define explicit permission_classes on every view. Use object-level
+  permissions when users should only access their own resources.
+  Consider custom permissions for complex authorization logic.
+
+tags:
+  - security
+  - drf
+  - authorization
+
+examples:
+  bad: |
+    class UserViewSet(ModelViewSet):
+        queryset = User.objects.all()  # No permissions, uses global default
+  good: |
+    class UserViewSet(ModelViewSet):
+        permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+
+        def get_queryset(self):
+            if self.request.user.is_staff:
+                return User.objects.all()
+            return User.objects.filter(pk=self.request.user.pk)

@@ -1,0 +1,44 @@
+id: django/template-query
+name: Query Execution in Template
+level: major
+category: performance
+description: |
+  Detects patterns where database queries might be executed in
+  templates by accessing related objects that weren't prefetched
+  in the view. This causes N+1 queries and poor performance.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "render\\("
+    - "TemplateResponse"
+    - "get_context_data"
+    - "context\\["
+
+checklist:
+  - Are related objects passed to templates without prefetch?
+  - Could template loops trigger queries for each iteration?
+  - Are there .all or related manager accesses in context?
+  - Is select_related/prefetch_related used for template data?
+  - Could lazy querysets be evaluated multiple times in template?
+
+fix: |
+  Prefetch all related objects needed in templates in the view.
+  Use select_related for ForeignKey/OneToOne, prefetch_related
+  for reverse FK/M2M. Consider using .only() for needed fields.
+
+tags:
+  - performance
+  - orm
+  - templates
+
+examples:
+  bad: |
+    def get_context_data(self):
+        return {'orders': Order.objects.all()}
+        # Template: {% for order in orders %}{{ order.user.name }}{% endfor %}
+        # Causes N+1 queries!
+  good: |
+    def get_context_data(self):
+        return {'orders': Order.objects.select_related('user').all()}

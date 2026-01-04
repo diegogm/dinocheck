@@ -1,0 +1,52 @@
+id: django/permission-logic-mismatch
+name: Permission vs Business Logic Mismatch
+level: critical
+category: security
+description: |
+  Detects cases where permission checks in views don't match
+  the authorization logic in business code, or where permissions
+  are checked at one layer but not enforced at another.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "permission_classes"
+    - "has_permission"
+    - "has_object_permission"
+    - "IsAuthenticated"
+    - "request\\.user"
+
+checklist:
+  - Are view permissions consistent with service layer checks?
+  - Could business logic be called without permission check?
+  - Are object-level permissions enforced in services?
+  - Could a user bypass view permissions via another endpoint?
+  - Are permission checks duplicated inconsistently?
+
+fix: |
+  Centralize permission logic in services or decorators. Ensure
+  permissions are checked at the lowest level where data is
+  accessed. Use consistent permission patterns across views.
+
+tags:
+  - security
+  - authorization
+  - architecture
+
+examples:
+  bad: |
+    class ArticleViewSet(ModelViewSet):
+        permission_classes = [IsAuthenticated]
+
+        def destroy(self, request, pk):
+            article = self.get_object()
+            article.delete()  # Anyone can delete any article!
+  good: |
+    class ArticleViewSet(ModelViewSet):
+        permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+
+        def destroy(self, request, pk):
+            article = self.get_object()
+            # IsOwnerOrAdmin checks ownership in has_object_permission
+            article.delete()

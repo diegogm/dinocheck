@@ -1,0 +1,119 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dinocrit"
+version = "0.1.0"
+description = "Your vibe coding companion - LLM-powered code critic for AI-assisted development"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "Diego Garcia", email = "diego@example.com" }
+]
+maintainers = [
+    { name = "Diego Garcia", email = "diego@example.com" }
+]
+keywords = ["code-review", "llm", "django", "vibe-coding", "ai-linter", "code-quality"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+    "Typing :: Typed",
+]
+
+# Pinned dependencies for reproducibility
+dependencies = [
+    "typer==0.15.1",
+    "pydantic==2.10.6",
+    "pydantic-settings==2.7.1",
+    "pyyaml==6.0.2",
+    "litellm>=1.80.0",
+    "httpx>=0.23.0,<0.28.0",
+    "gitpython==3.1.44",
+    "python-dotenv==1.0.1",
+    "aiofiles==24.1.0",
+]
+
+[project.optional-dependencies]
+django = [
+    "django>=4.2,<5.1",
+    "djangorestframework>=3.14.0,<4.0",
+]
+dev = [
+    "pytest==8.3.4",
+    "pytest-cov==6.0.0",
+    "pytest-asyncio==0.25.2",
+    "mypy==1.14.1",
+    "ruff==0.9.3",
+    "pre-commit==4.0.1",
+    "fabric==3.2.2",
+    "build==1.2.2",
+    "twine==6.0.1",
+]
+
+[project.scripts]
+dino = "dinocrit.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/diegogm/dinocrit"
+Documentation = "https://github.com/diegogm/dinocrit#readme"
+Repository = "https://github.com/diegogm/dinocrit"
+Issues = "https://github.com/diegogm/dinocrit/issues"
+Changelog = "https://github.com/diegogm/dinocrit/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/LICENSE",
+    "/README.md",
+    "/CHANGELOG.md",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dinocrit"]
+sources = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dinocrit"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["src/dinocrit"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

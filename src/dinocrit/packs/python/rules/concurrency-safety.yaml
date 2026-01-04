@@ -1,0 +1,47 @@
+id: python/concurrency-safety
+name: Concurrency Safety Review
+level: critical
+category: concurrency
+description: |
+  Reviews concurrent code for race conditions, deadlocks, and
+  thread-safety issues. These bugs are notoriously hard to detect
+  with static analysis and require understanding the execution context.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "threading\\."
+    - "multiprocessing\\."
+    - "asyncio\\."
+    - "concurrent\\.futures"
+    - "async def"
+    - "await "
+    - "Lock\\(|RLock\\(|Semaphore\\("
+
+checklist:
+  - Are shared mutable variables protected by locks?
+  - Could there be a race condition in check-then-act patterns?
+  - Is lock acquisition order consistent to prevent deadlocks?
+  - Are async operations properly awaited?
+  - Could blocking calls starve the event loop?
+
+fix: |
+  Use locks to protect shared state. Avoid check-then-act patterns
+  or use atomic operations. Ensure consistent lock ordering.
+  Don't mix blocking I/O with async code without run_in_executor.
+
+tags:
+  - concurrency
+  - threading
+  - async
+  - race-condition
+
+examples:
+  bad: |
+    if self.counter < MAX:  # Race condition: check
+        self.counter += 1   # Race condition: act
+  good: |
+    with self.lock:
+        if self.counter < MAX:
+            self.counter += 1

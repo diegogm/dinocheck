@@ -1,0 +1,51 @@
+id: python/stale-todo
+name: Stale TODO/FIXME Detection
+level: major
+category: maintainability
+description: |
+  Detects TODO, FIXME, HACK, and XXX comments that appear to be
+  critical, forgotten, or stale. Unlike simple pattern matching,
+  this evaluates the urgency and context of the comment.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "# TODO"
+    - "# FIXME"
+    - "# HACK"
+    - "# XXX"
+    - "# BUG"
+    - "# SECURITY"
+
+checklist:
+  - Does the TODO describe a critical issue that should be fixed?
+  - Is this a security-related FIXME that was forgotten?
+  - Does the HACK introduce technical debt that affects reliability?
+  - Is there a ticket/issue reference that should be checked?
+  - Has this TODO been here for a long time without resolution?
+  - Does the comment indicate a known bug in production?
+
+fix: |
+  Address critical TODOs before shipping. Create tickets for
+  non-critical items. Remove stale TODOs that are no longer
+  relevant. Add context and ticket numbers to remaining TODOs.
+
+tags:
+  - maintainability
+  - technical-debt
+  - documentation
+
+examples:
+  bad: |
+    # FIXME: This bypasses authentication for testing
+    def login(request):
+        return User.objects.first()  # Security issue!
+
+    # TODO: Handle the case where user is None
+    def get_profile(user):
+        return user.profile  # Will crash!
+  good: |
+    # TODO(PROJ-123): Add caching for performance optimization
+    def get_settings():
+        return Settings.objects.get(pk=1)

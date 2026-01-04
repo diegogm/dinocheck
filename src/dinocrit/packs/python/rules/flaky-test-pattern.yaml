@@ -1,0 +1,62 @@
+id: python/flaky-test-pattern
+name: Flaky Test Pattern Detection
+level: major
+category: testing
+description: |
+  Detects test patterns that can cause intermittent failures,
+  such as time dependencies, random data, shared state, or
+  external service calls without mocking.
+
+triggers:
+  file_patterns:
+    - "**/test_*.py"
+    - "**/*_test.py"
+    - "**/tests.py"
+  code_patterns:
+    - "time\\.sleep"
+    - "datetime\\.now"
+    - "random\\."
+    - "requests\\.get|post|put"
+    - "httpx\\."
+    - "uuid\\."
+
+checklist:
+  - Does the test depend on current time or date?
+  - Is there randomness that could cause different outcomes?
+  - Does the test call external services without mocking?
+  - Is there shared state between tests?
+  - Does test order matter?
+  - Are there race conditions in async tests?
+
+fix: |
+  Mock time with freezegun. Seed random generators. Mock external
+  calls. Use setUp/tearDown for isolation. Use pytest-randomly
+  to detect order dependencies.
+
+tags:
+  - testing
+  - flaky
+  - reliability
+
+examples:
+  bad: |
+    def test_token_expiry(self):
+        token = create_token()
+        time.sleep(2)  # Flaky: timing-dependent
+        self.assertTrue(token.is_expired())
+
+    def test_send_notification(self):
+        result = send_email("test@example.com")  # Calls real service!
+        self.assertTrue(result)
+  good: |
+    @freeze_time("2024-01-01 12:00:00")
+    def test_token_expiry(self):
+        token = create_token()
+        with freeze_time("2024-01-01 12:05:00"):
+            self.assertTrue(token.is_expired())
+
+    @patch('myapp.email.send_email')
+    def test_send_notification(self, mock_send):
+        mock_send.return_value = True
+        result = send_email("test@example.com")
+        self.assertTrue(result)

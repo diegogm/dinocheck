@@ -1,0 +1,28 @@
+id: django/not-null-two-phase
+name: NOT NULL Without Two-Phase Migration
+level: critical
+category: migrations
+description: |
+  Adding NOT NULL to existing column requires two-phase migration
+  to avoid blocking writes and data loss.
+
+triggers:
+  file_patterns:
+    - "**/migrations/*.py"
+  code_patterns:
+    - "AddField.*null=False"
+    - "AlterField.*null=False"
+
+checklist:
+  - Adding NOT NULL without default
+  - Missing data backfill migration
+
+fix: |
+  Phase 1: Add nullable field
+  Phase 2: Backfill data
+  Phase 3: Make field NOT NULL
+
+tags:
+  - migrations
+  - database
+  - safety

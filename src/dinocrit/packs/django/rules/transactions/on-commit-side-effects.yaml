@@ -1,0 +1,26 @@
+id: django/on-commit-side-effects
+name: Side Effects Should Use on_commit
+level: major
+category: transactions
+description: |
+  Side effects like sending emails inside atomic blocks may execute
+  even if the transaction rolls back.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "transaction\\.atomic.*send_"
+    - "atomic.*\\.delay\\("
+
+checklist:
+  - Email/notification sent inside atomic block
+  - Celery task triggered inside atomic block
+
+fix: |
+  Use transaction.on_commit() for side effects that should only
+  run after the transaction commits successfully.
+
+tags:
+  - transactions
+  - side-effects

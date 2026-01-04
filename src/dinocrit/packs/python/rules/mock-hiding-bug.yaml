@@ -1,0 +1,62 @@
+id: python/mock-hiding-bug
+name: Mock Hiding Real Bug
+level: major
+category: testing
+description: |
+  Detects mocks that are too broad or unrealistic, potentially
+  hiding bugs in the code under test. Mocks should simulate
+  real behavior, not just return happy-path values.
+
+triggers:
+  file_patterns:
+    - "**/test_*.py"
+    - "**/*_test.py"
+    - "**/tests.py"
+  code_patterns:
+    - "@patch"
+    - "@mock"
+    - "Mock\\("
+    - "MagicMock"
+    - "return_value"
+    - "side_effect"
+
+checklist:
+  - Does the mock return realistic data?
+  - Are mock return types consistent with real implementation?
+  - Could the mock hide None/error handling issues?
+  - Is too much being mocked, bypassing code under test?
+  - Does the mock verify it was called correctly?
+  - Would the test still pass if the real code broke?
+
+fix: |
+  Use realistic mock data. Verify mock calls with assert_called_with.
+  Don't mock the code under test. Consider integration tests for
+  critical paths. Use factories for test data.
+
+tags:
+  - testing
+  - mocking
+  - reliability
+
+examples:
+  bad: |
+    @patch('myapp.services.external_api')
+    def test_process_order(self, mock_api):
+        mock_api.return_value = True  # Too simplistic!
+        result = process_order(order)
+        assert result.success
+        # Bug: process_order doesn't handle API response structure
+  good: |
+    @patch('myapp.services.external_api')
+    def test_process_order(self, mock_api):
+        mock_api.return_value = {
+            'status': 'completed',
+            'transaction_id': 'txn_123',
+            'amount': 99.99
+        }
+        result = process_order(order)
+        assert result.success
+        assert result.transaction_id == 'txn_123'
+        mock_api.assert_called_once_with(
+            order_id=order.id, amount=order.total
+        )

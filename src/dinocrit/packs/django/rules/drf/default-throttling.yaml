@@ -1,0 +1,45 @@
+id: django/api-rate-limiting
+name: API Rate Limiting Review
+level: major
+category: reliability
+description: |
+  Reviews API endpoints for proper rate limiting configuration.
+  Beyond just checking for throttle_classes, semantic analysis
+  considers the endpoint's sensitivity and appropriate limits.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "ViewSet"
+    - "APIView"
+    - "@api_view"
+    - "throttle_classes"
+
+checklist:
+  - Are throttle classes configured for public endpoints?
+  - Are rate limits appropriate for the operation cost?
+  - Are there different limits for authenticated vs anonymous users?
+  - Could expensive operations be abused without throttling?
+  - Is there global rate limiting as a fallback?
+
+fix: |
+  Configure throttle_classes per view or set DEFAULT_THROTTLE_RATES
+  in settings. Use different rates for different user types.
+  Consider operation cost when setting limits.
+
+tags:
+  - reliability
+  - drf
+  - rate-limiting
+  - dos-prevention
+
+examples:
+  bad: |
+    class ReportViewSet(ModelViewSet):
+        # No throttling on expensive report generation
+        queryset = Report.objects.all()
+  good: |
+    class ReportViewSet(ModelViewSet):
+        throttle_classes = [UserRateThrottle]
+        throttle_scope = 'reports'  # 10/hour limit

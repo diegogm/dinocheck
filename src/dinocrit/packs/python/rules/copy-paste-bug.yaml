@@ -1,0 +1,47 @@
+id: python/copy-paste-bug
+name: Copy-Paste Bug Detection
+level: critical
+category: correctness
+description: |
+  Detects code that appears to be copy-pasted where a variable,
+  field, or value was not updated correctly. These bugs are common
+  and hard to spot in code review.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "\\b(\\w+)\\s*=.*\\1.*\\1"
+    - "if .+ == .+:\\s*\\n.*elif .+ == .+:"
+    - "def \\w+.*:\\s*\\n.*def \\w+.*:"
+
+checklist:
+  - Are there repeated code blocks with subtle differences?
+  - Is the same variable used where a different one was expected?
+  - Are there sequential conditionals that look copy-pasted?
+  - Does a repeated pattern have an inconsistent element?
+  - Were all occurrences updated when copying code?
+
+fix: |
+  Review repeated code patterns carefully. Extract common logic
+  into a helper function if appropriate. Use parameterization
+  instead of copy-paste when possible.
+
+tags:
+  - correctness
+  - bug
+  - code-smell
+
+examples:
+  bad: |
+    def process_order(order):
+        order.total = calculate_total(order)
+        order.tax = calculate_tax(order)
+        order.shipping = calculate_shipping(order)
+        order.total = order.total + order.tax  # Forgot to add shipping!
+  good: |
+    def process_order(order):
+        order.total = calculate_total(order)
+        order.tax = calculate_tax(order)
+        order.shipping = calculate_shipping(order)
+        order.total = order.total + order.tax + order.shipping

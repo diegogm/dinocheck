@@ -1,0 +1,31 @@
+id: django/f-expression
+name: Use F() for Atomic Field Updates
+level: major
+category: transactions
+description: |
+  Read-modify-write patterns can cause race conditions.
+  Use F() expressions for atomic updates.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "\\.\\w+\\s*[-+]=\\s*\\d+"
+    - "\\.\\w+\\s*=\\s*\\.\\w+\\s*[-+]"
+
+checklist:
+  - Field increment/decrement without F()
+  - Read-modify-write pattern
+
+fix: Use Model.objects.filter(pk=obj.pk).update(field=F('field') + value).
+
+tags:
+  - transactions
+  - race-condition
+
+examples:
+  bad: |
+    product.stock -= quantity
+    product.save()
+  good: |
+    Product.objects.filter(pk=product.pk).update(stock=F('stock') - quantity)

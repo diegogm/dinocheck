@@ -1,0 +1,27 @@
+id: django/large-index-migration
+name: Large Table Index Without CONCURRENTLY
+level: critical
+category: migrations
+description: |
+  Creating index on large table locks writes.
+  Use CREATE INDEX CONCURRENTLY for production safety.
+
+triggers:
+  file_patterns:
+    - "**/migrations/*.py"
+  code_patterns:
+    - "AddIndex"
+    - "db_index=True"
+
+checklist:
+  - Index creation on large table
+  - Missing CONCURRENTLY option
+
+fix: |
+  Use atomic=False and AddIndexConcurrently for large tables,
+  or create index manually with CONCURRENTLY.
+
+tags:
+  - migrations
+  - database
+  - performance

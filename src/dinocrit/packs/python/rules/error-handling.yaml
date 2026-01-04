@@ -1,0 +1,45 @@
+id: python/error-handling
+name: Error Handling Review
+level: major
+category: error-handling
+description: |
+  Reviews error handling patterns to ensure exceptions are handled
+  appropriately for the context. A linter can detect bare except,
+  but only semantic analysis can determine if the handling strategy
+  is correct for the situation.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "except.*:"
+    - "try:"
+
+checklist:
+  - Is the exception type appropriate for what could be raised?
+  - Should this error be logged, re-raised, or silently ignored?
+  - Is critical business logic protected from silent failures?
+  - Are transient errors (network, DB) handled with retry logic?
+  - Could this error handling mask a bug that should crash loudly?
+
+fix: |
+  Consider the context: cache misses can be silently ignored,
+  but payment failures should never be. Log unexpected errors,
+  use specific exception types, and fail fast for programming errors.
+
+tags:
+  - error-handling
+  - reliability
+
+examples:
+  bad: |
+    try:
+        process_payment(order)
+    except Exception:
+        pass  # Payment failure silently ignored!
+  good: |
+    try:
+        process_payment(order)
+    except PaymentGatewayError as e:
+        logger.error("Payment failed for order %s: %s", order.id, e)
+        raise OrderProcessingError("Payment failed") from e

@@ -1,0 +1,49 @@
+id: django/queryset-performance
+name: QuerySet Performance Review
+level: major
+category: performance
+description: |
+  Reviews Django QuerySet usage for performance issues. While simple
+  patterns like len(qs) vs count() can be caught by linters, semantic
+  analysis can identify broader issues like unnecessary queries,
+  missing optimizations, and inefficient patterns in context.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "\\.objects\\."
+    - "QuerySet"
+    - "\\.filter\\("
+    - "\\.all\\("
+
+checklist:
+  - Are querysets evaluated multiple times when they could be cached?
+  - Is iteration happening over large querysets without chunking?
+  - Are aggregate operations (count, sum) done in Python instead of DB?
+  - Could bulk operations (bulk_create, bulk_update) be used?
+  - Are there unnecessary fields being fetched (.only(), .defer())?
+  - Is .values() or .values_list() used when full objects aren't needed?
+
+fix: |
+  Cache queryset results when reused. Use iterator() for large datasets.
+  Prefer database aggregation over Python. Use bulk operations for
+  multiple inserts/updates. Select only needed fields.
+
+tags:
+  - performance
+  - orm
+  - database
+
+examples:
+  bad: |
+    # Multiple evaluations of same queryset
+    users = User.objects.filter(active=True)
+    count = len(users)  # Fetches all users
+    for user in users:  # Fetches all users again
+        process(user)
+  good: |
+    users = User.objects.filter(active=True)
+    count = users.count()  # COUNT query only
+    for user in users.iterator():  # Memory-efficient iteration
+        process(user)

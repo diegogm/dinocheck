@@ -1,0 +1,53 @@
+id: django/migration-data-loss
+name: Migration Data Loss Risk
+level: blocker
+category: migrations
+description: |
+  Detects migrations that could cause data loss or corruption.
+  This includes removing fields, changing field types, or
+  operations that can't be safely reversed.
+
+triggers:
+  file_patterns:
+    - "**/migrations/*.py"
+  code_patterns:
+    - "RemoveField"
+    - "DeleteModel"
+    - "AlterField"
+    - "RenameField"
+    - "RunSQL"
+    - "RunPython"
+
+checklist:
+  - Does RemoveField delete data that should be preserved?
+  - Does AlterField change type in a way that loses precision?
+  - Is there a data migration before destructive schema changes?
+  - Can RunSQL/RunPython be reversed safely?
+  - Is there a backup strategy for irreversible operations?
+  - Are nullable fields made non-nullable without defaults?
+
+fix: |
+  Add data migrations before removing fields. Use two-phase
+  migrations for type changes. Add reverse operations for
+  RunPython. Document irreversible operations clearly.
+
+tags:
+  - migrations
+  - data-integrity
+  - safety
+
+examples:
+  bad: |
+    operations = [
+        migrations.RemoveField(
+            model_name='user',
+            name='legacy_id',  # Data lost forever!
+        ),
+    ]
+  good: |
+    # First: migrate data
+    # migrations/0002_copy_legacy_id.py
+    operations = [
+        migrations.RunPython(copy_legacy_to_new_field),
+    ]
+    # Later: remove field after verification

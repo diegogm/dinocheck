@@ -1,0 +1,25 @@
+id: django/select-for-update
+name: Missing select_for_update in Race Condition
+level: critical
+category: transactions
+description: |
+  Operations that check and update data need select_for_update()
+  to prevent race conditions.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "if\\s+not\\s+\\w+\\.\\w+:"
+    - "if\\s+\\w+\\.\\w+\\s*=="
+
+checklist:
+  - Check-then-update pattern without locking
+  - Missing select_for_update in atomic block
+
+fix: Use select_for_update() within a transaction.atomic() block.
+
+tags:
+  - transactions
+  - race-condition
+  - concurrency

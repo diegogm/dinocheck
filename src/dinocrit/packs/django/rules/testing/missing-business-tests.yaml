@@ -1,0 +1,24 @@
+id: django/missing-business-tests
+name: Business Logic Missing Tests
+level: major
+category: testing
+description: |
+  Business logic functions and methods should have unit tests
+  to ensure correctness and prevent regressions.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "def\\s+\\w+"
+
+checklist:
+  - Business logic without corresponding tests
+  - Missing edge case coverage
+  - No validation tests
+
+fix: Write unit tests covering happy path, edge cases, and error conditions.
+
+tags:
+  - testing
+  - quality

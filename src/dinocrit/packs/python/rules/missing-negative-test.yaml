@@ -1,0 +1,61 @@
+id: python/missing-negative-test
+name: Missing Negative Test Cases
+level: major
+category: testing
+description: |
+  Detects test files that only test the happy path without
+  testing error conditions, edge cases, or invalid inputs.
+  Comprehensive testing requires both positive and negative cases.
+
+triggers:
+  file_patterns:
+    - "**/test_*.py"
+    - "**/*_test.py"
+    - "**/tests.py"
+  code_patterns:
+    - "def test_"
+    - "class Test"
+
+checklist:
+  - Are there tests for invalid input handling?
+  - Are error responses tested (4xx, 5xx)?
+  - Are exception paths tested?
+  - Are boundary conditions tested (empty, max, null)?
+  - Are permission denied cases tested?
+  - Are concurrent access scenarios tested?
+
+fix: |
+  Add tests for error cases. Test invalid inputs. Test boundary
+  conditions. Test permission failures. Consider property-based
+  testing for edge case discovery.
+
+tags:
+  - testing
+  - coverage
+  - edge-cases
+
+examples:
+  bad: |
+    class TestUserAPI:
+        def test_create_user(self):
+            response = client.post('/users/', {'email': 'test@example.com'})
+            assert response.status_code == 201
+        # No tests for: invalid email, duplicate user, missing fields
+  good: |
+    class TestUserAPI:
+        def test_create_user(self):
+            response = client.post('/users/', {'email': 'test@example.com'})
+            assert response.status_code == 201
+
+        def test_create_user_invalid_email(self):
+            response = client.post('/users/', {'email': 'invalid'})
+            assert response.status_code == 400
+
+        def test_create_user_duplicate(self):
+            client.post('/users/', {'email': 'test@example.com'})
+            response = client.post('/users/', {'email': 'test@example.com'})
+            assert response.status_code == 409
+
+        def test_create_user_missing_email(self):
+            response = client.post('/users/', {})
+            assert response.status_code == 400

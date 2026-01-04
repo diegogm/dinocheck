@@ -1,0 +1,44 @@
+id: python/misleading-comment
+name: Misleading Comment Detection
+level: major
+category: maintainability
+description: |
+  Detects comments that contradict or no longer match the code
+  they describe. This happens when code is modified but comments
+  are not updated, leading to confusion and bugs.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - '""".*"""'
+    - "'''.*'''"
+    - "# .*"
+
+checklist:
+  - Does the docstring describe behavior the function doesn't have?
+  - Do parameter descriptions match actual parameters?
+  - Does the return type in docstring match actual return?
+  - Do inline comments describe what the code actually does?
+  - Are there comments about removed or changed functionality?
+
+fix: |
+  Update comments to match current code behavior. Remove outdated
+  comments. Consider if the code or the comment is wrong - sometimes
+  the comment describes intended behavior that wasn't implemented.
+
+tags:
+  - maintainability
+  - documentation
+  - correctness
+
+examples:
+  bad: |
+    def calculate_total(items):
+        """Returns the sum of all item prices with tax."""
+        # Apply 10% discount for members  <-- No discount in code!
+        return sum(item.price for item in items)
+  good: |
+    def calculate_total(items):
+        """Returns the sum of all item prices."""
+        return sum(item.price for item in items)

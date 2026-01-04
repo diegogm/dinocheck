@@ -1,0 +1,23 @@
+id: django/missing-select-related
+name: Missing select_related
+level: major
+category: performance
+description: |
+  Accessing ForeignKey or OneToOne field without using select_related()
+  causes additional database queries.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "\\.objects\\.(all|filter|get)\\("
+
+checklist:
+  - ForeignKey access without select_related
+  - OneToOne field access in loop
+
+fix: Add select_related('field_name') to the queryset.
+
+tags:
+  - performance
+  - orm

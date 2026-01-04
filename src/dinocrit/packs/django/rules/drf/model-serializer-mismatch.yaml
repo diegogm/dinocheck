@@ -1,0 +1,52 @@
+id: django/model-serializer-mismatch
+name: Model-Serializer Field Mismatch
+level: major
+category: correctness
+description: |
+  Detects inconsistencies between Django models and their DRF
+  serializers, such as missing required fields, type mismatches,
+  or validation gaps.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "ModelSerializer"
+    - "Serializer"
+    - "fields\\s*="
+    - "SerializerMethodField"
+
+checklist:
+  - Are all required model fields included in serializer?
+  - Do serializer field types match model field types?
+  - Are model validators replicated in serializer?
+  - Are read_only fields correctly identified?
+  - Could write operations fail due to missing fields?
+  - Are nested serializers consistent with related models?
+
+fix: |
+  Ensure serializer fields match model requirements. Use
+  explicit field lists instead of '__all__'. Add serializer
+  validation for model constraints. Test create/update operations.
+
+tags:
+  - correctness
+  - drf
+  - validation
+
+examples:
+  bad: |
+    class User(models.Model):
+        email = models.EmailField(unique=True)
+        name = models.CharField(max_length=100)
+        role = models.CharField(choices=ROLES)  # Required!
+
+    class UserSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = User
+            fields = ['email', 'name']  # Missing 'role'!
+  good: |
+    class UserSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = User
+            fields = ['email', 'name', 'role']

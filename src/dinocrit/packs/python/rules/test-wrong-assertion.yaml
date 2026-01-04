@@ -1,0 +1,57 @@
+id: python/test-wrong-assertion
+name: Test with Wrong Assertion
+level: major
+category: testing
+description: |
+  Detects tests that pass but for the wrong reason, such as
+  asserting on the wrong value, using assertions that always
+  pass, or testing implementation instead of behavior.
+
+triggers:
+  file_patterns:
+    - "**/test_*.py"
+    - "**/*_test.py"
+    - "**/tests.py"
+  code_patterns:
+    - "assert "
+    - "assertEqual"
+    - "assertTrue"
+    - "assertFalse"
+    - "self\\.assert"
+
+checklist:
+  - Does assertTrue/assertFalse check the correct condition?
+  - Could the assertion pass for wrong reasons (e.g., assert response)?
+  - Is the expected value actually what's being tested?
+  - Are there assertions on type instead of value?
+  - Could the test pass with completely wrong output?
+  - Is the test checking behavior or implementation details?
+
+fix: |
+  Use specific assertions (assertEqual, assertIn, assertRaises).
+  Check actual values, not just truthiness. Test behavior, not
+  implementation. Add negative test cases.
+
+tags:
+  - testing
+  - assertions
+  - correctness
+
+examples:
+  bad: |
+    def test_get_user(self):
+        response = client.get('/api/users/1/')
+        self.assertTrue(response)  # Always passes if response exists!
+
+    def test_calculate_total(self):
+        result = calculate_total([1, 2, 3])
+        self.assertTrue(isinstance(result, int))  # Doesn't check value!
+  good: |
+    def test_get_user(self):
+        response = client.get('/api/users/1/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['id'], 1)
+
+    def test_calculate_total(self):
+        result = calculate_total([1, 2, 3])
+        self.assertEqual(result, 6)

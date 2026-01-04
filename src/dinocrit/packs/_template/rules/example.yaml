@@ -1,0 +1,55 @@
+# Example Custom Rule for Dinocrit
+# Copy this file to .dinocrit/rules/ and modify for your needs
+
+id: custom/example-rule
+name: Example Custom Rule
+level: major  # blocker, critical, major, minor, info
+category: custom
+
+description: |
+  This is an example custom rule that demonstrates the YAML rule format.
+
+  Custom rules allow you to define project-specific checks that will be
+  evaluated by the LLM during code analysis. Unlike traditional linters,
+  Dinocrit uses semantic understanding to detect issues.
+
+checklist:
+  - First condition to check for
+  - Second condition to check for
+  - Third condition the LLM should verify
+
+fix: |
+  Describe how to fix the issue when detected.
+  This guidance is shown to developers and also helps the LLM
+  understand what a correct solution looks like.
+
+tags:
+  - custom
+  - example
+
+triggers:
+  # File patterns (glob) - rule only applies to matching files
+  file_patterns:
+    - "**/views.py"
+    - "**/api/*.py"
+
+  # Code patterns (regex) - triggers LLM analysis when matched
+  code_patterns:
+    - "dangerous_function\\("
+    - "unsafe_operation\\("
+
+examples:
+  bad: |
+    # Bad example - what to avoid
+    def process_data(user_input):
+        dangerous_function(user_input)  # Unsafe!
+
+  good: |
+    # Good example - how to do it right
+    def process_data(user_input):
+        sanitized = sanitize(user_input)
+        safe_function(sanitized)  # Safe!
+
+references:
+  - https://example.com/security-guidelines
+  - https://docs.example.com/best-practices

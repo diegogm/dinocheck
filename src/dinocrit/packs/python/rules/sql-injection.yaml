@@ -1,0 +1,47 @@
+id: python/sql-injection
+name: SQL Injection Review
+level: blocker
+category: security
+description: |
+  Reviews SQL query construction for injection vulnerabilities.
+  While linters can detect f-strings in execute(), only semantic
+  analysis can determine if the interpolated data is actually
+  user-controlled or safely derived from internal sources.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "execute\\("
+    - "\\.raw\\("
+    - "cursor\\."
+    - "SELECT.*FROM"
+    - "INSERT.*INTO"
+    - "UPDATE.*SET"
+    - "DELETE.*FROM"
+
+checklist:
+  - Is the query built with string interpolation or concatenation?
+  - Does any interpolated value originate from user input?
+  - Could the query be refactored to use parameterized queries?
+  - If using ORM raw(), is the input properly escaped?
+  - Are there any dynamic table/column names from user input?
+
+fix: |
+  Always use parameterized queries. If dynamic SQL is unavoidable,
+  use allowlists for table/column names. Never trust user input
+  in any part of a SQL query.
+
+tags:
+  - security
+  - sql
+  - injection
+
+examples:
+  bad: |
+    # User input directly in query
+    query = f"SELECT * FROM users WHERE name = '{name}'"
+    cursor.execute(query)
+  good: |
+    # Parameterized query
+    cursor.execute("SELECT * FROM users WHERE name = %s", [name])

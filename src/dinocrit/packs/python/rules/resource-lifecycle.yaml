@@ -1,0 +1,47 @@
+id: python/resource-lifecycle
+name: Resource Lifecycle Management
+level: major
+category: reliability
+description: |
+  Reviews management of resources like file handles, database connections,
+  locks, and network sockets. Ensures resources are properly acquired,
+  used, and released even when errors occur.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "open\\("
+    - "connect\\("
+    - "acquire\\("
+    - "Lock\\("
+    - "socket\\("
+    - "Session\\("
+
+checklist:
+  - Is the resource used within a context manager (with statement)?
+  - If not using context manager, is there proper try/finally cleanup?
+  - Could an exception leave the resource in an inconsistent state?
+  - Are there timeout configurations for network resources?
+  - Could resource exhaustion occur under load?
+
+fix: |
+  Use context managers (with statement) for automatic cleanup.
+  For resources without context manager support, use try/finally.
+  Set appropriate timeouts for network operations.
+
+tags:
+  - reliability
+  - resources
+  - memory
+
+examples:
+  bad: |
+    f = open("data.txt")
+    data = f.read()
+    process(data)
+    f.close()  # Never reached if process() raises
+  good: |
+    with open("data.txt") as f:
+        data = f.read()
+        process(data)

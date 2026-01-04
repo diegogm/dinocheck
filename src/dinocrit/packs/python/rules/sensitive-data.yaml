@@ -1,0 +1,48 @@
+id: python/sensitive-data
+name: Sensitive Data Exposure
+level: major
+category: security
+description: |
+  Detects code that might EXPOSE sensitive data (passwords, tokens, API keys,
+  PII) through logging, error messages, API responses, or insecure storage.
+
+  IMPORTANT: Just having a variable named "password" or "token" is NOT an issue.
+  Only flag when sensitive data is actually being exposed or mishandled.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "log.*password|log.*token|log.*secret|log.*api_key"
+    - "print.*password|print.*token|print.*secret"
+    - "password\\s*=\\s*[\"']"
+    - "api_key\\s*=\\s*[\"']"
+
+checklist:
+  - Is sensitive data being LOGGED or PRINTED? (issue if yes)
+  - Is sensitive data HARDCODED in source code? (issue if yes)
+  - Is sensitive data returned in API responses? (issue if yes)
+  - Just REFERENCING a variable called "password"? (NOT an issue)
+  - Loading from environment variables? (NOT an issue - that's correct)
+
+fix: |
+  Load secrets from environment variables or a secrets manager.
+  Never log sensitive values. Use secure comparison for tokens.
+  Mask sensitive data in error messages and API responses.
+
+tags:
+  - security
+  - secrets
+  - pii
+
+examples:
+  bad: |
+    logger.info(f"Authenticating user with token: {api_token}")
+    PASSWORD = "hardcoded_secret_123"  # Hardcoded!
+  good: |
+    logger.info("Authenticating user with token: %s...", api_token[:4])
+    PASSWORD = os.environ["MY_PASSWORD"]  # From environment - OK
+  not_an_issue: |
+    # Just referencing a variable is fine
+    def verify_password(password: str) -> bool:
+        return check_password_hash(stored_hash, password)

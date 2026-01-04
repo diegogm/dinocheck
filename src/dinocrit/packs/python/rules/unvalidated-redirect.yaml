@@ -1,0 +1,53 @@
+id: python/unvalidated-redirect
+name: Unvalidated Redirect (Open Redirect)
+level: critical
+category: security
+description: |
+  Detects redirects to URLs from user input without validation.
+  Open redirects can be used for phishing attacks by making
+  malicious links appear to come from a trusted domain.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "redirect\\("
+    - "HttpResponseRedirect"
+    - "RedirectView"
+    - "next="
+    - "return_url"
+    - "redirect_to"
+
+checklist:
+  - Is the redirect URL from user input (query params, form)?
+  - Is the URL validated against a whitelist of allowed domains?
+  - Could a relative URL be interpreted as absolute?
+  - Are protocol-relative URLs (//) blocked?
+  - Is url_has_allowed_host_and_scheme() used?
+
+fix: |
+  Validate redirect URLs against allowed hosts. Use Django's
+  url_has_allowed_host_and_scheme(). Prefer relative URLs.
+  Never redirect to arbitrary user-provided URLs.
+
+tags:
+  - security
+  - redirect
+  - phishing
+
+examples:
+  bad: |
+    def login_view(request):
+        next_url = request.GET.get('next', '/')
+        if authenticate(request):
+            return redirect(next_url)  # Open redirect!
+        # Attacker: /login?next=https://evil.com/steal-creds
+  good: |
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    def login_view(request):
+        next_url = request.GET.get('next', '/')
+        if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+            next_url = '/'
+        if authenticate(request):
+            return redirect(next_url)

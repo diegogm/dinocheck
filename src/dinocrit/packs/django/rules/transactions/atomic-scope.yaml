@@ -1,0 +1,25 @@
+id: django/atomic-scope
+name: Inappropriate atomic() Scope
+level: critical
+category: transactions
+description: |
+  Related database operations should be in the same atomic block
+  to ensure data consistency.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "transaction\\.atomic"
+    - "@atomic"
+
+checklist:
+  - Multiple atomic blocks for related operations
+  - Side effects inside atomic block
+  - Atomic scope too narrow or too wide
+
+fix: Group related database operations in a single atomic block.
+
+tags:
+  - transactions
+  - consistency

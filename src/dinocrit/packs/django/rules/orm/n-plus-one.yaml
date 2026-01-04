@@ -1,0 +1,36 @@
+id: django/n-plus-one
+name: N+1 Query Detection
+level: major
+category: performance
+description: |
+  Detects patterns that cause N+1 database queries, where a query is
+  executed inside a loop iterating over a queryset.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "for .+ in .+\\.objects\\."
+    - "\\.all\\(\\).*for"
+
+checklist:
+  - Loop iterating over queryset result
+  - Related model access inside loop without prefetch
+  - Nested serializer without prefetch in view
+
+fix: |
+  Use select_related() for ForeignKey/OneToOne fields.
+  Use prefetch_related() for reverse FK/M2M fields.
+
+tags:
+  - performance
+  - orm
+  - database
+
+examples:
+  bad: |
+    for book in Book.objects.all():
+        print(book.author.name)
+  good: |
+    for book in Book.objects.select_related('author'):
+        print(book.author.name)

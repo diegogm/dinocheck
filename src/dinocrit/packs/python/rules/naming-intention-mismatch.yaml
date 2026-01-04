@@ -1,0 +1,51 @@
+id: python/naming-intention-mismatch
+name: Naming vs Intention Mismatch
+level: major
+category: correctness
+description: |
+  Detects functions and methods where the name suggests one behavior
+  but the implementation does something different. This causes confusion
+  and bugs when developers trust the name without reading the code.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "def (get_|fetch_|find_|load_|read_)"
+    - "def (set_|update_|save_|write_|store_)"
+    - "def (is_|has_|can_|should_|check_)"
+    - "def (create_|delete_|remove_|add_)"
+
+checklist:
+  - Does a get_* function modify state or have side effects?
+  - Does an is_*/has_* function return non-boolean?
+  - Does a create_* function return an existing object instead?
+  - Does the function name match what it actually does?
+  - Are there hidden side effects not suggested by the name?
+
+fix: |
+  Rename the function to accurately describe its behavior, or refactor
+  to match the expected behavior. Functions starting with get_ should
+  be pure; is_/has_ should return bool; create_ should always create.
+
+tags:
+  - correctness
+  - naming
+  - readability
+
+examples:
+  bad: |
+    def get_user(user_id):
+        user = User.objects.get(id=user_id)
+        user.last_accessed = now()  # Side effect in getter!
+        user.save()
+        return user
+  good: |
+    def get_user(user_id):
+        return User.objects.get(id=user_id)
+
+    def record_user_access(user_id):
+        user = User.objects.get(id=user_id)
+        user.last_accessed = now()
+        user.save()
+        return user

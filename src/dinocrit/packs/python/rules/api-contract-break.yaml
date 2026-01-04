@@ -1,0 +1,45 @@
+id: python/api-contract-break
+name: API Contract Breaking Change
+level: blocker
+category: compatibility
+description: |
+  Detects changes that could break backward compatibility for
+  API consumers. This includes removing parameters, changing
+  return types, or modifying expected behavior.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "def \\w+\\(.*\\).*:"
+    - "class \\w+.*:"
+    - "@property"
+    - "return "
+
+checklist:
+  - Are required parameters being added to existing functions?
+  - Is the return type changing in an incompatible way?
+  - Are exceptions being changed or removed?
+  - Is a previously public method being removed or renamed?
+  - Could existing callers break with this change?
+  - Is None being returned where a value was expected?
+
+fix: |
+  Use deprecation warnings before removing features. Add new
+  parameters with default values. Consider versioning for major
+  changes. Document breaking changes clearly.
+
+tags:
+  - compatibility
+  - api
+  - breaking-change
+
+examples:
+  bad: |
+    # Before: def send_email(to, subject, body)
+    # After: Breaking change - new required parameter!
+    def send_email(to, subject, body, priority):
+        ...
+  good: |
+    def send_email(to, subject, body, priority="normal"):
+        ...  # New parameter has default, backward compatible

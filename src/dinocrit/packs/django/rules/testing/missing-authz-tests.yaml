@@ -1,0 +1,28 @@
+id: django/missing-authz-tests
+name: Authorization Missing Tests
+level: critical
+category: testing
+description: |
+  Endpoints with authorization logic should have tests verifying
+  that unauthorized access is properly denied.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "permission_classes"
+    - "IsAuthenticated"
+
+checklist:
+  - No tests for unauthorized access
+  - Missing tests for different user roles
+  - Permission edge cases not tested
+
+fix: |
+  Add tests verifying that unauthorized users receive 401/403
+  and cannot access restricted resources.
+
+tags:
+  - testing
+  - security
+  - authorization

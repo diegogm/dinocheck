@@ -1,0 +1,49 @@
+id: python/timing-attack
+name: Timing Attack Vulnerability
+level: critical
+category: security
+description: |
+  Detects string comparisons of secrets that are vulnerable to
+  timing attacks. Regular string comparison returns early on
+  first difference, leaking information about the secret.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "(token|secret|password|key|hash|signature).*=="
+    - "==.*(token|secret|password|key|hash|signature)"
+    - "!=.*(token|secret|password|key|hash)"
+
+checklist:
+  - Are API keys or tokens compared with == operator?
+  - Are password hashes compared without constant-time function?
+  - Are HMAC signatures verified with regular comparison?
+  - Are webhook signatures checked timing-safely?
+  - Could an attacker measure response time differences?
+
+fix: |
+  Use hmac.compare_digest() for constant-time comparison of
+  secrets. Use secrets.compare_digest() in Python 3.x. Never
+  use == for comparing tokens, signatures, or hashes.
+
+tags:
+  - security
+  - cryptography
+  - timing-attack
+
+examples:
+  bad: |
+    def verify_webhook(request):
+        expected = compute_signature(request.body)
+        received = request.headers['X-Signature']
+        if expected == received:  # Timing attack!
+            process_webhook(request)
+  good: |
+    import hmac
+
+    def verify_webhook(request):
+        expected = compute_signature(request.body)
+        received = request.headers['X-Signature']
+        if hmac.compare_digest(expected, received):
+            process_webhook(request)

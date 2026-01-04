@@ -1,0 +1,53 @@
+id: django/cache-stale-data
+name: Cache Invalidation Issue
+level: major
+category: reliability
+description: |
+  Detects patterns where cached data might become stale because
+  the cache is not invalidated when the underlying data changes.
+  "There are only two hard things: cache invalidation and naming things."
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "cache\\.get"
+    - "cache\\.set"
+    - "@cache_page"
+    - "@cached_property"
+    - "cache\\.delete"
+
+checklist:
+  - Is the cache invalidated when underlying data is modified?
+  - Could concurrent writes cause stale cache to be set?
+  - Are all code paths that modify data invalidating cache?
+  - Is cache invalidation in the same transaction as the write?
+  - Could signal-based invalidation be missed (bulk operations)?
+  - Are cache keys consistent across get/set/delete?
+
+fix: |
+  Invalidate cache in the same transaction as data modifications.
+  Use cache versioning or key prefixes. Consider write-through
+  caching. Document cache dependencies clearly.
+
+tags:
+  - reliability
+  - caching
+  - consistency
+
+examples:
+  bad: |
+    def get_user_stats(user_id):
+        stats = cache.get(f'user_stats_{user_id}')
+        if not stats:
+            stats = calculate_stats(user_id)
+            cache.set(f'user_stats_{user_id}', stats, 3600)
+        return stats
+
+    def add_purchase(user_id, amount):
+        Purchase.objects.create(user_id=user_id, amount=amount)
+        # Forgot to invalidate cache!
+  good: |
+    def add_purchase(user_id, amount):
+        Purchase.objects.create(user_id=user_id, amount=amount)
+        cache.delete(f'user_stats_{user_id}')  # Invalidate

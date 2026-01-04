@@ -1,0 +1,48 @@
+id: django/async-blocking-call
+name: Blocking Call in Async Context
+level: critical
+category: performance
+description: |
+  Detects synchronous blocking calls inside async views or
+  coroutines. This defeats the purpose of async and can cause
+  the entire event loop to stall.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "async def"
+    - "await"
+    - "@sync_to_async"
+    - "@async_to_sync"
+
+checklist:
+  - Are there ORM queries without sync_to_async wrapper?
+  - Are file operations wrapped for async?
+  - Are external HTTP calls using async client?
+  - Is time.sleep() used instead of asyncio.sleep()?
+  - Are third-party libraries async-compatible?
+  - Could blocking calls starve the event loop?
+
+fix: |
+  Use sync_to_async for Django ORM operations. Use aiohttp/httpx
+  for HTTP calls. Use aiofiles for file operations. Replace
+  time.sleep with asyncio.sleep.
+
+tags:
+  - performance
+  - async
+  - blocking
+
+examples:
+  bad: |
+    async def get_user_data(user_id):
+        user = User.objects.get(id=user_id)  # Blocking ORM call!
+        response = requests.get(f'/api/stats/{user_id}')  # Blocking HTTP!
+        return {'user': user, 'stats': response.json()}
+  good: |
+    async def get_user_data(user_id):
+        user = await sync_to_async(User.objects.get)(id=user_id)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f'/api/stats/{user_id}')
+        return {'user': user, 'stats': response.json()}

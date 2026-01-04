@@ -1,0 +1,57 @@
+id: django/non-idempotent-task
+name: Non-Idempotent Async Task
+level: critical
+category: reliability
+description: |
+  Detects Celery/async tasks that are not safe to retry. Tasks
+  can be executed multiple times due to retries, worker crashes,
+  or message broker issues. Non-idempotent tasks cause data corruption.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "@shared_task"
+    - "@task"
+    - "@app\\.task"
+    - "\\.delay\\("
+    - "\\.apply_async\\("
+
+checklist:
+  - Could running this task twice cause duplicate data?
+  - Are there side effects that shouldn't repeat (emails, payments)?
+  - Is there a check for already-processed state?
+  - Are database operations atomic and repeatable?
+  - Could partial completion leave data inconsistent?
+  - Is there proper locking for concurrent execution?
+
+fix: |
+  Make tasks idempotent using unique constraints, idempotency keys,
+  or state checks. Use database transactions. Consider using
+  select_for_update for concurrent access. Log task execution
+  for debugging retries.
+
+tags:
+  - reliability
+  - celery
+  - async
+  - idempotency
+
+examples:
+  bad: |
+    @shared_task
+    def charge_subscription(user_id):
+        user = User.objects.get(id=user_id)
+        Payment.objects.create(user=user, amount=9.99)  # Duplicates on retry!
+        charge_card(user.card_token, 9.99)
+  good: |
+    @shared_task
+    def charge_subscription(user_id, idempotency_key):
+        if Payment.objects.filter(idempotency_key=idempotency_key).exists():
+            return  # Already processed
+        with transaction.atomic():
+            user = User.objects.select_for_update().get(id=user_id)
+            Payment.objects.create(
+                user=user, amount=9.99, idempotency_key=idempotency_key
+            )
+            charge_card(user.card_token, 9.99)

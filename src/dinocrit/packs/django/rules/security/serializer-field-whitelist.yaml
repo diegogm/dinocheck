@@ -1,0 +1,46 @@
+id: django/serializer-field-whitelist
+name: Serializer Data Exposure Review
+level: critical
+category: security
+description: |
+  Reviews DRF serializers for potential data exposure issues.
+  While fields='__all__' is an obvious trigger, semantic analysis
+  is needed to determine if exposed fields contain sensitive data
+  and if the serializer is used in public-facing endpoints.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "Serializer"
+    - "fields\\s*="
+    - "class Meta:"
+
+checklist:
+  - Are sensitive fields (password, tokens, internal IDs) exposed?
+  - Is this serializer used in public API endpoints?
+  - Are there different serializers for read vs write operations?
+  - Could nested serializers expose parent's sensitive data?
+  - Is there proper field-level permission checking?
+
+fix: |
+  Explicitly list safe fields. Use separate serializers for different
+  contexts (admin vs public). Implement field-level permissions for
+  sensitive data. Use SerializerMethodField for computed/filtered data.
+
+tags:
+  - security
+  - drf
+  - data-exposure
+
+examples:
+  bad: |
+    class UserSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = User
+            fields = '__all__'  # Exposes password hash, tokens, etc.
+  good: |
+    class UserSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = User
+            fields = ['id', 'username', 'email', 'date_joined']

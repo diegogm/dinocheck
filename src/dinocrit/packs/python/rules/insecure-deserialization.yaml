@@ -1,0 +1,56 @@
+id: python/insecure-deserialization
+name: Insecure Deserialization
+level: blocker
+category: security
+description: |
+  Detects deserialization of untrusted data using unsafe methods
+  like pickle, yaml.load, or eval. This can lead to remote code
+  execution if an attacker controls the serialized data.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "pickle\\.load"
+    - "pickle\\.loads"
+    - "yaml\\.load"
+    - "yaml\\.unsafe_load"
+    - "eval\\("
+    - "exec\\("
+    - "marshal\\.load"
+    - "shelve\\.open"
+
+checklist:
+  - Is pickle used with data from untrusted sources?
+  - Is yaml.load() used without Loader=SafeLoader?
+  - Is eval/exec used on user-provided strings?
+  - Could cached/stored data be tampered with?
+  - Are there safer alternatives (JSON, safe YAML)?
+
+fix: |
+  Never deserialize untrusted data with pickle. Use
+  yaml.safe_load() instead of yaml.load(). Avoid eval/exec
+  entirely. Use JSON for data exchange. Sign serialized data
+  if it must be stored client-side.
+
+tags:
+  - security
+  - deserialization
+  - rce
+
+examples:
+  bad: |
+    import pickle
+
+    def load_session(session_data):
+        return pickle.loads(base64.b64decode(session_data))
+        # Attacker can execute arbitrary code!
+
+    config = yaml.load(user_config_file)  # Unsafe!
+  good: |
+    import json
+
+    def load_session(session_data):
+        return json.loads(base64.b64decode(session_data))
+
+    config = yaml.safe_load(user_config_file)

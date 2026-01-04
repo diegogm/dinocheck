@@ -1,0 +1,52 @@
+id: python/error-info-leak
+name: Error Information Leakage
+level: critical
+category: security
+description: |
+  Detects error handling that could expose internal system details
+  to users, such as stack traces, file paths, database queries,
+  or internal IP addresses.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "except.*:"
+    - "raise.*\\("
+    - "traceback"
+    - "str\\(e\\)|str\\(err\\)|str\\(ex\\)"
+    - "\\.message"
+
+checklist:
+  - Are exception details returned in API responses?
+  - Could stack traces reach end users?
+  - Are internal file paths exposed in error messages?
+  - Are database query errors shown to users?
+  - Could error messages reveal system architecture?
+  - Are internal hostnames or IPs in error responses?
+
+fix: |
+  Return generic error messages to users. Log detailed errors
+  server-side with correlation IDs. Use error codes instead of
+  messages for client debugging. Never expose stack traces in
+  production.
+
+tags:
+  - security
+  - error-handling
+  - information-disclosure
+
+examples:
+  bad: |
+    try:
+        user = User.objects.get(id=user_id)
+    except Exception as e:
+        return Response({'error': str(e)})  # Exposes DB details!
+  good: |
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+    except Exception as e:
+        logger.exception("Unexpected error fetching user %s", user_id)
+        return Response({'error': 'Internal error'}, status=500)

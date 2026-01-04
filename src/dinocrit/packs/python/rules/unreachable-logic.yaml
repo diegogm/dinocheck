@@ -1,0 +1,46 @@
+id: python/unreachable-logic
+name: Unreachable Logic Detection
+level: major
+category: correctness
+description: |
+  Detects code that can never execute due to logical contradictions,
+  not syntax errors. Unlike dead code detected by linters, this
+  requires understanding the semantic meaning of conditions.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "if .+ and .+:"
+    - "if .+ or .+:"
+    - "while .+:"
+    - "elif .+:"
+
+checklist:
+  - Are there contradictory conditions (x and not x)?
+  - Is there code after an unconditional return/raise?
+  - Are there conditions that can never be true given prior checks?
+  - Is the same condition checked multiple times with different outcomes?
+  - Are there mutually exclusive conditions in elif chains?
+
+fix: |
+  Remove unreachable code or fix the logical condition. If the
+  unreachable code was intentional (defensive), add a comment
+  explaining why it exists.
+
+tags:
+  - correctness
+  - logic
+  - dead-code
+
+examples:
+  bad: |
+    def process(user):
+        if user.is_admin:
+            if not user.is_admin:  # Can never be true!
+                log_security_event()
+            grant_access()
+  good: |
+    def process(user):
+        if user.is_admin:
+            grant_access()

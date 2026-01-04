@@ -1,0 +1,52 @@
+id: django/signal-hidden-logic
+name: Critical Logic Hidden in Signals
+level: major
+category: maintainability
+description: |
+  Detects critical business logic implemented in Django signals
+  instead of explicit code. Signals make the flow opaque and can
+  cause unexpected behavior, especially in tests and bulk operations.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "@receiver"
+    - "post_save"
+    - "pre_save"
+    - "post_delete"
+    - "m2m_changed"
+    - "\\.connect\\("
+
+checklist:
+  - Is critical business logic in signals instead of explicit calls?
+  - Could the signal be skipped (bulk_create, raw SQL)?
+  - Are there side effects that should be transactional with the save?
+  - Is the signal's existence documented where the model is used?
+  - Could the signal cause infinite loops or circular updates?
+  - Are tests aware of and accounting for signal behavior?
+
+fix: |
+  Move critical logic to explicit service functions. Use signals
+  only for truly decoupled concerns (logging, cache invalidation).
+  Document signal behavior clearly. Consider using model methods.
+
+tags:
+  - maintainability
+  - signals
+  - architecture
+
+examples:
+  bad: |
+    @receiver(post_save, sender=Order)
+    def create_invoice(sender, instance, created, **kwargs):
+        if created:
+            Invoice.objects.create(order=instance)  # Hidden logic!
+            send_confirmation_email(instance)
+  good: |
+    class OrderService:
+        def create_order(self, data):
+            order = Order.objects.create(**data)
+            Invoice.objects.create(order=order)  # Explicit
+            send_confirmation_email(order)
+            return order

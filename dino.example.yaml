@@ -1,0 +1,28 @@
+# Dinocrit Configuration
+# Your vibe coding companion - LLM-powered code critic
+#
+# Copy this file to dino.yaml and customize for your project
+# Documentation: https://github.com/diegogm/dinocrit
+
+# Enable language/framework packs
+packs:
+  - python           # Base Python rules
+  - django           # Django framework rules
+
+# LLM model to use (provider/model format)
+# Examples:
+#   - openai/gpt-5.1-codex, openai/gpt-4o, openai/gpt-4o-mini
+#   - anthropic/claude-3-5-sonnet-20241022
+#   - ollama/llama3, ollama/mistral
+model: openai/gpt-5.1-codex
+
+# Response language (en, es, fr, de, pt, etc.)
+language: en
+
+# Max LLM calls per run (default: 1)
+# max_llm_calls: 1
+
+# Disable specific rules
+# disabled_rules:
+#   - django/bare-except
+#   - python/broad-exception

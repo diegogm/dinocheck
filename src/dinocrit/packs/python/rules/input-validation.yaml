@@ -1,0 +1,50 @@
+id: python/input-validation
+name: Input Validation at Boundaries
+level: major
+category: security
+description: |
+  Reviews validation of external input at system boundaries.
+  User input, API payloads, file contents, and environment variables
+  should be validated before use. A linter cannot know what is "input".
+
+  NOTE: If Pydantic, marshmallow, or similar schema validation is used
+  after loading data, this is generally sufficient - do NOT flag as issue.
+
+triggers:
+  file_patterns:
+    - "**/views.py"
+    - "**/api/**/*.py"
+    - "**/handlers/**/*.py"
+  code_patterns:
+    - "request\\.(data|json|form|args|files)"
+    - "sys\\.argv"
+    - "input\\("
+
+checklist:
+  - Is the input used DIRECTLY without any validation framework?
+  - Is Pydantic, marshmallow, or similar schema used? (NOT an issue if yes)
+  - Is the input used in SQL, shell, or HTML without sanitization?
+  - Could an attacker-controlled value cause security issues here?
+
+fix: |
+  Validate all external input at the boundary. Use schemas (Pydantic,
+  marshmallow) for structured validation. Sanitize before use in
+  sensitive contexts. Set reasonable size limits.
+
+tags:
+  - security
+  - validation
+  - input
+
+examples:
+  bad: |
+    user_id = request.args.get("user_id")
+    user = User.objects.get(id=user_id)  # No validation!
+  good: |
+    user_id = request.args.get("user_id")
+    if not user_id or not user_id.isdigit():
+        raise BadRequest("Invalid user_id")
+    user = User.objects.get(id=int(user_id))
+  also_good: |
+    # Using Pydantic is sufficient validation
+    config = DinocritConfig.model_validate(yaml.safe_load(f))

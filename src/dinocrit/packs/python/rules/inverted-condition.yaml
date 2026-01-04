@@ -1,0 +1,45 @@
+id: python/inverted-condition
+name: Inverted Condition Detection
+level: critical
+category: correctness
+description: |
+  Detects conditions that appear to be inverted relative to the
+  action being taken. This is a common source of security bugs
+  and logic errors.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "if not .+:"
+    - "if .+ != .+:"
+    - "unless"
+    - "while not .+:"
+
+checklist:
+  - Does "if not authorized" lead to allowing access?
+  - Does "if error" lead to success handling?
+  - Is the condition inverted from what the variable name suggests?
+  - Does the action contradict the condition semantically?
+  - Are there double negatives that obscure the logic?
+
+fix: |
+  Invert the condition and swap the if/else branches for clarity,
+  or rename variables to match the logic. Avoid double negatives.
+
+tags:
+  - correctness
+  - security
+  - logic
+
+examples:
+  bad: |
+    if not user.has_permission:
+        allow_access()  # Inverted! Allows when no permission
+    else:
+        deny_access()
+  good: |
+    if user.has_permission:
+        allow_access()
+    else:
+        deny_access()

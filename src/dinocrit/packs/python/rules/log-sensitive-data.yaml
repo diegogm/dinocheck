@@ -1,0 +1,46 @@
+id: python/log-sensitive-data
+name: Sensitive Data in Logs
+level: blocker
+category: security
+description: |
+  Detects patterns where sensitive data like passwords, tokens,
+  PII, or financial information might end up in logs. Logs are
+  often stored insecurely and accessed by many people.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "log(ger)?\\.(debug|info|warning|error|critical|exception)"
+    - "print\\("
+    - "logging\\."
+
+checklist:
+  - Are passwords, tokens, or API keys being logged?
+  - Is PII (email, phone, SSN, address) in log messages?
+  - Are credit card numbers or financial data logged?
+  - Could f-strings or format strings expose sensitive objects?
+  - Are request bodies with sensitive data being logged?
+  - Are exception messages exposing internal details?
+
+fix: |
+  Mask or redact sensitive data before logging. Use structured
+  logging with explicit field selection. Never log full request
+  bodies or user credentials. Implement a logging filter for
+  sensitive patterns.
+
+tags:
+  - security
+  - logging
+  - pii
+  - data-exposure
+
+examples:
+  bad: |
+    logger.info(f"User login: {username} with password {password}")
+    logger.debug(f"API request: {request.data}")  # Contains secrets
+    logger.error(f"Payment failed for card {card_number}")
+  good: |
+    logger.info(f"User login: {username}")
+    logger.debug(f"API request to {request.path}")
+    logger.error(f"Payment failed for card ending in {card_number[-4:]}")
