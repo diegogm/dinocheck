@@ -76,9 +76,7 @@ class SQLiteCache(Cache):
 
     # ==================== Cache Methods ====================
 
-    def get(
-        self, file_hash: str, pack_version: str, rules_hash: str
-    ) -> list[Issue] | None:
+    def get(self, file_hash: str, pack_version: str, rules_hash: str) -> list[Issue] | None:
         """Get cached issues for a file if not expired."""
         with self._connect() as conn:
             row = conn.execute(
@@ -94,9 +92,7 @@ class SQLiteCache(Cache):
                 return self._deserialize_issues(row["issues_json"])
         return None
 
-    def put(
-        self, file_hash: str, pack_version: str, rules_hash: str, issues: list[Issue]
-    ) -> None:
+    def put(self, file_hash: str, pack_version: str, rules_hash: str, issues: list[Issue]) -> None:
         """Cache issues for a file."""
         issues_json = self._serialize_issues(issues)
         with self._connect() as conn:
@@ -124,13 +120,9 @@ class SQLiteCache(Cache):
         with self._connect() as conn:
             total = conn.execute("SELECT COUNT(*) FROM cache").fetchone()[0]
 
-            oldest = conn.execute(
-                "SELECT MIN(created_at) FROM cache"
-            ).fetchone()[0]
+            oldest = conn.execute("SELECT MIN(created_at) FROM cache").fetchone()[0]
 
-            newest = conn.execute(
-                "SELECT MAX(created_at) FROM cache"
-            ).fetchone()[0]
+            newest = conn.execute("SELECT MAX(created_at) FROM cache").fetchone()[0]
 
         size = self.db_path.stat().st_size if self.db_path.exists() else 0
 
@@ -328,9 +320,7 @@ class SQLiteCache(Cache):
             tags=d.get("tags", []),
         )
 
-    def _estimate_cost(
-        self, model: str, prompt_tokens: int, completion_tokens: int
-    ) -> float:
+    def _estimate_cost(self, model: str, prompt_tokens: int, completion_tokens: int) -> float:
         """Estimate cost based on model and token counts using litellm."""
         try:
             from litellm import cost_per_token

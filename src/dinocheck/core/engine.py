@@ -88,7 +88,12 @@ class Engine:
         logger.info("=" * 60)
         logger.info("DINOCRIT ANALYSIS STARTED")
         logger.info("=" * 60)
-        logger.debug("Config: model=%s, packs=%s, language=%s", self.config.model, self.config.packs, self.config.language)
+        logger.debug(
+            "Config: model=%s, packs=%s, language=%s",
+            self.config.model,
+            self.config.packs,
+            self.config.language,
+        )
         logger.debug("Paths to analyze: %s, diff_only=%s", [str(p) for p in paths], diff_only)
 
         def progress(step: str, details: str = "") -> None:
@@ -99,13 +104,18 @@ class Engine:
         progress("compose_packs", f"Loading packs: {', '.join(self.config.packs)}")
         composed_pack = self.compositor.compose(self.config.packs)
         progress("compose_packs", f"Loaded {len(composed_pack.rules)} rules")
-        logger.info("Loaded %d rules from packs: %s", len(composed_pack.rules), ", ".join(self.config.packs))
+        logger.info(
+            "Loaded %d rules from packs: %s", len(composed_pack.rules), ", ".join(self.config.packs)
+        )
         for rule in composed_pack.rules:
             logger.debug("  Rule: %s (%s) - %s", rule.id, rule.level.value, rule.name)
 
         # 2. Discover files to analyze
         scan_paths = [] if diff_only else paths
-        progress("discover_files", f"Scanning {'changed files' if diff_only else f'{len(paths)} path(s)'}...")
+        progress(
+            "discover_files",
+            f"Scanning {'changed files' if diff_only else f'{len(paths)} path(s)'}...",
+        )
         files = list(self.workspace.discover(scan_paths, diff_only=diff_only))
         progress("discover_files", f"Found {len(files)} file(s) to analyze")
         logger.info("Discovered %d file(s) to analyze", len(files))
@@ -139,7 +149,9 @@ class Engine:
 
             cached = self.cache.get(file_hash, composed_pack.version, rules_hash)
             if cached is not None:
-                logger.debug("Cache HIT: %s (hash=%s, %d issues)", file_ctx.path, file_hash[:8], len(cached))
+                logger.debug(
+                    "Cache HIT: %s (hash=%s, %d issues)", file_ctx.path, file_hash[:8], len(cached)
+                )
                 all_issues.extend(cached)
                 cache_hits += 1
                 continue
@@ -170,9 +182,16 @@ class Engine:
                     file_ctx = future_to_file[future]
                     try:
                         issues = future.result()
-                        logger.info("LLM analyzed %s: found %d issue(s)", file_ctx.path, len(issues))
+                        logger.info(
+                            "LLM analyzed %s: found %d issue(s)", file_ctx.path, len(issues)
+                        )
                         for issue in issues:
-                            logger.debug("  Issue: [%s] %s at line %d", issue.level.value, issue.title, issue.location.start_line)
+                            logger.debug(
+                                "  Issue: [%s] %s at line %d",
+                                issue.level.value,
+                                issue.title,
+                                issue.location.start_line,
+                            )
                         all_issues.extend(issues)
                         llm_calls += 1
 
@@ -188,16 +207,16 @@ class Engine:
         if rule_filter:
             progress("filter_rules", f"Filtering by rules: {', '.join(rule_filter)}")
             all_issues = [
-                issue for issue in all_issues
-                if any(f in issue.rule_id for f in rule_filter)
+                issue for issue in all_issues if any(f in issue.rule_id for f in rule_filter)
             ]
 
         # 6. Filter out disabled rules
         if self.config.disabled_rules:
-            progress("filter_disabled", f"Filtering {len(self.config.disabled_rules)} disabled rule(s)")
+            progress(
+                "filter_disabled", f"Filtering {len(self.config.disabled_rules)} disabled rule(s)"
+            )
             all_issues = [
-                issue for issue in all_issues
-                if issue.rule_id not in self.config.disabled_rules
+                issue for issue in all_issues if issue.rule_id not in self.config.disabled_rules
             ]
 
         # 7. Deduplicate issues
@@ -220,7 +239,9 @@ class Engine:
         logger.info("ANALYSIS COMPLETE")
         logger.info("=" * 60)
         logger.info("Duration: %dms", duration_ms)
-        logger.info("Files analyzed: %d (cache hits: %d, LLM calls: %d)", len(files), cache_hits, llm_calls)
+        logger.info(
+            "Files analyzed: %d (cache hits: %d, LLM calls: %d)", len(files), cache_hits, llm_calls
+        )
         logger.info("Issues found: %d", len(all_issues))
         logger.info("Score: %d/100 | Gate: %s", score, "PASSED" if gate_passed else "FAILED")
         if fail_reasons:
@@ -260,9 +281,7 @@ class Engine:
             return []
 
         # Build prompts
-        prompt = CriticPromptBuilder.build_user_prompt(
-            file_ctx, rules, self.config.language
-        )
+        prompt = CriticPromptBuilder.build_user_prompt(file_ctx, rules, self.config.language)
         system = CriticPromptBuilder.build_system_prompt(composed_pack.name)
         logger.debug("Prompt length: %d chars", len(prompt))
 
@@ -315,9 +334,7 @@ class Engine:
                 end_line = critic_issue.location.end_line
 
                 # Extract code snippet and context
-                snippet = CodeExtractor.extract_snippet(
-                    file_ctx.content, start_line, end_line
-                )
+                snippet = CodeExtractor.extract_snippet(file_ctx.content, start_line, end_line)
                 context = CodeExtractor.extract_context(file_ctx.content, start_line)
 
                 issue = Issue(
@@ -367,9 +384,7 @@ class Engine:
         for file_issues in by_file.values():
             # Sort by severity and take top N
             severity_order = ["blocker", "critical", "major", "minor", "info"]
-            file_issues.sort(
-                key=lambda i: severity_order.index(i.level.value)
-            )
+            file_issues.sort(key=lambda i: severity_order.index(i.level.value))
             limited.extend(file_issues[:MAX_ISSUES_PER_FILE])
 
         return limited

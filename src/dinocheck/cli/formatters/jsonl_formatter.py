@@ -16,12 +16,16 @@ class JSONLFormatter(Formatter):
     def format(self, result: AnalysisResult) -> str:
         lines = []
         # Summary line
-        lines.append(json.dumps({
-            "type": "summary",
-            "score": result.score,
-            "gate": "pass" if result.gate_passed else "fail",
-            "issues_count": len(result.issues),
-        }))
+        lines.append(
+            json.dumps(
+                {
+                    "type": "summary",
+                    "score": result.score,
+                    "gate": "pass" if result.gate_passed else "fail",
+                    "issues_count": len(result.issues),
+                }
+            )
+        )
         # Issue lines
         for issue in result.issues:
             lines.append(json.dumps({"type": "issue", **issue.to_dict()}))

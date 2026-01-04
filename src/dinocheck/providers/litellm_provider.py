@@ -64,6 +64,7 @@ class LiteLLMProvider(LLMProvider):
         """Get or create cache instance (lazy initialization)."""
         if self.cache_db and self._cache is None:
             from dinocheck.core.cache import SQLiteCache
+
             self._cache = SQLiteCache(self.cache_db)
         return self._cache
 

@@ -81,10 +81,9 @@ Return your findings as JSON with the schema provided.
     @classmethod
     def _format_rules(cls, rules: list[Rule]) -> str:
         """Format rules list for prompt."""
-        return "\n".join([
-            f"- {r.id}: {r.name} ({r.level.value}) - {r.description[:100]}..."
-            for r in rules
-        ])
+        return "\n".join(
+            [f"- {r.id}: {r.name} ({r.level.value}) - {r.description[:100]}..." for r in rules]
+        )
 
     @classmethod
     def _get_language_instruction(cls, language: str) -> str:

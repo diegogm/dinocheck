@@ -93,9 +93,7 @@ class GitWorkspaceScanner(IWorkspaceScanner):
             # If git fails, fall back to no files
             pass
 
-    def _discover_directory(
-        self, directory: Path, diff_only: bool
-    ) -> Iterator[FileContext]:
+    def _discover_directory(self, directory: Path, diff_only: bool) -> Iterator[FileContext]:
         """Discover Python files in a directory."""
         for path in directory.rglob("*.py"):
             # Skip hidden directories and common excludes
@@ -163,12 +161,14 @@ class GitWorkspaceScanner(IWorkspaceScanner):
             hunk_match = re.match(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@(.*)$", line)
             if hunk_match:
                 if in_hunk:
-                    hunks.append(DiffHunk(
-                        start_line=current_start,
-                        end_line=current_end,
-                        content="\n".join(current_lines),
-                        header=current_header,
-                    ))
+                    hunks.append(
+                        DiffHunk(
+                            start_line=current_start,
+                            end_line=current_end,
+                            content="\n".join(current_lines),
+                            header=current_header,
+                        )
+                    )
 
                 current_start = int(hunk_match.group(1))
                 count = int(hunk_match.group(2) or 1)
@@ -186,12 +186,14 @@ class GitWorkspaceScanner(IWorkspaceScanner):
                     current_lines.append(line[1:])
 
         if in_hunk:
-            hunks.append(DiffHunk(
-                start_line=current_start,
-                end_line=current_end,
-                content="\n".join(current_lines),
-                header=current_header,
-            ))
+            hunks.append(
+                DiffHunk(
+                    start_line=current_start,
+                    end_line=current_end,
+                    content="\n".join(current_lines),
+                    header=current_header,
+                )
+            )
 
         return hunks
 

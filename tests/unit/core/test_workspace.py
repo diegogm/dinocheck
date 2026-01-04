@@ -1,6 +1,5 @@
 """Tests for workspace scanner."""
 
-
 import pytest
 
 from dinocheck.core.workspace import GitWorkspaceScanner

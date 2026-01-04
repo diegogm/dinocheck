@@ -28,11 +28,13 @@ class MockProvider(LLMProvider):
         temperature: float = 0.1,
     ) -> BaseModel:
         """Return mock response based on prompt content (synchronous)."""
-        self.calls.append({
-            "prompt": prompt,
-            "schema": response_schema,
-            "system": system,
-        })
+        self.calls.append(
+            {
+                "prompt": prompt,
+                "schema": response_schema,
+                "system": system,
+            }
+        )
 
         # Check for matching response
         for key, response in self.responses.items():

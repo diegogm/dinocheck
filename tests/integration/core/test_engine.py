@@ -24,6 +24,7 @@ def engine_config(tmp_path):
 def sample_issues():
     """Sample issues for testing scoring."""
     from dinocheck.core.types import Issue, Location
+
     return [
         Issue(
             rule_id="django/n-plus-one",
@@ -49,19 +50,23 @@ def sample_issues():
 @pytest.fixture
 def mock_provider_with_issues():
     """Mock provider that returns issues."""
-    return MockProvider(responses={
-        "default": {
-            "issues": [{
-                "rule_id": "django/n-plus-one",
-                "level": "major",
-                "location": {"start_line": 5, "end_line": 7},
-                "title": "N+1 query detected",
-                "why": "Accessing related field in loop",
-                "do": ["Add select_related('author')"],
-                "confidence": 0.95,
-            }]
+    return MockProvider(
+        responses={
+            "default": {
+                "issues": [
+                    {
+                        "rule_id": "django/n-plus-one",
+                        "level": "major",
+                        "location": {"start_line": 5, "end_line": 7},
+                        "title": "N+1 query detected",
+                        "why": "Accessing related field in loop",
+                        "do": ["Add select_related('author')"],
+                        "confidence": 0.95,
+                    }
+                ]
+            }
         }
-    })
+    )
 
 
 class TestEngine:
@@ -128,7 +133,7 @@ def hello():
     async def test_analyze_django_views(self, engine_config, tmp_path):
         """Should analyze Django views file."""
         views_path = tmp_path / "views.py"
-        views_path.write_text('''
+        views_path.write_text("""
 from django.shortcuts import render
 from .models import Book
 
@@ -140,7 +145,7 @@ def book_list(request):
 
 class OrderViewSet:
     queryset = Order.objects.all()
-''')
+""")
 
         engine = Engine(engine_config)
         result = await engine.analyze([views_path])
@@ -188,7 +193,7 @@ class TestEngineWithMockLLM:
     async def test_analyze_with_mock_llm(self, engine_config, mock_provider_with_issues, tmp_path):
         """Should analyze with mock LLM and find issues."""
         views_path = tmp_path / "views.py"
-        views_path.write_text('''
+        views_path.write_text("""
 from django.shortcuts import render
 from .models import Book
 
@@ -196,7 +201,7 @@ def book_list(request):
     books = Book.objects.all()
     for book in books:
         print(book.author.name)
-''')
+""")
 
         # Replace provider in config
         engine = Engine(engine_config)

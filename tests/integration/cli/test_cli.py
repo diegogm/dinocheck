@@ -85,7 +85,7 @@ def example_function():
     def django_views_file(self, tmp_path):
         """Create a Django views file with potential issues."""
         file_path = tmp_path / "views.py"
-        file_path.write_text('''
+        file_path.write_text("""
 from django.shortcuts import render
 from .models import Book
 
@@ -95,18 +95,22 @@ def book_list(request):
     return render(request, "books.html", {
         "books": [{"title": b.title, "author": b.author.name} for b in books]
     })
-''')
+""")
         return file_path
 
     def test_check_json_format(self, python_file, tmp_path, monkeypatch):
         """Should output JSON format."""
         monkeypatch.chdir(tmp_path)
 
-        result = runner.invoke(app, [
-            "check",
-            str(python_file),
-            "--format", "json",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "check",
+                str(python_file),
+                "--format",
+                "json",
+            ],
+        )
 
         # Should be valid JSON if it succeeded
         if result.exit_code in (0, 1):

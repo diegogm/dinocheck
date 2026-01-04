@@ -1,6 +1,5 @@
 """Tests for pack loading and composition."""
 
-
 import pytest
 
 from dinocheck.core.types import IssueLevel

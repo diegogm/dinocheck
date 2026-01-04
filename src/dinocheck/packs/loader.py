@@ -48,10 +48,12 @@ def _ensure_builtin_packs() -> None:
     """Ensure built-in packs are loaded."""
     if "python" not in _pack_registry:
         from dinocheck.packs.python.pack import PythonPack
+
         register_pack(PythonPack())
 
     if "django" not in _pack_registry:
         from dinocheck.packs.django.pack import DjangoPack
+
         register_pack(DjangoPack())
 
 
@@ -78,6 +80,7 @@ def load_rules_from_directory(rules_dir: Path) -> list[Rule]:
                     rules.append(rule)
         except Exception as e:
             import logging
+
             logging.warning(f"Failed to load rule from {yaml_file}: {e}")
 
     return rules

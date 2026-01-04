@@ -60,8 +60,7 @@ class Pack(ABC):
             # Check file patterns
             if rule.triggers.file_patterns:
                 matched = any(
-                    fnmatch.fnmatch(str(path), pattern)
-                    for pattern in rule.triggers.file_patterns
+                    fnmatch.fnmatch(str(path), pattern) for pattern in rule.triggers.file_patterns
                 )
                 if not matched:
                     continue
@@ -146,9 +145,7 @@ class Cache(ABC):
         ...
 
     @abstractmethod
-    def put(
-        self, file_hash: str, pack_version: str, rules_hash: str, issues: list[Issue]
-    ) -> None:
+    def put(self, file_hash: str, pack_version: str, rules_hash: str, issues: list[Issue]) -> None:
         """Cache issues for a file."""
         ...
 
@@ -167,9 +164,7 @@ class WorkspaceScanner(ABC):
     """Scans workspace for files to analyze."""
 
     @abstractmethod
-    def discover(
-        self, paths: list[Path], diff_only: bool = True
-    ) -> Iterator[FileContext]:
+    def discover(self, paths: list[Path], diff_only: bool = True) -> Iterator[FileContext]:
         """Discover files to analyze."""
         ...
 

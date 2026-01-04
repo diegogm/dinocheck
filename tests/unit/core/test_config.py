@@ -1,6 +1,5 @@
 """Tests for configuration loading."""
 
-
 from dinocheck.core.config import ConfigManager, DinocheckConfig
 
 
@@ -55,13 +54,13 @@ class TestConfigManager:
         monkeypatch.chdir(tmp_path)
 
         config_file = tmp_path / "dino.yaml"
-        config_file.write_text('''
+        config_file.write_text("""
 packs:
   - python
   - django
 model: openai/gpt-4o
 language: es
-''')
+""")
 
         manager = ConfigManager(config_file)
         config = manager.load()
@@ -87,11 +86,11 @@ language: es
         monkeypatch.chdir(tmp_path)
 
         config_file = tmp_path / "dino.yaml"
-        config_file.write_text('''
+        config_file.write_text("""
 packs:
   - python
 model: openai/gpt-4o-mini
-''')
+""")
 
         # Set environment override
         monkeypatch.setenv("DINO_MODEL", "anthropic/claude-3-5-sonnet")
@@ -108,19 +107,19 @@ model: openai/gpt-4o-mini
         """Should load from .env file."""
         # Create .env file
         env_file = tmp_path / ".env"
-        env_file.write_text('''
+        env_file.write_text("""
 OPENAI_API_KEY=sk-test-key
 DINO_MODEL=openai/gpt-4o
-''')
+""")
 
         # Change to tmp_path so .env is found
         monkeypatch.chdir(tmp_path)
 
         config_file = tmp_path / "dino.yaml"
-        config_file.write_text('''
+        config_file.write_text("""
 packs:
   - python
-''')
+""")
 
         manager = ConfigManager(config_file)
         config = manager.load()

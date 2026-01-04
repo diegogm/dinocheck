@@ -85,7 +85,7 @@ def test(c, cov=False, verbose=False, markers=None):
 
 @task
 def lint(c, fix=False):
-    """Run linters (ruff + mypy).
+    """Run linters (ruff check + ruff format + mypy).
 
     Args:
         fix: Auto-fix issues where possible
@@ -93,10 +93,16 @@ def lint(c, fix=False):
     ruff_cmd = f"ruff check {SOURCE_DIRS}"
     if fix:
         ruff_cmd += " --fix"
-    result = _run(c, _uv_run(ruff_cmd), warn=True)
+    check_result = _run(c, _uv_run(ruff_cmd), warn=True)
+
+    format_cmd = f"ruff format {SOURCE_DIRS}"
+    if not fix:
+        format_cmd += " --check"
+    format_result = _run(c, _uv_run(format_cmd), warn=True)
+
     mypy_result = _run(c, _uv_run(f"mypy {PACKAGE_DIR}"), warn=True)
 
-    if result.ok and mypy_result.ok:
+    if check_result.ok and format_result.ok and mypy_result.ok:
         _success("All checks passed!")
 
 
