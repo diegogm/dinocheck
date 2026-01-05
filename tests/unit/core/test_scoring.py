@@ -1,8 +1,8 @@
-"""Tests for scoring and gate logic."""
+"""Tests for scoring logic."""
 
 from pathlib import Path
 
-from dinocheck.core.scoring import ScoreCalculator, calculate_score, check_gate
+from dinocheck.core.scoring import ScoreCalculator, calculate_score
 from dinocheck.core.types import Issue, IssueLevel, Location
 
 
@@ -74,56 +74,6 @@ class TestCalculateScore:
         assert score == 0
 
 
-class TestCheckGate:
-    """Tests for check_gate function."""
-
-    def test_gate_passes_no_issues(self):
-        """No issues should pass gate."""
-        passed, reasons = check_gate([])
-        assert passed
-        assert reasons == []
-
-    def test_gate_fails_on_blocker(self):
-        """Blocker should fail gate."""
-        issues = [make_issue(IssueLevel.BLOCKER)]
-        passed, reasons = check_gate(issues)
-        assert not passed
-        assert "blocker" in reasons[0].lower()
-
-    def test_gate_fails_on_critical(self):
-        """Critical should fail gate."""
-        issues = [make_issue(IssueLevel.CRITICAL)]
-        passed, reasons = check_gate(issues)
-        assert not passed
-        assert "critical" in reasons[0].lower()
-
-    def test_gate_fails_on_major(self):
-        """Major should fail gate by default."""
-        issues = [make_issue(IssueLevel.MAJOR)]
-        passed, reasons = check_gate(issues)
-        assert not passed
-        assert "major" in reasons[0].lower()
-
-    def test_gate_passes_minor(self):
-        """Minor should pass gate by default."""
-        issues = [make_issue(IssueLevel.MINOR)]
-        passed, reasons = check_gate(issues)
-        assert passed
-
-    def test_gate_passes_info(self):
-        """Info should pass gate."""
-        issues = [make_issue(IssueLevel.INFO)]
-        passed, _ = check_gate(issues)
-        assert passed
-
-    def test_gate_custom_fail_levels(self):
-        """Custom fail levels should be respected."""
-        issues = [make_issue(IssueLevel.MAJOR)]
-        # Only fail on blockers
-        passed, _ = check_gate(issues, fail_levels=[IssueLevel.BLOCKER])
-        assert passed
-
-
 class TestScoreCalculator:
     """Tests for ScoreCalculator class."""
 
@@ -133,7 +83,6 @@ class TestScoreCalculator:
         summary = calculator.get_summary(sample_issues)
 
         assert "score" in summary
-        assert "gate" in summary
         assert "counts" in summary
         assert summary["total_issues"] == 3
 

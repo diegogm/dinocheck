@@ -124,6 +124,13 @@ def check(
             help="Write detailed debug log to dino.log",
         ),
     ] = False,
+    no_cache: Annotated[
+        bool,
+        typer.Option(
+            "--no-cache",
+            help="Disable cache, re-analyze all files",
+        ),
+    ] = False,
     config: ConfigOption = None,
     verbose: VerboseOption = 0,
     quiet: QuietOption = False,
@@ -142,8 +149,6 @@ def check(
         dino check --format json      # Output as JSON
         dino check --pack django      # Use only Django rules
     """
-    import asyncio
-
     from dinocheck.core.engine import Engine
     from dinocheck.core.logging import setup_logger
 
@@ -178,16 +183,33 @@ def check(
     # Create progress callback for verbose mode
     def on_progress(step: str, details: str) -> None:
         if verbose >= 1:
-            console.step(step, details, err=True)
+            # Handle file-specific progress with nicer formatting
+            if step == "file_skip":
+                # Parse: "path → 0 rules, skipped"
+                path = details.split(" → ")[0]
+                console.file_status(path, 0, "skip", err=True)
+            elif step == "file_cache":
+                # Parse: "path → N rules, cached"
+                parts = details.split(" → ")
+                path = parts[0]
+                rules = int(parts[1].split(" ")[0])
+                console.file_status(path, rules, "cache", err=True)
+            elif step == "file_analyze":
+                # Parse: "path → N rules, will analyze"
+                parts = details.split(" → ")
+                path = parts[0]
+                rules = int(parts[1].split(" ")[0])
+                console.file_status(path, rules, "analyze", err=True)
+            else:
+                console.step(step, details, err=True)
 
     try:
-        result = asyncio.run(
-            engine.analyze(
-                paths=paths or [Path(".")],
-                rule_filter=rule.split(",") if rule else None,
-                on_progress=on_progress if verbose else None,
-                diff_only=diff,
-            )
+        result = engine.analyze(
+            paths=paths or [Path(".")],
+            rule_filter=rule.split(",") if rule else None,
+            on_progress=on_progress if verbose else None,
+            diff_only=diff,
+            no_cache=no_cache,
         )
     except Exception as e:
         console.error(f"Analysis error: {e}")
@@ -210,10 +232,6 @@ def check(
             console.success(f"Output written to {output}")
     else:
         console.print(formatted)
-
-    # Exit with appropriate code
-    if not result.gate_passed:
-        raise typer.Exit(1)
 
 
 # Packs subcommand
@@ -545,6 +563,7 @@ def init(
     """Initialize dino.yaml configuration file.
 
     Creates a starter configuration for Dinocheck with sensible defaults.
+    Also offers to create a Claude Code skill if .claude folder exists.
     """
     config_path = path / "dino.yaml"
 
@@ -576,6 +595,78 @@ max_llm_calls: 10
 
     config_path.write_text(default_config)
     console.success(f"Created config: {config_path}")
+
+    # Check if .claude folder exists and offer to create skill
+    claude_dir = path / ".claude"
+    if claude_dir.is_dir():
+        _offer_claude_skill(path, claude_dir, force)
+
+
+def _offer_claude_skill(path: Path, claude_dir: Path, force: bool) -> None:
+    """Offer to create a Claude Code skill for dinocheck."""
+    skill_dir = claude_dir / "skills" / "dinocheck"
+    skill_file = skill_dir / "SKILL.md"
+
+    if skill_file.exists() and not force:
+        console.info("Claude Code skill already exists", err=True)
+        return
+
+    # Ask user if they want to create the skill
+    create_skill = typer.confirm(
+        "\nDetected .claude folder. Create a Claude Code skill for dinocheck?",
+        default=True,
+    )
+
+    if not create_skill:
+        return
+
+    skill_content = """\
+---
+name: dinocheck
+description: >
+  Run LLM-powered code review with dinocheck. Use when you finish writing code,
+  before committing, or when the user asks to review, check, or analyze code quality.
+allowed-tools: Bash(dino:*)
+---
+
+# Dinocheck - LLM Code Review
+
+Run dinocheck to get AI-powered code review feedback.
+
+## When to use
+
+- After writing or modifying code
+- Before committing changes
+- When asked to review code quality
+- When looking for potential bugs or improvements
+
+## Commands
+
+```bash
+# Check current directory
+dino check
+
+# Check specific files or directories
+dino check src/
+
+# Check only changed files (git diff)
+dino check --diff
+
+# Verbose output with progress
+dino check -v
+```
+
+## Workflow
+
+1. Run `dino check` on the relevant code
+2. Review the issues found
+3. Address critical and major issues first
+4. Use `dino explain <rule-id>` for more details on any rule
+"""
+
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    skill_file.write_text(skill_content)
+    console.success(f"Created Claude Code skill: {skill_file}")
 
 
 @app.command()

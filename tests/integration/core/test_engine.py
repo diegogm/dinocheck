@@ -72,30 +72,31 @@ def mock_provider_with_issues():
 class TestEngine:
     """Integration tests for Engine class."""
 
-    @pytest.mark.asyncio
-    async def test_analyze_empty_paths(self, engine_config):
-        """Should handle empty paths list."""
+    def test_analyze_empty_directory(self, engine_config, tmp_path):
+        """Should handle directory with no Python files."""
         engine = Engine(engine_config)
+        engine.provider = MockProvider()
 
-        result = await engine.analyze([])
+        # Create an empty temp directory
+        empty_dir = tmp_path / "empty"
+        empty_dir.mkdir()
+
+        result = engine.analyze([empty_dir])
 
         assert result.issues == []
         assert result.score == 100
-        assert result.gate_passed
 
-    @pytest.mark.asyncio
-    async def test_analyze_nonexistent_path(self, engine_config, tmp_path):
+    def test_analyze_nonexistent_path(self, engine_config, tmp_path):
         """Should handle nonexistent paths gracefully."""
         engine = Engine(engine_config)
         nonexistent = tmp_path / "does_not_exist.py"
 
-        result = await engine.analyze([nonexistent])
+        result = engine.analyze([nonexistent])
 
         # Should not crash, may have empty issues
         assert isinstance(result.issues, list)
 
-    @pytest.mark.asyncio
-    async def test_analyze_simple_python_file(self, engine_config, tmp_path):
+    def test_analyze_simple_python_file(self, engine_config, tmp_path):
         """Should analyze a simple Python file."""
         # Create a simple Python file
         file_path = tmp_path / "simple.py"
@@ -106,14 +107,14 @@ def hello():
 ''')
 
         engine = Engine(engine_config)
-        result = await engine.analyze([file_path])
+        engine.provider = MockProvider()
+        result = engine.analyze([file_path])
 
         assert isinstance(result.issues, list)
         assert isinstance(result.score, int)
         assert 0 <= result.score <= 100
 
-    @pytest.mark.asyncio
-    async def test_analyze_caches_results(self, engine_config, tmp_path):
+    def test_analyze_caches_results(self, engine_config, tmp_path):
         """Should cache analysis results."""
         file_path = tmp_path / "cached.py"
         file_path.write_text("def foo(): pass")
@@ -121,16 +122,15 @@ def hello():
         engine = Engine(engine_config)
 
         # First analysis
-        result1 = await engine.analyze([file_path])
+        result1 = engine.analyze([file_path])
 
         # Second analysis should use cache
-        result2 = await engine.analyze([file_path])
+        result2 = engine.analyze([file_path])
 
         # Results should be consistent
         assert len(result1.issues) == len(result2.issues)
 
-    @pytest.mark.asyncio
-    async def test_analyze_django_views(self, engine_config, tmp_path):
+    def test_analyze_django_views(self, engine_config, tmp_path):
         """Should analyze Django views file."""
         views_path = tmp_path / "views.py"
         views_path.write_text("""
@@ -148,13 +148,13 @@ class OrderViewSet:
 """)
 
         engine = Engine(engine_config)
-        result = await engine.analyze([views_path])
+        engine.provider = MockProvider()
+        result = engine.analyze([views_path])
 
         # Should complete without error
         assert isinstance(result.score, int)
 
-    @pytest.mark.asyncio
-    async def test_analyze_respects_rule_filter(self, engine_config, tmp_path):
+    def test_analyze_respects_rule_filter(self, engine_config, tmp_path):
         """Should filter rules when specified."""
         file_path = tmp_path / "test.py"
         file_path.write_text("x = 1")
@@ -162,7 +162,7 @@ class OrderViewSet:
         engine = Engine(engine_config)
 
         # Analyze with specific rule filter
-        result = await engine.analyze(
+        result = engine.analyze(
             [file_path],
             rule_filter=["django/n-plus-one"],
         )
@@ -170,8 +170,7 @@ class OrderViewSet:
         # Should complete without error
         assert isinstance(result.issues, list)
 
-    @pytest.mark.asyncio
-    async def test_analyze_multiple_files(self, engine_config, tmp_path):
+    def test_analyze_multiple_files(self, engine_config, tmp_path):
         """Should analyze multiple files."""
         file1 = tmp_path / "file1.py"
         file1.write_text("def foo(): pass")
@@ -180,7 +179,7 @@ class OrderViewSet:
         file2.write_text("def bar(): pass")
 
         engine = Engine(engine_config)
-        result = await engine.analyze([file1, file2])
+        result = engine.analyze([file1, file2])
 
         assert isinstance(result.issues, list)
         assert isinstance(result.meta, dict)
@@ -189,8 +188,7 @@ class OrderViewSet:
 class TestEngineWithMockLLM:
     """Tests using mock LLM provider."""
 
-    @pytest.mark.asyncio
-    async def test_analyze_with_mock_llm(self, engine_config, mock_provider_with_issues, tmp_path):
+    def test_analyze_with_mock_llm(self, engine_config, mock_provider_with_issues, tmp_path):
         """Should analyze with mock LLM and find issues."""
         views_path = tmp_path / "views.py"
         views_path.write_text("""
@@ -207,7 +205,7 @@ def book_list(request):
         engine = Engine(engine_config)
         engine.provider = mock_provider_with_issues
 
-        result = await engine.analyze([views_path])
+        result = engine.analyze([views_path])
 
         # Should complete analysis
         assert isinstance(result.issues, list)
@@ -216,8 +214,7 @@ def book_list(request):
 class TestEngineScoring:
     """Tests for engine scoring integration."""
 
-    @pytest.mark.asyncio
-    async def test_score_reflects_issues(self, engine_config, tmp_path, sample_issues):
+    def test_score_reflects_issues(self, engine_config, tmp_path, sample_issues):
         """Score should decrease with issues."""
         from dinocheck.core.scoring import calculate_score
 
@@ -226,24 +223,3 @@ class TestEngineScoring:
 
         assert score_no_issues == 100
         assert score_with_issues < score_no_issues
-
-    @pytest.mark.asyncio
-    async def test_gate_fails_on_blocker(self, sample_issues):
-        """Gate should fail on blocker issues."""
-        from dinocheck.core.scoring import check_gate
-        from dinocheck.core.types import Issue, IssueLevel, Location
-
-        # Create a blocker issue
-        blocker = Issue(
-            rule_id="python/sql-injection",
-            level=IssueLevel.BLOCKER,
-            location=Location(Path("app.py"), 1, 5),
-            title="SQL Injection",
-            why="User input in query",
-            do=["Use parameterized query"],
-            pack="python",
-        )
-
-        passed, reasons = check_gate([blocker])
-        assert not passed
-        assert len(reasons) > 0

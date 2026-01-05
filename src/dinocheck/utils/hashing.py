@@ -30,12 +30,14 @@ class ContentHasher:
     def hash_content(cls, content: str) -> str:
         """Compute stable hash of file content.
 
-        Normalizes only trailing whitespace per line to ensure
-        consistent hashing while preserving significant formatting.
+        Normalizes whitespace to ensure consistent hashing:
+        - Strips trailing whitespace from each line
+        - Removes trailing blank lines
+        - Ensures single newline at end
         """
-        # Normalize: strip trailing whitespace per line, ensure single newline at end
+        # Normalize: strip trailing whitespace per line, remove trailing blank lines
         lines = [line.rstrip() for line in content.splitlines()]
-        normalized = "\n".join(lines).strip() + "\n"
+        normalized = "\n".join(lines).rstrip() + "\n"
         return hashlib.sha256(normalized.encode()).hexdigest()[: cls.HASH_LENGTH]
 
     @classmethod

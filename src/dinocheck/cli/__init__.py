@@ -1,1 +1,1 @@
-"""CLI module for Dinocrit."""
+"""CLI module for Dinocheck."""

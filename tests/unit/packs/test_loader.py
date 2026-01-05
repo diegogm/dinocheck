@@ -3,9 +3,7 @@
 import pytest
 
 from dinocheck.core.types import IssueLevel
-from dinocheck.packs.django.pack import DjangoPack
 from dinocheck.packs.loader import get_all_packs, get_pack, get_packs, load_custom_rules
-from dinocheck.packs.python.pack import PythonPack
 
 
 class TestPackLoader:
@@ -54,8 +52,8 @@ class TestPythonPack:
 
     @pytest.fixture
     def pack(self):
-        """Create Python pack."""
-        return PythonPack()
+        """Get Python pack."""
+        return get_pack("python")
 
     def test_pack_name(self, pack):
         """Should have correct name."""
@@ -91,8 +89,8 @@ class TestDjangoPack:
 
     @pytest.fixture
     def pack(self):
-        """Create Django pack."""
-        return DjangoPack()
+        """Get Django pack."""
+        return get_pack("django")
 
     def test_pack_name(self, pack):
         """Should have correct name."""
@@ -151,7 +149,7 @@ class TestPackComposition:
 
     def test_get_rules_by_tag(self):
         """Should filter rules by tag."""
-        pack = DjangoPack()
+        pack = get_pack("django")
 
         security_rules = [r for r in pack.rules if "security" in r.tags]
         performance_rules = [r for r in pack.rules if "performance" in r.tags]
@@ -165,8 +163,8 @@ class TestRuleTriggers:
 
     @pytest.fixture
     def pack(self):
-        """Create Django pack."""
-        return DjangoPack()
+        """Get Django pack."""
+        return get_pack("django")
 
     def test_n_plus_one_triggers(self, pack):
         """N+1 rule should have file pattern triggers."""

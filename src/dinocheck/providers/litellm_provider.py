@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 from pathlib import Path
@@ -73,8 +74,8 @@ class LiteLLMProvider(LLMProvider):
         prompt: str,
         response_schema: type[BaseModel],
         system: str | None = None,
-        max_tokens: int = 2048,
-        temperature: float = 0.1,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
     ) -> BaseModel:
         """Complete a prompt with structured output (synchronous version).
 
@@ -88,14 +89,20 @@ class LiteLLMProvider(LLMProvider):
         start_time = time.time()
 
         try:
+            # Build kwargs, only include optional params if provided
+            kwargs: dict[str, object] = {
+                "model": self.model,
+                "messages": messages,
+                "response_format": {"type": "json_object"},
+            }
+            # Only add optional params if provided (some models don't support them)
+            if max_tokens is not None:
+                kwargs["max_tokens"] = max_tokens
+            if temperature is not None:
+                kwargs["temperature"] = temperature
+
             # LiteLLM synchronous completion
-            response = litellm.completion(
-                model=self.model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                response_format={"type": "json_object"},
-            )
+            response = litellm.completion(**kwargs)
 
             content = response.choices[0].message.content
             duration_ms = int((time.time() - start_time) * 1000)
@@ -103,9 +110,9 @@ class LiteLLMProvider(LLMProvider):
             # Parse response into Pydantic model
             result = response_schema.model_validate_json(content)
 
-            # Log the call if cache is available
+            # Log the call if cache is available and usage metadata exists
             cache = self._get_cache()
-            if cache:
+            if cache and response.usage:
                 # Get issue count from response if it has issues
                 issues_found = 0
                 if hasattr(result, "issues"):
@@ -115,8 +122,8 @@ class LiteLLMProvider(LLMProvider):
                     model=self.model,
                     pack="unknown",  # Will be set by caller
                     files=[],  # Will be set by caller
-                    prompt_tokens=response.usage.prompt_tokens,
-                    completion_tokens=response.usage.completion_tokens,
+                    prompt_tokens=response.usage.prompt_tokens or 0,
+                    completion_tokens=response.usage.completion_tokens or 0,
                     duration_ms=duration_ms,
                     issues_found=issues_found,
                 )
@@ -131,20 +138,20 @@ class LiteLLMProvider(LLMProvider):
         prompt: str,
         response_schema: type[BaseModel],
         system: str | None = None,
-        max_tokens: int = 2048,
-        temperature: float = 0.1,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
     ) -> BaseModel:
-        """Complete a prompt with structured output (async wrapper).
+        """Complete a prompt with structured output (async).
 
-        Note: For better concurrency, use complete_structured_sync with ThreadPoolExecutor.
+        Runs the sync version in a thread to avoid blocking the event loop.
         """
-        # Delegate to sync version - engine handles threading
-        return self.complete_structured_sync(
-            prompt=prompt,
-            response_schema=response_schema,
-            system=system,
-            max_tokens=max_tokens,
-            temperature=temperature,
+        return await asyncio.to_thread(
+            self.complete_structured_sync,
+            prompt,
+            response_schema,
+            system,
+            max_tokens,
+            temperature,
         )
 
     def estimate_tokens(self, text: str) -> int:

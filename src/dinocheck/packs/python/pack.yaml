@@ -1,0 +1,6 @@
+name: python
+version: "0.1.0"
+description: |
+  Base Python language pack.
+  Provides general Python best practices and common issue detection.
+  These rules are designed to guide LLM coding assistants in vibe coding workflows.

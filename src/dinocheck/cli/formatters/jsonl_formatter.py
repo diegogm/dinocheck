@@ -21,7 +21,6 @@ class JSONLFormatter(Formatter):
                 {
                     "type": "summary",
                     "score": result.score,
-                    "gate": "pass" if result.gate_passed else "fail",
                     "issues_count": len(result.issues),
                 }
             )

@@ -12,8 +12,6 @@ class AnalysisResult:
 
     issues: list[Issue]
     score: int
-    gate_passed: bool
-    fail_reasons: list[str]
     meta: dict[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
@@ -21,8 +19,7 @@ class AnalysisResult:
             "issues": [i.to_dict() for i in self.issues],
             "summary": {
                 "score": self.score,
-                "gate": "pass" if self.gate_passed else "fail",
-                "fail_reasons": self.fail_reasons,
+                "total_issues": len(self.issues),
                 "counts": self._count_by_level(),
             },
             "meta": self.meta,

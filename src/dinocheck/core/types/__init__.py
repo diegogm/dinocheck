@@ -1,4 +1,4 @@
-"""Core types for Dinocrit.
+"""Core types for Dinocheck.
 
 This module exports all core types used throughout the application.
 """

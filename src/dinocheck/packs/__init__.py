@@ -1,1 +1,1 @@
-"""Rule packs for Dinocrit."""
+"""Rule packs for Dinocheck."""

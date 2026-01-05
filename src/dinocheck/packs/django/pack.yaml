@@ -1,0 +1,13 @@
+name: django
+version: "0.1.0"
+description: |
+  Official Django framework pack.
+  Provides Django and Django REST Framework best practices and common issue detection.
+
+  Rules are organized by category:
+  - orm/: ORM and performance rules
+  - transactions/: Transaction and consistency rules
+  - security/: Security and authorization rules
+  - drf/: Django REST Framework rules
+  - migrations/: Database migration rules
+  - testing/: Testing best practices

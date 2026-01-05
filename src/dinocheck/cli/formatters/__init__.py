@@ -1,4 +1,4 @@
-"""Output formatters for Dinocrit."""
+"""Output formatters for Dinocheck."""
 
 from dinocheck.cli.formatters.json_formatter import JSONFormatter
 from dinocheck.cli.formatters.jsonl_formatter import JSONLFormatter

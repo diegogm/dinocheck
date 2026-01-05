@@ -47,8 +47,6 @@ def sample_result():
             ),
         ],
         score=75,
-        gate_passed=False,
-        fail_reasons=["Critical issue found"],
         meta={
             "files_analyzed": 5,
             "cache_hits": 2,
@@ -63,8 +61,6 @@ def empty_result():
     return AnalysisResult(
         issues=[],
         score=100,
-        gate_passed=True,
-        fail_reasons=[],
         meta={
             "files_analyzed": 3,
             "cache_hits": 3,
@@ -86,9 +82,7 @@ class TestTextFormatter:
         formatter = TextFormatter()
         output = formatter.format(sample_result)
 
-        assert "FAIL" in output
         assert "75/100" in output
-        assert "Critical issue found" in output
         assert "test.py" in output
         assert "views.py" in output
         assert "Bare except" in output
@@ -101,7 +95,6 @@ class TestTextFormatter:
         formatter = TextFormatter()
         output = formatter.format(empty_result)
 
-        assert "PASS" in output
         assert "100/100" in output
         assert "No issues found" in output
 
@@ -110,9 +103,8 @@ class TestTextFormatter:
         formatter = TextFormatter()
         output = strip_ansi(formatter.format(sample_result))
 
-        assert "Files: 5" in output
-        assert "Cache hits: 2" in output
-        assert "LLM calls: 3" in output
+        assert "Checked 5 files" in output
+        assert "2 cached" in output
 
 
 class TestJSONFormatter:
@@ -138,9 +130,7 @@ class TestJSONFormatter:
 
         data = json.loads(output)
         assert data["summary"]["score"] == 75
-        assert data["summary"]["gate"] == "fail"
         assert len(data["issues"]) == 2
-        assert data["summary"]["fail_reasons"] == ["Critical issue found"]
 
     def test_format_empty_result(self, empty_result):
         """Should format empty result."""
@@ -149,7 +139,6 @@ class TestJSONFormatter:
 
         data = json.loads(output)
         assert data["summary"]["score"] == 100
-        assert data["summary"]["gate"] == "pass"
         assert data["issues"] == []
 
 
@@ -183,7 +172,6 @@ class TestJSONLFormatter:
 
         assert data["type"] == "summary"
         assert data["score"] == 75
-        assert data["gate"] == "fail"
         assert data["issues_count"] == 2
 
     def test_format_issue_lines(self, sample_result):
@@ -208,7 +196,7 @@ class TestJSONLFormatter:
 
         data = json.loads(lines[0])
         assert data["type"] == "summary"
-        assert data["gate"] == "pass"
+        assert data["score"] == 100
 
 
 class TestGetFormatter:

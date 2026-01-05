@@ -1,1 +1,1 @@
-"""LLM integration for Dinocrit."""
+"""LLM integration for Dinocheck."""

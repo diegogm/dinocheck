@@ -13,9 +13,9 @@ from dinocheck.core.types import AnalysisResult, Issue
 class TextFormatter(Formatter):
     """Human-readable text output with colors."""
 
-    # Visual elements
-    SEPARATOR = "─" * 60
-    ISSUE_SEPARATOR = "┈" * 40
+    # Visual elements (ASCII for terminal compatibility)
+    SEPARATOR = "-" * 60
+    ISSUE_SEPARATOR = "-" * 40
 
     # Colors by level
     LEVEL_COLORS: ClassVar[dict[str, str]] = {
@@ -32,31 +32,17 @@ class TextFormatter(Formatter):
 
     def format(self, result: AnalysisResult) -> str:
         buffer = StringIO()
-        console = Console(file=buffer, force_terminal=True, width=100)
+        console = Console(file=buffer, force_terminal=True, width=500)
 
         # Header
-        if result.gate_passed:
-            gate_text = Text()
-            gate_text.append("✓", style="bold green")
-            gate_text.append(" Analysis Complete - Gate: ")
-            gate_text.append("PASS", style="bold green")
-            gate_text.append(f" - Score: {result.score}/100")
-        else:
-            gate_text = Text()
-            gate_text.append("✗", style="bold red")
-            gate_text.append(" Analysis Complete - Gate: ")
-            gate_text.append("FAIL", style="bold red")
-            gate_text.append(f" - Score: {result.score}/100")
+        header_text = Text()
+        header_text.append("✓", style="bold cyan")
+        header_text.append(f" Analysis Complete - Score: {result.score}/100")
 
         console.print()
         console.print(self.SEPARATOR, style="dim")
-        console.print(gate_text)
+        console.print(header_text)
         console.print(self.SEPARATOR, style="dim")
-
-        if result.fail_reasons:
-            console.print("\nFail reasons:", style="bold")
-            for reason in result.fail_reasons:
-                console.print(f"  • {reason}", style="red")
 
         # Issues by file
         if result.issues:
@@ -103,16 +89,12 @@ class TextFormatter(Formatter):
         else:
             console.print("\n✓ No issues found!", style="bold green")
 
-        # Meta footer
-        console.print()
-        console.print(self.SEPARATOR, style="dim")
-        meta_text = (
-            f" Files: {result.meta.get('files_analyzed', 0)} | "
-            f"Cache hits: {result.meta.get('cache_hits', 0)} | "
-            f"LLM calls: {result.meta.get('llm_calls', 0)} | "
-            f"Duration: {result.meta.get('duration_ms', 0)}ms"
-        )
-        console.print(meta_text, style="dim")
-        console.print(self.SEPARATOR, style="dim")
+        # Meta footer (write directly to avoid Rich word wrapping)
+        cost_usd = result.meta.get("cost_usd", 0.0)
+        files = result.meta.get("files_analyzed", 0)
+        cached = result.meta.get("cache_hits", 0)
+        duration = result.meta.get("duration_ms", 0)
 
-        return buffer.getvalue()
+        output = buffer.getvalue()
+        meta = f"\nChecked {files} files ({cached} cached) in {duration}ms for ${cost_usd:.3f}\n"
+        return output + meta

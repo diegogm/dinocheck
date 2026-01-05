@@ -81,6 +81,36 @@ class DinoConsole:
         console.print(text)
 
     @classmethod
+    def file_status(cls, path: str, rules: int, status: str, err: bool = True) -> None:
+        """Print file analysis status.
+
+        Args:
+            path: File path
+            rules: Number of applicable rules
+            status: One of 'skip', 'cache', 'analyze'
+        """
+        text = Text()
+
+        # Status indicator and color
+        if status == "skip":
+            text.append("  ○ ", style="dim")
+            text.append(path, style="dim")
+            text.append(" → 0 rules, skipped", style="dim")
+        elif status == "cache":
+            text.append("  ◉ ", style="green")
+            text.append(path, style="")
+            text.append(f" → {rules} rules, ", style="dim")
+            text.append("cached", style="green")
+        elif status == "analyze":
+            text.append("  ◎ ", style="yellow")
+            text.append(path, style="")
+            text.append(f" → {rules} rules, ", style="dim")
+            text.append("analyzing", style="yellow")
+
+        console = cls._stderr if err else cls._stdout
+        console.print(text)
+
+    @classmethod
     def banner(cls, title: str, err: bool = False) -> None:
         """Print a banner with separators."""
         console = cls._stderr if err else cls._stdout

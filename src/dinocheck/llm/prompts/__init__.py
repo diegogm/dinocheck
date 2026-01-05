@@ -1,4 +1,4 @@
-"""LLM prompt templates for Dinocrit."""
+"""LLM prompt templates for Dinocheck."""
 
 from dinocheck.llm.prompts.critic import CriticPromptBuilder
 

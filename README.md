@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="dinocheck.png" alt="Dinocheck Logo" width="300">
+  <img src="etc/dinocheck.png" alt="Dinocheck Logo" width="300">
 </p>
 
 <h1 align="center">Dinocheck</h1>
@@ -18,7 +18,25 @@
 
 ---
 
-Dinocheck is an AI-powered code linter designed for **vibe coding**. It doesn't do pattern matching - that's what traditional linters are for. Instead, it uses GPT, Claude, or local models to understand your code **semantically** and provide intelligent feedback.
+Dinocheck is an AI-powered code critic designed to **enhance your vibe coding sessions**. It's not a traditional linter - those focus on syntax and style. Dinocheck uses GPT, Claude, or local models to understand your code **semantically** and provide intelligent feedback on the things that matter: logic bugs, security issues, and architectural problems.
+
+```bash
+$ dino check src/views.py
+
+src/views.py:42 [major] django/n-plus-one
+  N+1 query detected: iterating over `Order.objects.filter(user=user)` and
+  accessing `order.items.all()` inside the loop causes one query per order.
+
+  → Use `prefetch_related('items')` to fetch all items in a single query.
+
+src/views.py:87 [critical] django/missing-permission-check
+  The `delete_account` view modifies user data but has no permission check.
+  Any authenticated user could delete any account by guessing the ID.
+
+  → Add ownership validation: `if account.user != request.user: return 403`
+
+✗ 2 issues found (1 critical, 1 major)
+```
 
 ## Why Dinocheck?
 
@@ -62,7 +80,17 @@ uv add dinocheck
 
 ### Configuration
 
-Create `dino.yaml` in your project:
+Initialize your project and configure your LLM provider:
+
+```bash
+# Create dino.yaml with interactive setup
+dino init
+
+# Set your API key
+export OPENAI_API_KEY=sk-...
+```
+
+The `dino init` command creates a `dino.yaml` file where you can customize your LLM provider and packs:
 
 ```yaml
 dinocheck:
@@ -71,18 +99,11 @@ dinocheck:
     - django
 
   provider:
-    model: gpt-4o-mini
+    model: gpt-4o-mini          # or claude-3-5-sonnet, ollama/llama3
     api_key_env: OPENAI_API_KEY
 
   output:
     language: en
-```
-
-Or use environment variables:
-
-```bash
-export OPENAI_API_KEY=sk-...
-export DINO_MODEL=gpt-4o-mini
 ```
 
 ### Usage
@@ -116,31 +137,32 @@ dino logs cost
 | `dino cache stats` | Show cache statistics |
 | `dino cache clear` | Clear the cache |
 | `dino logs list` | View LLM call history |
+| `dino logs show ID` | Show details of a specific LLM call |
 | `dino logs cost` | View cost summary |
 | `dino init` | Create dino.yaml |
+| `dino version` | Show version information |
 
 ## Rule Packs
 
 ### Python Pack
 
-| Rule | Description |
-|------|-------------|
-| `python/sql-injection` | SQL injection vulnerabilities |
-| `python/insecure-deserialization` | Unsafe pickle/yaml loading |
-| `python/concurrency-safety` | Race conditions and deadlocks |
-| `python/error-handling` | Missing or incorrect error handling |
-| `python/resource-lifecycle` | Unclosed files, connections |
-| `python/api-contract-break` | Breaking API changes |
+| Category | Rules |
+|----------|-------|
+| **Security** | SQL injection, insecure deserialization, mass assignment, timing attacks |
+| **Logic** | Inverted conditions, unreachable code, copy-paste bugs, missing edge cases |
+| **Code Quality** | Naming mismatches, misleading comments, stale TODOs |
+| **Concurrency** | Race conditions, deadlocks, resource lifecycle |
+| **Testing** | Wrong assertions, flaky patterns, missing negative tests, mocks hiding bugs |
 
 ### Django Pack
 
 | Category | Rules |
 |----------|-------|
-| **ORM** | N+1 queries, missing select_related, queryset performance |
-| **Security** | Missing permissions, field whitelisting, ownership filters |
-| **Transactions** | Atomic scope, select_for_update, on_commit side effects |
-| **DRF** | Permission classes, throttling, async blocking calls |
+| **ORM** | N+1 queries, missing select_related, queryset performance, template queries, signal hidden logic, cache stale data |
+| **Transactions** | Atomic scope, select_for_update, F-expressions, on_commit side effects |
+| **DRF** | Permission classes, throttling, async blocking calls, serializer mismatches |
 | **Migrations** | Data loss, large indexes, NOT NULL two-phase |
+| **Tasks** | Non-idempotent Celery tasks |
 | **Testing** | Missing auth tests, business logic coverage |
 
 ## Output Formats
@@ -165,47 +187,9 @@ jobs:
       - uses: astral-sh/setup-uv@v5
 
       - run: uv add dinocheck
-      - run: uv run dino check --diff --format sarif -o results.sarif
+      - run: uv run dino check --diff
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-      - uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: results.sarif
-```
-
-## Configuration Reference
-
-```yaml
-dinocheck:
-  version: "1.0"
-
-  packs:
-    - python
-    - django
-
-  provider:
-    model: gpt-4o-mini          # gpt-4o, claude-3-5-sonnet, ollama/llama3
-    api_key_env: OPENAI_API_KEY
-
-  output:
-    default_format: text
-    language: en                # en, es, fr, de, pt, etc.
-
-  budget:
-    max_llm_calls_local: 1      # Max calls per file (local)
-    max_llm_calls_pr: 3         # Max calls per file (PR mode)
-
-  cache:
-    enabled: true
-    database: .dinocheck_cache/cache.db
-    ttl_hours: 168              # 7 days
-
-  packs_config:
-    django:
-      check_drf: auto           # auto, always, never
-      disabled_rules:
-        - django/structured-logging
 ```
 
 ## Supported LLM Providers
@@ -224,7 +208,7 @@ See [LiteLLM docs](https://docs.litellm.ai/docs/providers) for 100+ supported pr
 
 ```bash
 # Clone and install
-git clone https://github.com/your-org/dinocheck.git
+git clone https://github.com/diegogm/dinocheck.git
 cd dinocheck
 uv sync --dev
 

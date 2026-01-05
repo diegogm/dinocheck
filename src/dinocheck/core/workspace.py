@@ -85,7 +85,9 @@ class GitWorkspaceScanner(IWorkspaceScanner):
                     changed.add(Path(untracked))
 
             for file_path in changed:
-                full_path = self.repo_path / file_path
+                # Git paths are relative to repo root, not self.repo_path
+                repo_root = Path(str(self.repo.working_dir))
+                full_path = repo_root / file_path
                 if full_path.exists():
                     yield from self._file_to_context(full_path, diff_only=True)
 
@@ -97,7 +99,8 @@ class GitWorkspaceScanner(IWorkspaceScanner):
         """Discover Python files in a directory."""
         for path in directory.rglob("*.py"):
             # Skip hidden directories and common excludes
-            if any(part.startswith(".") for part in path.parts):
+            # Note: exclude ".." and "." from the check (they're navigation, not hidden)
+            if any(part.startswith(".") and part not in (".", "..") for part in path.parts):
                 continue
             if any(part in ("__pycache__", "node_modules", ".venv", "venv") for part in path.parts):
                 continue
@@ -198,12 +201,30 @@ class GitWorkspaceScanner(IWorkspaceScanner):
         return hunks
 
     def _is_new_file(self, path: Path) -> bool:
-        """Check if a file is new (untracked or just added)."""
+        """Check if a file is new (untracked or staged but not yet committed)."""
         if not self.repo:
-            return True
+            # Without git context, we can't determine if file is new
+            return False
 
         try:
             relative_path = str(path.relative_to(self.repo.working_dir))
-            return relative_path in self.repo.untracked_files
+
+            # Check if untracked
+            if relative_path in self.repo.untracked_files:
+                return True
+
+            # Check if staged but new (exists in index but not in HEAD)
+            try:
+                # Get staged changes against HEAD
+                for diff in self.repo.index.diff("HEAD"):
+                    # new_file means it exists in index but not in HEAD
+                    if diff.new_file and diff.b_path == relative_path:
+                        return True
+            except ValueError:
+                # No HEAD yet (empty repo), all staged files are new
+                if relative_path in [e.path for e in self.repo.index.entries.values()]:
+                    return True
+
+            return False
         except (ValueError, git.GitCommandError):
             return False

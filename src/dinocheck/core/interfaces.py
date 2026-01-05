@@ -1,5 +1,6 @@
-"""Abstract base classes for Dinocrit components."""
+"""Abstract base classes for Dinocheck components."""
 
+import asyncio
 import fnmatch
 import re
 from abc import ABC, abstractmethod
@@ -92,8 +93,8 @@ class LLMProvider(ABC):
         prompt: str,
         response_schema: type[BaseModel],
         system: str | None = None,
-        max_tokens: int = 2048,
-        temperature: float = 0.1,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
     ) -> BaseModel:
         """Complete a prompt with structured output (synchronous, thread-safe)."""
         ...
@@ -103,16 +104,20 @@ class LLMProvider(ABC):
         prompt: str,
         response_schema: type[BaseModel],
         system: str | None = None,
-        max_tokens: int = 2048,
-        temperature: float = 0.1,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
     ) -> BaseModel:
-        """Complete a prompt with structured output (async wrapper)."""
-        return self.complete_structured_sync(
-            prompt=prompt,
-            response_schema=response_schema,
-            system=system,
-            max_tokens=max_tokens,
-            temperature=temperature,
+        """Complete a prompt with structured output (async).
+
+        Default implementation runs sync version in a thread.
+        """
+        return await asyncio.to_thread(
+            self.complete_structured_sync,
+            prompt,
+            response_schema,
+            system,
+            max_tokens,
+            temperature,
         )
 
     @abstractmethod

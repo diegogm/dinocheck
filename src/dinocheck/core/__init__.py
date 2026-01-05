@@ -1,4 +1,4 @@
-"""Core module for Dinocrit."""
+"""Core module for Dinocheck."""
 
 from dinocheck.core.interfaces import (
     Analyzer,

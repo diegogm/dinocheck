@@ -1,4 +1,4 @@
-"""LLM providers for Dinocrit."""
+"""LLM providers for Dinocheck."""
 
 from dinocheck.providers.litellm_provider import LiteLLMProvider
 from dinocheck.providers.mock import MockProvider

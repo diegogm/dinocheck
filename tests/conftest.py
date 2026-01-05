@@ -96,7 +96,11 @@ def sample_issues():
 
 @pytest.fixture
 def django_test_code():
-    """Sample Django code with known issues."""
+    """Sample Django code with known issues.
+
+    NOTE: This code intentionally contains anti-patterns (N+1 queries,
+    missing ownership filters) to test that dinocheck detects them.
+    """
     return """
 from django.shortcuts import render
 from rest_framework.viewsets import ModelViewSet

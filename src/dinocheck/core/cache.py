@@ -148,8 +148,8 @@ class SQLiteCache(Cache):
         prompt_text: str | None = None,
         response_text: str | None = None,
         cached: bool = False,
-    ) -> str:
-        """Log an LLM call and return the log ID."""
+    ) -> float:
+        """Log an LLM call and return the cost in USD."""
         log_id = str(uuid.uuid4())
 
         # Calculate cost if not provided
@@ -180,7 +180,7 @@ class SQLiteCache(Cache):
                 ),
             )
 
-        return log_id
+        return cost_usd
 
     def get_llm_logs(self, limit: int = 20) -> list[LLMCallLog]:
         """Get recent LLM call logs."""

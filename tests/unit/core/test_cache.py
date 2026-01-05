@@ -112,8 +112,8 @@ class TestLLMLogging:
     """Tests for LLM call logging."""
 
     def test_log_llm_call(self, cache):
-        """Should log LLM call."""
-        log_id = cache.log_llm_call(
+        """Should log LLM call and return cost."""
+        cost_usd = cache.log_llm_call(
             model="gpt-4o-mini",
             pack="django",
             files=["views.py"],
@@ -123,8 +123,9 @@ class TestLLMLogging:
             issues_found=3,
         )
 
-        assert log_id is not None
-        assert len(log_id) == 36  # UUID length
+        # log_llm_call returns cost_usd (float)
+        assert isinstance(cost_usd, float)
+        assert cost_usd >= 0.0
 
     def test_get_llm_logs(self, cache):
         """Should retrieve LLM logs."""

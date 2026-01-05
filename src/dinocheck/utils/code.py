@@ -65,14 +65,14 @@ class CodeExtractor:
                 context_parts = [f"class {node.name}"]
                 # Check for method inside class
                 for child in ast.iter_child_nodes(node):
-                    if isinstance(
-                        child, ast.FunctionDef | ast.AsyncFunctionDef
+                    if isinstance(  # noqa: UP038
+                        child, (ast.FunctionDef, ast.AsyncFunctionDef)
                     ) and cls._node_contains_line(child, line):
                         context_parts.append(child.name)
                         break
 
             elif (
-                isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))  # noqa: UP038
                 and cls._node_contains_line(node, line)
                 and not context_parts
             ):

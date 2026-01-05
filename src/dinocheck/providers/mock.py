@@ -24,8 +24,8 @@ class MockProvider(LLMProvider):
         prompt: str,
         response_schema: type[BaseModel],
         system: str | None = None,
-        max_tokens: int = 2048,
-        temperature: float = 0.1,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
     ) -> BaseModel:
         """Return mock response based on prompt content (synchronous)."""
         self.calls.append(
@@ -46,8 +46,9 @@ class MockProvider(LLMProvider):
                     return response
                 return response_schema.model_validate(response)
 
-        # Return empty response
-        return response_schema.model_validate({"issues": []})
+        # Return empty response - use model_construct to bypass validation
+        # This works for any schema, not just ones with an 'issues' field
+        return response_schema.model_construct()
 
     def estimate_tokens(self, text: str) -> int:
         """Estimate token count."""

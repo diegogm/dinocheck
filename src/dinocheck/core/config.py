@@ -18,7 +18,7 @@ class DinocheckConfig(BaseModel):
     packs: list[str] = Field(default_factory=lambda: ["python"])
     model: str = "openai/gpt-5.1-codex"
     language: str = "en"
-    max_llm_calls: int = 1
+    max_llm_calls: int = 10
     disabled_rules: list[str] = Field(default_factory=list)
 
     @property
@@ -75,11 +75,14 @@ class ConfigManager:
             start_path = Path.cwd()
 
         current = start_path.resolve()
-        while current != current.parent:
+        while True:
             config_path = current / "dino.yaml"
             if config_path.exists():
                 return config_path
-            current = current.parent
+            parent = current.parent
+            if parent == current:  # Reached root
+                break
+            current = parent
 
         return None
 
@@ -88,20 +91,20 @@ class ConfigManager:
 
         Priority (highest to lowest):
         1. Environment variables (DINO_*)
-        2. .env file
+        2. .env file (in same directory as dino.yaml)
         3. dino.yaml
         4. Defaults
         """
-        # Load .env if exists
-        env_path = Path.cwd() / ".env"
+        # Find config file first
+        config_path = self._config_path or self.find_config_file()
+
+        # Load .env from same directory as config file (or cwd if no config)
+        env_path = config_path.parent / ".env" if config_path else Path.cwd() / ".env"
         if env_path.exists():
             load_dotenv(env_path)
 
         # Load environment settings
         env_settings = EnvSettings()
-
-        # Find and load YAML config
-        config_path = self._config_path or self.find_config_file()
 
         config_dict: dict[str, object] = {}
         if config_path and config_path.exists():

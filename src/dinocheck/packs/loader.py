@@ -1,8 +1,11 @@
 """Pack loading and discovery.
 
-Supports:
-- Built-in packs (python, django)
-- Custom YAML rules from .dinocheck/rules/ directory
+Packs are automatically discovered from subdirectories in the packs/ folder.
+Each pack is a directory containing:
+- rules/: Directory with YAML rule files
+- pack.yaml (optional): Pack metadata (name, version, description)
+
+Custom rules can also be loaded from .dinocheck/rules/ in the project directory.
 """
 
 from collections.abc import Iterator
@@ -14,7 +17,46 @@ from dinocheck.core.interfaces import Pack
 from dinocheck.core.types import Rule
 
 _pack_registry: dict[str, Pack] = {}
-_custom_rules_loaded = False
+_builtin_packs_loaded = False
+
+
+class DirectoryPack(Pack):
+    """A pack loaded from a directory structure."""
+
+    def __init__(self, pack_dir: Path) -> None:
+        self._pack_dir = pack_dir
+        self._name = pack_dir.name
+        self._version = "0.1.0"
+        self._description = ""
+
+        # Load metadata from pack.yaml if exists
+        metadata_file = pack_dir / "pack.yaml"
+        if metadata_file.exists():
+            with open(metadata_file) as f:
+                metadata = yaml.safe_load(f) or {}
+                self._name = metadata.get("name", self._name)
+                self._version = metadata.get("version", self._version)
+                self._description = metadata.get("description", self._description)
+
+        # Load rules from rules/ directory
+        rules_dir = pack_dir / "rules"
+        self._rules = load_rules_from_directory(rules_dir)
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def version(self) -> str:
+        return self._version
+
+    @property
+    def description(self) -> str:
+        return self._description
+
+    @property
+    def rules(self) -> list[Rule]:
+        return self._rules
 
 
 def register_pack(pack: Pack) -> None:
@@ -24,7 +66,6 @@ def register_pack(pack: Pack) -> None:
 
 def get_pack(name: str) -> Pack:
     """Get a pack by name."""
-    # Lazy load built-in packs
     _ensure_builtin_packs()
 
     if name not in _pack_registry:
@@ -44,17 +85,42 @@ def get_packs(names: list[str]) -> list[Pack]:
     return [get_pack(name) for name in names]
 
 
+def _discover_builtin_packs() -> list[Pack]:
+    """Discover all built-in packs from the packs directory."""
+    packs_dir = Path(__file__).parent
+    discovered: list[Pack] = []
+
+    for item in packs_dir.iterdir():
+        # Skip non-directories and special directories
+        if not item.is_dir():
+            continue
+        if item.name.startswith("_") or item.name.startswith("."):
+            continue
+        if item.name == "__pycache__":
+            continue
+
+        # Check if it has a rules/ directory
+        rules_dir = item / "rules"
+        if rules_dir.exists() and rules_dir.is_dir():
+            pack = DirectoryPack(item)
+            if pack.rules:  # Only add if it has rules
+                discovered.append(pack)
+
+    return discovered
+
+
 def _ensure_builtin_packs() -> None:
     """Ensure built-in packs are loaded."""
-    if "python" not in _pack_registry:
-        from dinocheck.packs.python.pack import PythonPack
+    global _builtin_packs_loaded
 
-        register_pack(PythonPack())
+    if _builtin_packs_loaded:
+        return
 
-    if "django" not in _pack_registry:
-        from dinocheck.packs.django.pack import DjangoPack
+    for pack in _discover_builtin_packs():
+        if pack.name not in _pack_registry:
+            register_pack(pack)
 
-        register_pack(DjangoPack())
+    _builtin_packs_loaded = True
 
 
 def load_rules_from_directory(rules_dir: Path) -> list[Rule]:
@@ -95,36 +161,6 @@ def load_custom_rules(rules_dir: Path | str | None = None) -> list[Rule]:
 
     Returns:
         List of Rule objects loaded from YAML files.
-
-    Custom rules should be YAML files with the following structure:
-
-    ```yaml
-    id: my-pack/my-rule
-    name: My Custom Rule
-    level: major  # blocker, critical, major, minor, info
-    category: security
-    description: |
-      Description of what this rule checks.
-    checklist:
-      - First thing to check
-      - Second thing to check
-    fix: How to fix the issue.
-    tags:
-      - security
-      - custom
-    triggers:
-      file_patterns:
-        - "**/views.py"
-      code_patterns:
-        - "dangerous_function\\("
-    examples:
-      bad: |
-        # Bad example
-        dangerous_function(user_input)
-      good: |
-        # Good example
-        safe_function(sanitize(user_input))
-    ```
     """
     rules_path = Path.cwd() / ".dinocheck" / "rules" if rules_dir is None else Path(rules_dir)
     return load_rules_from_directory(rules_path)
