@@ -1,5 +1,5 @@
 name: python
-version: "0.1.0"
+version: "0.1.1"
 description: |
   Base Python language pack.
   Provides general Python best practices and common issue detection.

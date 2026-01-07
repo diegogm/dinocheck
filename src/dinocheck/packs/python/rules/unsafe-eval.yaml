@@ -1,0 +1,44 @@
+id: python/unsafe-eval
+name: Unsafe eval/exec Usage
+level: critical
+category: security
+description: |
+  Detects usage of eval/exec or dynamic code execution patterns
+  that can run untrusted input. These can lead to arbitrary code
+  execution if user-controlled data reaches them.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "\\beval\\("
+    - "\\bexec\\("
+    - "compile\\(.*\\)"
+
+checklist:
+  - Is the input to eval/exec derived from user input or external sources?
+  - Can the same behavior be achieved with a safe parser or mapping?
+  - Are there safeguards (allowlists) or strict validation in place?
+  - Is dynamic code execution absolutely required for this feature?
+
+fix: |
+  Avoid eval/exec. Use explicit parsing (e.g., json, ast.literal_eval)
+  or safe mappings. If dynamic execution is unavoidable, ensure strict
+  allowlists and validation so only expected constructs are permitted.
+
+tags:
+  - security
+  - code-execution
+  - injection
+
+examples:
+  bad: |
+    def run_expression(expr):
+        return eval(expr)  # User-controlled input could execute code
+  good: |
+    import ast
+
+    def run_expression(expr):
+        allowed = {"add": lambda a, b: a + b}
+        data = ast.literal_eval(expr)
+        return allowed[data["op"]](*data["args"])
