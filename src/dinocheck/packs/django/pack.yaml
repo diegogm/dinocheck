@@ -1,5 +1,5 @@
 name: django
-version: "0.1.0"
+version: "0.1.1"
 description: |
   Official Django framework pack.
   Provides Django and Django REST Framework best practices and common issue detection.

@@ -1,0 +1,54 @@
+id: django/csrf-exempt
+name: CSRF Protection Disabled
+level: major
+category: security
+description: |
+  Detects when CSRF protection is disabled for Django views or globally.
+  @csrf_exempt and removing CsrfViewMiddleware can expose session-based
+  endpoints to cross-site request forgery unless alternative protections
+  (token auth, strict CORS, or custom validation) are in place.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "@csrf_exempt"
+    - "csrf_exempt"
+    - "CsrfViewMiddleware"
+    - "MIDDLEWARE"
+
+checklist:
+  - Is the view using SessionAuthentication or cookies?
+  - Is CSRF disabled globally via MIDDLEWARE?
+  - Is the exemption scoped to a specific endpoint or entire module?
+  - Is there an alternative protection (token auth, signed headers)?
+  - Could a browser-based request trigger state-changing actions?
+
+fix: |
+  Remove @csrf_exempt from session-based views and keep
+  CsrfViewMiddleware enabled. For API endpoints, use token-based
+  authentication and ensure CORS is restrictive. Consider adding
+  @csrf_protect to enforce CSRF validation.
+
+tags:
+  - security
+  - csrf
+  - django
+
+examples:
+  bad: |
+    from django.views.decorators.csrf import csrf_exempt
+
+    @csrf_exempt
+    def update_profile(request):
+        if request.method == "POST":
+            request.user.email = request.POST["email"]
+            request.user.save()
+  good: |
+    from django.views.decorators.csrf import csrf_protect
+
+    @csrf_protect
+    def update_profile(request):
+        if request.method == "POST":
+            request.user.email = request.POST["email"]
+            request.user.save()
