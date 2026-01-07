@@ -1,0 +1,35 @@
+id: vue/missing-key-v-for
+name: Missing :key in v-for
+level: major
+category: templates
+description: |
+  Vue requires a stable :key for list rendering to keep DOM updates predictable.
+  Missing keys can lead to incorrect component reuse, rendering bugs, and
+  performance issues when the list changes.
+checklist:
+  - A v-for is rendering components or elements without a :key binding.
+  - The missing :key could cause stateful components to be reused incorrectly.
+  - The list is expected to reorder, insert, or delete items at runtime.
+fix: |
+  Provide a stable, unique :key binding for each item in the v-for loop.
+  Prefer unique IDs from the data model rather than array indexes.
+
+tags:
+  - vue
+  - performance
+  - correctness
+
+triggers:
+  file_patterns:
+    - "**/*.vue"
+  code_patterns:
+    - "v-for=\""
+
+examples:
+  bad: |
+    <li v-for="user in users">{{ user.name }}</li>
+  good: |
+    <li v-for="user in users" :key="user.id">{{ user.name }}</li>
+
+references:
+  - https://vuejs.org/guide/essentials/list.html#v-for
