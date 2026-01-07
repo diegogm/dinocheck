@@ -1,0 +1,10 @@
+name: vue
+version: "0.1.0"
+description: |
+  Official Vue.js framework pack.
+  Provides Vue component best practices and common issue detection.
+
+  Rules are organized by category:
+  - reactivity/: Vue reactivity and state management rules
+  - templates/: Template rendering and performance rules
+  - security/: XSS and user input handling rules

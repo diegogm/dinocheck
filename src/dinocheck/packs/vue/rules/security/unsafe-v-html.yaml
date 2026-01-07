@@ -1,0 +1,35 @@
+id: vue/unsafe-v-html
+name: Unsafe v-html usage
+level: critical
+category: security
+description: |
+  Using v-html renders raw HTML into the DOM, which can lead to XSS if the
+  content is user-provided or not properly sanitized. Vue does not sanitize
+  HTML for you.
+checklist:
+  - v-html is used to render dynamic HTML content.
+  - The HTML originates from user input, external APIs, or untrusted sources.
+  - There is no explicit sanitization step before rendering.
+fix: |
+  Avoid v-html when possible. If rendering HTML is required, sanitize the
+  content with a trusted sanitizer before passing it to v-html.
+
+tags:
+  - vue
+  - security
+  - xss
+
+triggers:
+  file_patterns:
+    - "**/*.vue"
+  code_patterns:
+    - "v-html=\""
+
+examples:
+  bad: |
+    <div v-html="comment.body"></div>
+  good: |
+    <div v-html="sanitize(comment.body)"></div>
+
+references:
+  - https://vuejs.org/guide/best-practices/security.html#xss

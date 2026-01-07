@@ -1,0 +1,53 @@
+id: vue/props-mutation
+name: Direct mutation of props
+level: major
+category: reactivity
+description: |
+  Vue treats props as immutable inputs. Mutating a prop directly can break
+  one-way data flow and create confusing reactivity bugs when parents re-render.
+checklist:
+  - A prop is assigned to or mutated directly inside a component.
+  - The mutation is not copied into local state or emitted back to the parent.
+  - The component expects parent updates to stay in sync.
+fix: |
+  Use a local copy for editable state or emit an update to the parent with
+  v-model or an explicit event.
+
+tags:
+  - vue
+  - reactivity
+  - maintainability
+
+triggers:
+  file_patterns:
+    - "**/*.vue"
+    - "**/*.js"
+    - "**/*.ts"
+  code_patterns:
+    - "props:"
+    - "this\.\w+\s*="
+
+examples:
+  bad: |
+    export default {
+      props: { count: Number },
+      mounted() {
+        this.count = this.count + 1
+      }
+    }
+  good: |
+    export default {
+      props: { count: Number },
+      data() {
+        return { localCount: this.count }
+      },
+      methods: {
+        increment() {
+          this.localCount += 1
+          this.$emit('update:count', this.localCount)
+        }
+      }
+    }
+
+references:
+  - https://vuejs.org/guide/components/props.html#one-way-data-flow
