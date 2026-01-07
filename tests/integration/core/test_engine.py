@@ -120,6 +120,7 @@ def hello():
         file_path.write_text("def foo(): pass")
 
         engine = Engine(engine_config)
+        engine.provider = MockProvider()
 
         # First analysis
         result1 = engine.analyze([file_path])
@@ -179,6 +180,7 @@ class OrderViewSet:
         file2.write_text("def bar(): pass")
 
         engine = Engine(engine_config)
+        engine.provider = MockProvider()
         result = engine.analyze([file1, file2])
 
         assert isinstance(result.issues, list)
