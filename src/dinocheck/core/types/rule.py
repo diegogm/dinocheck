@@ -24,7 +24,6 @@ class Rule:
     tags: list[str] = field(default_factory=list)
     triggers: RuleTrigger = field(default_factory=RuleTrigger)
     examples: dict[str, str] | None = None  # {"bad": ..., "good": ...}
-    references: list[str] = field(default_factory=list)
 
     @classmethod
     def from_yaml(cls, data: dict[str, Any]) -> "Rule":
@@ -48,5 +47,4 @@ class Rule:
             tags=data.get("tags", []),
             triggers=triggers,
             examples=data.get("examples"),
-            references=data.get("references", []),
         )

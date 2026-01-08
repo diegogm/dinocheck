@@ -49,5 +49,3 @@ examples:
       }
     }
 
-references:
-  - https://vuejs.org/guide/components/props.html#one-way-data-flow

@@ -50,6 +50,3 @@ examples:
         sanitized = sanitize(user_input)
         safe_function(sanitized)  # Safe!
 
-references:
-  - https://example.com/security-guidelines
-  - https://docs.example.com/best-practices

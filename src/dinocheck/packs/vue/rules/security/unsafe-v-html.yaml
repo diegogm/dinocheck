@@ -31,5 +31,3 @@ examples:
   good: |
     <div v-html="sanitize(comment.body)"></div>
 
-references:
-  - https://vuejs.org/guide/best-practices/security.html#xss

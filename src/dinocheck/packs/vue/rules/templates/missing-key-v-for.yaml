@@ -31,5 +31,3 @@ examples:
   good: |
     <li v-for="user in users" :key="user.id">{{ user.name }}</li>
 
-references:
-  - https://vuejs.org/guide/essentials/list.html#v-for
