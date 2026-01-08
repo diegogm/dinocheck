@@ -108,7 +108,7 @@ class ConfigManager:
 
         config_dict: dict[str, object] = {}
         if config_path and config_path.exists():
-            with open(config_path) as f:
+            with open(config_path, encoding="utf-8") as f:
                 raw = yaml.safe_load(f)
                 if raw:
                     config_dict = raw

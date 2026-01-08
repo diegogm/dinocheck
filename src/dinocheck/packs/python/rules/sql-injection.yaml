@@ -4,9 +4,14 @@ level: blocker
 category: security
 description: |
   Reviews SQL query construction for injection vulnerabilities.
-  While linters can detect f-strings in execute(), only semantic
-  analysis can determine if the interpolated data is actually
-  user-controlled or safely derived from internal sources.
+
+  CRITICAL - DO NOT REPORT AS VULNERABILITY if:
+  - execute(query, params) has a second parameter - this IS SAFE, parameterized queries
+    prevent SQL injection by design. No additional validation needed.
+  - Values come from internal sources (config, DB queries, constants) - not user input
+
+  ONLY REPORT if: f-strings, .format(), or string concatenation with user input
+  is used WITHOUT a separate params argument.
 
 triggers:
   file_patterns:
@@ -22,10 +27,12 @@ triggers:
 
 checklist:
   - Is the query built with string interpolation or concatenation?
-  - Does any interpolated value originate from user input?
+  - Does any interpolated value originate from user input (HTTP requests, CLI args, file uploads)?
   - Could the query be refactored to use parameterized queries?
   - If using ORM raw(), is the input properly escaped?
   - Are there any dynamic table/column names from user input?
+  - Does execute() receive a second argument with parameters? If yes, it IS parameterized and SAFE
+  - Do dynamic values come only from internal sources (config, constants, other DB queries)? If yes, it is SAFE
 
 fix: |
   Always use parameterized queries. If dynamic SQL is unavoidable,

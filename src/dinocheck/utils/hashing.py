@@ -45,6 +45,7 @@ class ContentHasher:
         """Compute hash of rule IDs.
 
         Order-independent to ensure same rules = same hash.
+        Empty list returns hash of empty string (consistent sentinel value).
         """
         content = ",".join(sorted(rule_ids))
         return hashlib.sha256(content.encode()).hexdigest()[: cls.HASH_LENGTH]

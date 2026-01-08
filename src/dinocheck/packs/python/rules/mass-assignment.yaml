@@ -3,9 +3,15 @@ name: Mass Assignment Vulnerability
 level: blocker
 category: security
 description: |
-  Detects patterns where user input is passed directly to object
-  creation or update without field whitelisting. This allows
-  attackers to modify fields they shouldn't have access to.
+  Detects patterns where HTTP user input is spread into object creation.
+
+  CRITICAL - DO NOT REPORT if:
+  - Data comes from os.environ, config files, or constructor parameters - NOT user input
+  - Code is internal infrastructure (CLI tools, background jobs, not web endpoints)
+  - **kwargs in __init__ is standard Python pattern, NOT mass assignment
+
+  ONLY REPORT if: request.data, request.POST, request.GET, or HTTP body
+  is spread (**) directly into Django/ORM model.create() or .update().
 
 triggers:
   file_patterns:
@@ -24,6 +30,8 @@ checklist:
   - Are there sensitive fields that shouldn't be user-settable?
   - Is there a whitelist of allowed fields?
   - Could nested data modify related objects?
+  - Does the data come from environment variables, config files, or internal sources? If yes, it is SAFE
+  - Is this internal/trusted code (not a web endpoint)? Internal config assignment is SAFE
 
 fix: |
   Use explicit field assignment or whitelists. Use serializers

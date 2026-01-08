@@ -32,7 +32,7 @@ class DirectoryPack(Pack):
         # Load metadata from pack.yaml if exists
         metadata_file = pack_dir / "pack.yaml"
         if metadata_file.exists():
-            with open(metadata_file) as f:
+            with open(metadata_file, encoding="utf-8") as f:
                 metadata = yaml.safe_load(f) or {}
                 self._name = metadata.get("name", self._name)
                 self._version = metadata.get("version", self._version)
@@ -139,12 +139,12 @@ def load_rules_from_directory(rules_dir: Path) -> list[Rule]:
 
     for yaml_file in rules_dir.glob("**/*.yaml"):
         try:
-            with open(yaml_file) as f:
+            with open(yaml_file, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
                 if data and isinstance(data, dict) and "id" in data:
                     rule = Rule.from_yaml(data)
                     rules.append(rule)
-        except Exception as e:
+        except (yaml.YAMLError, OSError, KeyError, ValueError) as e:
             import logging
 
             logging.warning(f"Failed to load rule from {yaml_file}: {e}")
