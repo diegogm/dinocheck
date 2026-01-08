@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="etc/dinocheck.png" alt="Dinocheck Logo" width="300">
+  <img src="https://raw.githubusercontent.com/diegogm/dinocheck/main/etc/dinocheck.png" alt="Dinocheck Logo" width="300">
 </p>
 
 <h1 align="center">Dinocheck</h1>
@@ -224,7 +224,7 @@ fab predeploy
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](https://github.com/diegogm/dinocheck/blob/main/LICENSE) for details.
 
 ---
 
