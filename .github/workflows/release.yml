@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - "[0-9]+.[0-9]+.[0-9]+*"
 
 jobs:
   release:
@@ -39,7 +39,7 @@ jobs:
       - name: Verify version matches tag
         run: |
           PKG_VERSION=$(python -c "from dinocheck import __version__; print(__version__)")
-          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          TAG_VERSION="${GITHUB_REF#refs/tags/}"
           echo "Package version: $PKG_VERSION"
           echo "Tag version: $TAG_VERSION"
           if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
