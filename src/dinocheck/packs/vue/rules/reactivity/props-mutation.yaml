@@ -25,7 +25,7 @@ triggers:
     - "**/*.ts"
   code_patterns:
     - "props:"
-    - "this\.\w+\s*="
+    - 'this\.\w+\s*='
 
 examples:
   bad: |

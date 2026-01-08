@@ -5,10 +5,10 @@ you catch issues while you code. It's designed to run alongside your development
 workflow, not to fix code for you.
 """
 
-from enum import Enum
 from pathlib import Path
 from typing import Annotated
 
+import click
 import typer
 
 from dinocheck import __version__
@@ -23,14 +23,6 @@ app = typer.Typer(
     pretty_exceptions_enable=False,
     rich_markup_mode=None,
 )
-
-
-class OutputFormat(str, Enum):
-    """Output format options."""
-
-    TEXT = "text"
-    JSON = "json"
-    JSONL = "jsonl"
 
 
 # Global options
@@ -74,13 +66,14 @@ def check(
         ),
     ] = None,
     format: Annotated[
-        OutputFormat,
+        str,
         typer.Option(
             "--format",
             "-f",
             help="Output format",
+            click_type=click.Choice(["text", "json", "jsonl"]),
         ),
-    ] = OutputFormat.TEXT,
+    ] = "text",
     pack: Annotated[
         str | None,
         typer.Option(
@@ -222,7 +215,7 @@ def check(
     # Format output
     from dinocheck.cli.formatters import get_formatter
 
-    formatter = get_formatter(format.value)
+    formatter = get_formatter(format)
     formatted = formatter.format(result)
 
     # Write output
