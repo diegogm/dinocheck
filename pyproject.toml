@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "dinocheck"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Your vibe coding companion - LLM-powered code critic for AI-assisted development"
 readme = "README.md"
 license = "MIT"
@@ -84,9 +84,16 @@ include = [
 packages = ["src/dinocheck"]
 sources = ["src"]
 
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/dinocheck/_version.py"
+
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+exclude = ["src/dinocheck/_version.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF"]
@@ -100,6 +107,7 @@ python_version = "3.11"
 strict = true
 warn_return_any = true
 warn_unused_ignores = true
+exclude = ["src/dinocheck/_version\\.py"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

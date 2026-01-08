@@ -632,7 +632,6 @@ wheels = [
 
 [[package]]
 name = "dinocheck"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -688,7 +687,7 @@ requires-dist = [
     { name = "typer", specifier = "==0.15.1" },
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
 ]
-provides-extras = ["django", "dev"]
+provides-extras = ["dev", "django"]
 
 [[package]]
 name = "distlib"

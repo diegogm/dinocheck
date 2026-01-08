@@ -51,6 +51,7 @@ htmlcov/
 # Project specific
 .dinocheck/
 dino.yaml
+src/dinocheck/_version.py
 
 # OS
 .DS_Store
