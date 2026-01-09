@@ -557,7 +557,7 @@ def init(
     """Initialize dino.yaml configuration file.
 
     Creates a starter configuration for Dinocheck with sensible defaults.
-    Also offers to create a Claude Code skill if .claude folder exists.
+    Also offers to create agent skills if .claude or .codex folders exist.
     """
     config_path = path / "dino.yaml"
 
@@ -594,6 +594,11 @@ max_llm_calls: 10
     claude_dir = path / ".claude"
     if claude_dir.is_dir():
         _offer_claude_skill(path, claude_dir, force)
+
+    # Check if .codex folder exists and offer to create skill
+    codex_dir = path / ".codex"
+    if codex_dir.is_dir():
+        _offer_codex_skill(path, codex_dir, force)
 
 
 def _offer_claude_skill(path: Path, claude_dir: Path, force: bool) -> None:
@@ -661,6 +666,72 @@ dino check -v
     skill_dir.mkdir(parents=True, exist_ok=True)
     skill_file.write_text(skill_content)
     console.success(f"Created Claude Code skill: {skill_file}")
+
+
+def _offer_codex_skill(path: Path, codex_dir: Path, force: bool) -> None:
+    """Offer to create an OpenAI Codex skill for dinocheck."""
+    skill_dir = codex_dir / "skills" / "dinocheck"
+    skill_file = skill_dir / "SKILL.md"
+
+    if skill_file.exists() and not force:
+        console.info("Codex skill already exists", err=True)
+        return
+
+    # Ask user if they want to create the skill
+    create_skill = typer.confirm(
+        "\nDetected .codex folder. Create a Codex skill for dinocheck?",
+        default=True,
+    )
+
+    if not create_skill:
+        return
+
+    skill_content = """\
+---
+name: dinocheck
+description: >
+  Run LLM-powered code review with dinocheck. Use when you finish writing code,
+  before committing, or when the user asks to review, check, or analyze code quality.
+---
+
+# Dinocheck - LLM Code Review
+
+Run dinocheck to get AI-powered code review feedback.
+
+## When to use
+
+- After writing or modifying code
+- Before committing changes
+- When asked to review code quality
+- When looking for potential bugs or improvements
+
+## Commands
+
+```bash
+# Check current directory
+dino check
+
+# Check specific files or directories
+dino check src/
+
+# Check only changed files (git diff)
+dino check --diff
+
+# Verbose output with progress
+dino check -v
+```
+
+## Workflow
+
+1. Run `dino check` on the relevant code
+2. Review the issues found
+3. Address critical and major issues first
+4. Use `dino explain <rule-id>` for more details on any rule
+"""
+
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    skill_file.write_text(skill_content)
+    console.success(f"Created Codex skill: {skill_file}")
 
 
 @app.command()

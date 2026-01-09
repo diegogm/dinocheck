@@ -146,6 +146,57 @@ class TestInitCommand:
         # Should warn or skip
         assert "exists" in result.stdout.lower() or config_path.read_text() == "existing: true"
 
+    def test_init_creates_claude_skill(self, tmp_path, monkeypatch):
+        """Should create Claude Code skill when .claude exists."""
+        monkeypatch.chdir(tmp_path)
+
+        # Create .claude directory
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+
+        # Run init with 'y' input to confirm skill creation
+        result = runner.invoke(app, ["init"], input="y\n")
+
+        assert result.exit_code == 0
+        skill_file = tmp_path / ".claude" / "skills" / "dinocheck" / "SKILL.md"
+        assert skill_file.exists()
+        content = skill_file.read_text()
+        assert "name: dinocheck" in content
+        assert "dino check" in content
+
+    def test_init_creates_codex_skill(self, tmp_path, monkeypatch):
+        """Should create Codex skill when .codex exists."""
+        monkeypatch.chdir(tmp_path)
+
+        # Create .codex directory
+        codex_dir = tmp_path / ".codex"
+        codex_dir.mkdir()
+
+        # Run init with 'y' input to confirm skill creation
+        result = runner.invoke(app, ["init"], input="y\n")
+
+        assert result.exit_code == 0
+        skill_file = tmp_path / ".codex" / "skills" / "dinocheck" / "SKILL.md"
+        assert skill_file.exists()
+        content = skill_file.read_text()
+        assert "name: dinocheck" in content
+        assert "dino check" in content
+
+    def test_init_skips_skill_when_declined(self, tmp_path, monkeypatch):
+        """Should not create skill when user declines."""
+        monkeypatch.chdir(tmp_path)
+
+        # Create .codex directory
+        codex_dir = tmp_path / ".codex"
+        codex_dir.mkdir()
+
+        # Run init with 'n' input to decline skill creation
+        result = runner.invoke(app, ["init"], input="n\n")
+
+        assert result.exit_code == 0
+        skill_file = tmp_path / ".codex" / "skills" / "dinocheck" / "SKILL.md"
+        assert not skill_file.exists()
+
 
 class TestLogsCommand:
     """Tests for dino logs commands."""
