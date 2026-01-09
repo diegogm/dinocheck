@@ -1,5 +1,7 @@
 """Console utilities for colored output using Rich."""
 
+import os
+import sys
 from typing import ClassVar
 
 from rich.console import Console
@@ -7,12 +9,43 @@ from rich.table import Table
 from rich.text import Text
 
 
+def _should_use_color() -> bool:
+    """Determine if color output should be enabled.
+
+    Respects NO_COLOR env var and checks if output is a real terminal.
+    """
+    # Respect NO_COLOR standard (https://no-color.org/)
+    if os.environ.get("NO_COLOR"):
+        return False
+    # Force color if FORCE_COLOR is set
+    if os.environ.get("FORCE_COLOR"):
+        return True
+    # Check if stdout is a real terminal
+    return sys.stdout.isatty()
+
+
 class DinoConsole:
     """Centralized console output with Rich styling."""
 
-    # Shared console instances
-    _stdout: ClassVar[Console] = Console()
-    _stderr: ClassVar[Console] = Console(stderr=True)
+    # Shared console instances (lazy initialization)
+    _stdout: ClassVar[Console | None] = None
+    _stderr: ClassVar[Console | None] = None
+
+    @classmethod
+    def _get_stdout(cls) -> Console:
+        """Get or create stdout console."""
+        if cls._stdout is None:
+            use_color = _should_use_color()
+            cls._stdout = Console(force_terminal=use_color, no_color=not use_color)
+        return cls._stdout
+
+    @classmethod
+    def _get_stderr(cls) -> Console:
+        """Get or create stderr console."""
+        if cls._stderr is None:
+            use_color = _should_use_color()
+            cls._stderr = Console(stderr=True, force_terminal=use_color, no_color=not use_color)
+        return cls._stderr
 
     # Style constants
     SUCCESS = "bold green"
@@ -25,7 +58,7 @@ class DinoConsole:
     @classmethod
     def print(cls, message: str = "", style: str | None = None, err: bool = False) -> None:
         """Print a message with optional styling."""
-        console = cls._stderr if err else cls._stdout
+        console = cls._get_stderr() if err else cls._get_stdout()
         console.print(message, style=style)
 
     @classmethod
@@ -34,7 +67,7 @@ class DinoConsole:
         text = Text()
         text.append("✓ ", style=cls.SUCCESS)
         text.append(message)
-        console = cls._stderr if err else cls._stdout
+        console = cls._get_stderr() if err else cls._get_stdout()
         console.print(text)
 
     @classmethod
@@ -43,7 +76,7 @@ class DinoConsole:
         text = Text()
         text.append("✗ ", style=cls.ERROR)
         text.append(message, style=cls.ERROR)
-        cls._stderr.print(text)
+        cls._get_stderr().print(text)
 
     @classmethod
     def warning(cls, message: str, err: bool = False) -> None:
@@ -51,7 +84,7 @@ class DinoConsole:
         text = Text()
         text.append("⚠ ", style=cls.WARNING)
         text.append(message)
-        console = cls._stderr if err else cls._stdout
+        console = cls._get_stderr() if err else cls._get_stdout()
         console.print(text)
 
     @classmethod
@@ -60,13 +93,13 @@ class DinoConsole:
         text = Text()
         text.append("(i) ", style=cls.INFO)
         text.append(message)
-        console = cls._stderr if err else cls._stdout
+        console = cls._get_stderr() if err else cls._get_stdout()
         console.print(text)
 
     @classmethod
     def header(cls, title: str, err: bool = False) -> None:
         """Print a section header."""
-        console = cls._stderr if err else cls._stdout
+        console = cls._get_stderr() if err else cls._get_stdout()
         console.print()
         console.print(title, style=cls.HEADER)
         console.print("─" * len(title), style=cls.DIM)
@@ -77,7 +110,7 @@ class DinoConsole:
         text = Text()
         text.append(f"[{step}] ", style=cls.INFO)
         text.append(details, style=cls.DIM)
-        console = cls._stderr if err else cls._stdout
+        console = cls._get_stderr() if err else cls._get_stdout()
         console.print(text)
 
     @classmethod
@@ -107,13 +140,13 @@ class DinoConsole:
             text.append(f" → {rules} rules, ", style="dim")
             text.append("analyzing", style="yellow")
 
-        console = cls._stderr if err else cls._stdout
+        console = cls._get_stderr() if err else cls._get_stdout()
         console.print(text)
 
     @classmethod
     def banner(cls, title: str, err: bool = False) -> None:
         """Print a banner with separators."""
-        console = cls._stderr if err else cls._stdout
+        console = cls._get_stderr() if err else cls._get_stdout()
         line = "═" * 60
         console.print(line, style=cls.DIM)
         console.print(f" {title}", style="bold")
@@ -125,7 +158,7 @@ class DinoConsole:
         text = Text()
         text.append(f"{label}: ", style=cls.DIM)
         text.append(value, style=style)
-        cls._stdout.print(text)
+        cls._get_stdout().print(text)
 
     @classmethod
     def table(
@@ -157,12 +190,12 @@ class DinoConsole:
     @classmethod
     def print_table(cls, table: Table) -> None:
         """Print a table to stdout."""
-        cls._stdout.print(table)
+        cls._get_stdout().print(table)
 
     @classmethod
     def rule(cls, title: str = "", style: str = "dim") -> None:
         """Print a horizontal rule with optional title."""
-        cls._stdout.rule(title, style=style)
+        cls._get_stdout().rule(title, style=style)
 
 
 # Convenience aliases

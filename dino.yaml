@@ -1,0 +1,18 @@
+# Dinocheck - Your vibe coding companion
+# https://github.com/diegogm/dinocheck
+
+# Rule packs to enable
+packs:
+  - python
+  # - django  # Uncomment for Django projects
+
+# LLM configuration
+model: openai/gpt-5.1-codex  # Or: anthropic/claude-3-5-sonnet, ollama/llama3
+language: en
+
+# Analysis budget (max LLM calls per run)
+max_llm_calls: 10
+
+# Disable specific rules (by ID)
+# disabled_rules:
+#   - python/some-rule-id

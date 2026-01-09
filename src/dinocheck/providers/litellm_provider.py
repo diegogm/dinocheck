@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import time
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,6 +19,16 @@ if TYPE_CHECKING:
 
 # Suppress LiteLLM debug info messages
 litellm.suppress_debug_info = True
+
+# Suppress Pydantic serialization warnings from LiteLLM's internal models
+# These warnings occur because LiteLLM's Message/Choices types don't match
+# expected field counts during serialization (harmless but noisy)
+warnings.filterwarnings(
+    "ignore",
+    message=".*PydanticSerializationUnexpectedValue.*",
+    category=UserWarning,
+    module="pydantic.*",
+)
 
 
 class LiteLLMProvider(LLMProvider):

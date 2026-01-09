@@ -173,7 +173,7 @@ class Engine:
 
             # Check cache only if not disabled
             if not no_cache:
-                cached = self.cache.get(file_hash, composed_pack.version, rules_hash)
+                cached = self.cache.get(file_hash, rules_hash)
                 if cached is not None:
                     progress("file_cache", f"{file_ctx.path} → {rules_count} rules, cached")
                     logger.debug(
@@ -251,7 +251,7 @@ class Engine:
                         applicable_rules = uncached_rules[str(file_ctx.path)]
                         file_hash = ContentHasher.hash_content(file_ctx.content)
                         rules_hash = ContentHasher.hash_rules([r.id for r in applicable_rules])
-                        self.cache.put(file_hash, composed_pack.version, rules_hash, issues)
+                        self.cache.put(file_hash, rules_hash, issues)
 
                     except Exception:
                         llm_calls += 1

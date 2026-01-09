@@ -224,7 +224,8 @@ def check(
         if not quiet:
             console.success(f"Output written to {output}")
     else:
-        console.print(formatted)
+        # Print directly - formatted already contains ANSI codes from Rich
+        print(formatted, end="")
 
 
 # Packs subcommand

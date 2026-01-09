@@ -37,8 +37,8 @@ class TestSQLiteCache:
 
     def test_put_and_get(self, cache, sample_issue):
         """Should store and retrieve issues."""
-        cache.put("hash1", "1.0", "rules1", [sample_issue])
-        result = cache.get("hash1", "1.0", "rules1")
+        cache.put("hash1", "rules1", [sample_issue])
+        result = cache.get("hash1", "rules1")
 
         assert result is not None
         assert len(result) == 1
@@ -47,28 +47,21 @@ class TestSQLiteCache:
 
     def test_cache_miss(self, cache, sample_issue):
         """Should return None for missing key."""
-        cache.put("hash1", "1.0", "rules1", [sample_issue])
-        result = cache.get("hash2", "1.0", "rules1")
-
-        assert result is None
-
-    def test_cache_miss_different_version(self, cache, sample_issue):
-        """Should return None for different pack version."""
-        cache.put("hash1", "1.0", "rules1", [sample_issue])
-        result = cache.get("hash1", "2.0", "rules1")
+        cache.put("hash1", "rules1", [sample_issue])
+        result = cache.get("hash2", "rules1")
 
         assert result is None
 
     def test_cache_miss_different_rules(self, cache, sample_issue):
         """Should return None for different rules hash."""
-        cache.put("hash1", "1.0", "rules1", [sample_issue])
-        result = cache.get("hash1", "1.0", "rules2")
+        cache.put("hash1", "rules1", [sample_issue])
+        result = cache.get("hash1", "rules2")
 
         assert result is None
 
     def test_cache_update(self, cache, sample_issue):
         """Should update existing cache entry."""
-        cache.put("hash1", "1.0", "rules1", [sample_issue])
+        cache.put("hash1", "rules1", [sample_issue])
 
         new_issue = Issue(
             rule_id="test/other",
@@ -80,27 +73,27 @@ class TestSQLiteCache:
             pack="test",
             source="llm",
         )
-        cache.put("hash1", "1.0", "rules1", [new_issue])
+        cache.put("hash1", "rules1", [new_issue])
 
-        result = cache.get("hash1", "1.0", "rules1")
+        result = cache.get("hash1", "rules1")
         assert len(result) == 1
         assert result[0].rule_id == "test/other"
 
     def test_clear_all(self, cache, sample_issue):
         """Should clear all cache entries."""
-        cache.put("hash1", "1.0", "rules1", [sample_issue])
-        cache.put("hash2", "1.0", "rules1", [sample_issue])
+        cache.put("hash1", "rules1", [sample_issue])
+        cache.put("hash2", "rules1", [sample_issue])
 
         deleted = cache.clear()
 
         assert deleted == 2
-        assert cache.get("hash1", "1.0", "rules1") is None
-        assert cache.get("hash2", "1.0", "rules1") is None
+        assert cache.get("hash1", "rules1") is None
+        assert cache.get("hash2", "rules1") is None
 
     def test_stats(self, cache, sample_issue):
         """Should return cache statistics."""
-        cache.put("hash1", "1.0", "rules1", [sample_issue])
-        cache.put("hash2", "1.0", "rules1", [sample_issue])
+        cache.put("hash1", "rules1", [sample_issue])
+        cache.put("hash2", "rules1", [sample_issue])
 
         stats = cache.stats()
 

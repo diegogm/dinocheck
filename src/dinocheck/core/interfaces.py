@@ -145,12 +145,12 @@ class Cache(ABC):
     """Cache interface for analysis results."""
 
     @abstractmethod
-    def get(self, file_hash: str, pack_version: str, rules_hash: str) -> list[Issue] | None:
+    def get(self, file_hash: str, rules_hash: str) -> list[Issue] | None:
         """Get cached issues for a file."""
         ...
 
     @abstractmethod
-    def put(self, file_hash: str, pack_version: str, rules_hash: str, issues: list[Issue]) -> None:
+    def put(self, file_hash: str, rules_hash: str, issues: list[Issue]) -> None:
         """Cache issues for a file."""
         ...
 

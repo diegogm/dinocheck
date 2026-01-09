@@ -6,6 +6,7 @@ from typing import ClassVar
 from rich.console import Console
 from rich.text import Text
 
+from dinocheck.cli.console import _should_use_color
 from dinocheck.core.interfaces import Formatter
 from dinocheck.core.types import AnalysisResult, Issue
 
@@ -32,7 +33,8 @@ class TextFormatter(Formatter):
 
     def format(self, result: AnalysisResult) -> str:
         buffer = StringIO()
-        console = Console(file=buffer, force_terminal=True, width=500)
+        use_color = _should_use_color()
+        console = Console(file=buffer, force_terminal=use_color, no_color=not use_color, width=500)
 
         # Header
         header_text = Text()

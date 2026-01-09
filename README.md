@@ -23,19 +23,38 @@ Dinocheck is an AI-powered code critic designed to **enhance your vibe coding se
 ```bash
 $ dino check src/views.py
 
-src/views.py:42 [major] django/n-plus-one
-  N+1 query detected: iterating over `Order.objects.filter(user=user)` and
-  accessing `order.items.all()` inside the loop causes one query per order.
+------------------------------------------------------------
+✓ Analysis Complete - Score: 72/100
+------------------------------------------------------------
 
-  → Use `prefetch_related('items')` to fetch all items in a single query.
+Issues (2):
 
-src/views.py:87 [critical] django/missing-permission-check
-  The `delete_account` view modifies user data but has no permission check.
-  Any authenticated user could delete any account by guessing the ID.
+------------------------------------------------------------
+ src/views.py
+------------------------------------------------------------
 
-  → Add ownership validation: `if account.user != request.user: return 403`
+  [MAJOR] N+1 query detected in order iteration
+     Rule: django/n-plus-one
 
-✗ 2 issues found (1 critical, 1 major)
+     Why: Iterating over `Order.objects.filter(user=user)` and accessing
+     `order.items.all()` inside the loop causes one query per order.
+
+     Actions:
+       • Use `prefetch_related('items')` to fetch all items in a single query.
+
+  ----------------------------------------
+
+  [CRITICAL] Missing permission check in delete_account view
+     Rule: django/api-authorization
+
+     Why: The `delete_account` view modifies user data but has no permission
+     check. Any authenticated user could delete any account by guessing the ID.
+
+     Actions:
+       • Add ownership validation: `if account.user != request.user: return 403`
+       • Consider using DRF's permission classes for consistent access control.
+
+Checked 12 files (10 cached) in 1842ms for $0.003
 ```
 
 ## Why Dinocheck?
@@ -62,7 +81,7 @@ This fits the vibe coding workflow: you write code with AI assistance, and Dinoc
 | Feature | Description |
 |---------|-------------|
 | **LLM-First Analysis** | Uses GPT-4, Claude, or local models for semantic code review |
-| **Rule Packs** | Python and Django packs with 40+ rules |
+| **Rule Packs** | Python and Django packs with 49 rules |
 | **Smart Caching** | SQLite cache avoids re-analyzing unchanged files |
 | **Cost Tracking** | Monitor LLM usage and costs with `dino logs` |
 | **Multi-Language** | Get feedback in English, Spanish, French, etc. |
@@ -80,30 +99,23 @@ uv add dinocheck
 
 ### Configuration
 
-Initialize your project and configure your LLM provider:
-
 ```bash
-# Create dino.yaml with interactive setup
+# Create dino.yaml
 dino init
 
 # Set your API key
 export OPENAI_API_KEY=sk-...
 ```
 
-The `dino init` command creates a `dino.yaml` file where you can customize your LLM provider and packs:
+Example `dino.yaml`:
 
 ```yaml
-dinocheck:
-  packs:
-    - python
-    - django
+packs:
+  - python
+  - django
 
-  provider:
-    model: gpt-4o-mini          # or claude-3-5-sonnet, ollama/llama3
-    api_key_env: OPENAI_API_KEY
-
-  output:
-    language: en
+model: openai/gpt-4o-mini  # or anthropic/claude-3-5-sonnet, ollama/llama3
+language: en
 ```
 
 ### Usage
@@ -118,6 +130,12 @@ dino check src/views.py src/models.py
 # Only analyze changed files (git diff)
 dino check --diff
 
+# Verbose output (show progress)
+dino check -v
+
+# Debug mode (detailed logs in dino.log)
+dino check --debug
+
 # Output as JSON
 dino check --format json
 
@@ -131,6 +149,9 @@ dino logs cost
 |---------|-------------|
 | `dino check [paths]` | Analyze code with LLM |
 | `dino check --diff` | Analyze only changed files |
+| `dino check -v` | Verbose output with progress |
+| `dino check --debug` | Enable debug logging to dino.log |
+| `dino check --no-cache` | Skip cache, re-analyze all files |
 | `dino packs list` | List available packs |
 | `dino packs info NAME` | Show pack details |
 | `dino explain RULE_ID` | Explain a rule |
@@ -144,23 +165,24 @@ dino logs cost
 
 ## Rule Packs
 
-### Python Pack
+### Python Pack (26 rules)
 
 | Category | Rules |
 |----------|-------|
-| **Security** | SQL injection, insecure deserialization, mass assignment, timing attacks |
-| **Logic** | Inverted conditions, unreachable code, copy-paste bugs, missing edge cases |
-| **Code Quality** | Naming mismatches, misleading comments, stale TODOs |
-| **Concurrency** | Race conditions, deadlocks, resource lifecycle |
-| **Testing** | Wrong assertions, flaky patterns, missing negative tests, mocks hiding bugs |
+| **Security** | SQL injection, insecure deserialization, mass assignment, timing attacks, input validation, unsafe eval, sensitive data exposure, error info leaks, open redirects |
+| **Correctness** | Inverted conditions, unreachable code, copy-paste bugs, missing edge cases, business logic errors, naming vs intention mismatches |
+| **Testing** | Wrong assertions, flaky patterns, mocks hiding bugs, missing negative tests |
+| **Reliability** | Concurrency safety, error handling, resource lifecycle |
+| **Maintainability** | Misleading comments, stale TODOs, API contract breaks |
 
-### Django Pack
+### Django Pack (23 rules)
 
 | Category | Rules |
 |----------|-------|
 | **ORM** | N+1 queries, missing select_related, queryset performance, template queries, signal hidden logic, cache stale data |
 | **Transactions** | Atomic scope, select_for_update, F-expressions, on_commit side effects |
 | **DRF** | Permission classes, throttling, async blocking calls, serializer mismatches |
+| **Security** | CSRF exempt misuse, serializer field whitelist |
 | **Migrations** | Data loss, large indexes, NOT NULL two-phase |
 | **Tasks** | Non-idempotent Celery tasks |
 | **Testing** | Missing auth tests, business logic coverage |
