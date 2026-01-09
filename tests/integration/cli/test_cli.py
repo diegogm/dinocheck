@@ -197,6 +197,24 @@ class TestInitCommand:
         skill_file = tmp_path / ".codex" / "skills" / "dinocheck" / "SKILL.md"
         assert not skill_file.exists()
 
+    def test_init_creates_gemini_skill(self, tmp_path, monkeypatch):
+        """Should create Gemini CLI skill when .gemini exists."""
+        monkeypatch.chdir(tmp_path)
+
+        # Create .gemini directory
+        gemini_dir = tmp_path / ".gemini"
+        gemini_dir.mkdir()
+
+        # Run init with 'y' input to confirm skill creation
+        result = runner.invoke(app, ["init"], input="y\n")
+
+        assert result.exit_code == 0
+        skill_file = tmp_path / ".gemini" / "skills" / "dinocheck" / "SKILL.md"
+        assert skill_file.exists()
+        content = skill_file.read_text()
+        assert "name: dinocheck" in content
+        assert "dino check" in content
+
 
 class TestLogsCommand:
     """Tests for dino logs commands."""
