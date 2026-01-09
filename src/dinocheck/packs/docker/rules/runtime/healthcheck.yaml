@@ -1,0 +1,41 @@
+id: docker/missing-healthcheck
+name: Missing HEALTHCHECK instruction
+level: minor
+category: reliability
+description: |
+  Without a HEALTHCHECK, Docker and orchestrators cannot determine if the
+  application inside the container is actually healthy. The container may
+  appear running while the application is deadlocked or unresponsive.
+checklist:
+  - Dockerfile has no HEALTHCHECK instruction.
+  - Service exposes HTTP endpoints but has no health probe.
+  - Long-running application without liveness verification.
+fix: |
+  Add a HEALTHCHECK instruction that verifies application health. Use curl,
+  wget, or a custom health check script. Set appropriate intervals and timeouts.
+
+tags:
+  - docker
+  - reliability
+  - observability
+
+triggers:
+  file_patterns:
+    - "**/Dockerfile"
+    - "**/Dockerfile.*"
+    - "**/*.dockerfile"
+  code_patterns:
+    - "EXPOSE"
+    - "CMD"
+
+examples:
+  bad: |
+    FROM python:3.11
+    EXPOSE 8000
+    CMD ["uvicorn", "main:app"]
+  good: |
+    FROM python:3.11
+    EXPOSE 8000
+    HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
+      CMD curl -f http://localhost:8000/health || exit 1
+    CMD ["uvicorn", "main:app"]

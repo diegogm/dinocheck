@@ -1,0 +1,48 @@
+id: docker-compose/read-only-filesystem
+name: Writable root filesystem
+level: minor
+category: security
+description: |
+  A writable root filesystem allows attackers to modify binaries, install
+  malware, or create persistence mechanisms. Making the root filesystem
+  read-only limits the impact of container compromise.
+checklist:
+  - Service does not have read_only: true.
+  - No consideration for filesystem security.
+  - Application requires write access to specific paths only.
+fix: |
+  Set read_only: true and use tmpfs mounts for temporary data. Mount
+  specific volumes for paths that need write access. This follows the
+  principle of least privilege.
+
+tags:
+  - docker-compose
+  - security
+  - filesystem
+
+triggers:
+  file_patterns:
+    - "**/docker-compose*.yml"
+    - "**/docker-compose*.yaml"
+    - "**/compose*.yml"
+    - "**/compose*.yaml"
+  code_patterns:
+    - "services:"
+    - "image:"
+
+examples:
+  bad: |
+    services:
+      app:
+        image: myapp
+        # Writable filesystem by default
+  good: |
+    services:
+      app:
+        image: myapp
+        read_only: true
+        tmpfs:
+          - /tmp
+          - /var/run
+        volumes:
+          - app-data:/app/data

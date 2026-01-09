@@ -1,0 +1,40 @@
+id: docker/root-user
+name: Container running as root
+level: major
+category: security
+description: |
+  Running containers as root increases the attack surface. If a container is
+  compromised, the attacker gains root privileges which can lead to container
+  escape vulnerabilities or access to sensitive host resources.
+checklist:
+  - Dockerfile does not specify a non-root USER instruction.
+  - The final stage runs as root (UID 0).
+  - No explicit user switching before the ENTRYPOINT/CMD.
+fix: |
+  Add a USER instruction to run as a non-privileged user. Create the user
+  if needed with adduser/useradd.
+
+tags:
+  - docker
+  - security
+  - container
+
+triggers:
+  file_patterns:
+    - "**/Dockerfile"
+    - "**/Dockerfile.*"
+    - "**/*.dockerfile"
+  code_patterns:
+    - "^FROM"
+
+examples:
+  bad: |
+    FROM python:3.11
+    COPY . /app
+    CMD ["python", "app.py"]
+  good: |
+    FROM python:3.11
+    RUN useradd -r -u 1001 appuser
+    COPY --chown=appuser:appuser . /app
+    USER appuser
+    CMD ["python", "app.py"]

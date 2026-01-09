@@ -1,0 +1,45 @@
+id: typescript/eval-usage
+name: Dangerous eval or Function constructor
+level: critical
+category: security
+description: |
+  eval() and new Function() execute arbitrary code, creating severe security
+  vulnerabilities if the input contains user data. They also disable
+  optimizations and make code harder to analyze and debug.
+checklist:
+  - Direct eval() calls with dynamic content.
+  - new Function() with user-controlled strings.
+  - setTimeout/setInterval with string arguments.
+  - Dynamically constructed code for JSON parsing.
+fix: |
+  Use JSON.parse() for JSON data. For dynamic behavior, use object maps
+  or switch statements. For templating, use proper template engines.
+  There is almost never a legitimate need for eval.
+
+tags:
+  - typescript
+  - security
+  - code-injection
+
+triggers:
+  file_patterns:
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.mts"
+    - "**/*.js"
+    - "**/*.jsx"
+  code_patterns:
+    - "eval\\("
+    - "new Function\\("
+    - "setTimeout\\(['\"]"
+    - "setInterval\\(['\"]"
+
+examples:
+  bad: |
+    eval(`process_${action}(data)`);
+    const fn = new Function('x', userCode);
+    setTimeout("doAction()", 1000);
+  good: |
+    const actions = { save: processSave, delete: processDelete };
+    actions[action]?.(data);
+    setTimeout(() => doAction(), 1000);

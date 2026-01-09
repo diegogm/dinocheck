@@ -1,0 +1,39 @@
+id: sh/missing-set-options
+name: Missing defensive set options
+level: major
+category: reliability
+description: |
+  Without set -e, scripts continue after errors. Without set -u, undefined
+  variables silently expand to empty strings. Without set -o pipefail, only
+  the last command's exit status is checked in pipelines.
+checklist:
+  - Script lacks set -e (exit on error).
+  - Script lacks set -u (error on undefined variables).
+  - Script uses pipes without set -o pipefail.
+  - No error handling strategy is evident.
+fix: |
+  Add defensive options at script start: set -euo pipefail
+  Or use the equivalent: set -e; set -u; set -o pipefail
+
+tags:
+  - shell
+  - reliability
+  - error-handling
+
+triggers:
+  file_patterns:
+    - "**/*.sh"
+    - "**/*.bash"
+  code_patterns:
+    - "^#!/"
+
+examples:
+  bad: |
+    #!/bin/bash
+    cd /some/dir
+    rm -rf *
+  good: |
+    #!/bin/bash
+    set -euo pipefail
+    cd /some/dir
+    rm -rf ./*

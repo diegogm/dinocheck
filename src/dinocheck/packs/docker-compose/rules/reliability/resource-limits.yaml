@@ -1,0 +1,50 @@
+id: docker-compose/missing-resource-limits
+name: Missing resource limits
+level: minor
+category: reliability
+description: |
+  Without resource limits, a single container can consume all host resources
+  (CPU, memory), causing other services to fail. Memory leaks or CPU-intensive
+  tasks can bring down the entire host.
+checklist:
+  - Service has no memory limit (mem_limit or deploy.resources.limits).
+  - Service has no CPU limit.
+  - No reservation set for critical services.
+fix: |
+  Set memory and CPU limits appropriate for each service. Use reservations
+  to guarantee minimum resources for critical services. Monitor actual usage
+  to set appropriate limits.
+
+tags:
+  - docker-compose
+  - reliability
+  - resources
+
+triggers:
+  file_patterns:
+    - "**/docker-compose*.yml"
+    - "**/docker-compose*.yaml"
+    - "**/compose*.yml"
+    - "**/compose*.yaml"
+  code_patterns:
+    - "services:"
+    - "image:"
+
+examples:
+  bad: |
+    services:
+      app:
+        image: myapp
+        # No resource limits - can consume all host resources
+  good: |
+    services:
+      app:
+        image: myapp
+        deploy:
+          resources:
+            limits:
+              cpus: '0.5'
+              memory: 512M
+            reservations:
+              cpus: '0.25'
+              memory: 256M

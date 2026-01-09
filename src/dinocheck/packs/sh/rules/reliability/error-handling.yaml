@@ -1,0 +1,40 @@
+id: sh/unchecked-commands
+name: Critical commands without error checking
+level: major
+category: reliability
+description: |
+  Commands like cd, rm, or mkdir can fail for various reasons. Without
+  checking their exit status, scripts may continue in unexpected states,
+  potentially causing data loss or incorrect behavior.
+checklist:
+  - cd command without || exit or error handling.
+  - rm -rf on paths that might not exist or fail.
+  - mkdir without -p or error checking.
+  - Critical operations not wrapped in conditionals.
+fix: |
+  Check exit status of critical commands. Use || exit 1 for fatal failures.
+  Use || true only when failure is acceptable. Consider trap for cleanup.
+
+tags:
+  - shell
+  - reliability
+  - error-handling
+
+triggers:
+  file_patterns:
+    - "**/*.sh"
+    - "**/*.bash"
+  code_patterns:
+    - "^cd "
+    - "rm -rf"
+    - "mkdir "
+
+examples:
+  bad: |
+    cd "$BUILD_DIR"
+    rm -rf dist/
+    mkdir output
+  good: |
+    cd "$BUILD_DIR" || exit 1
+    rm -rf dist/ || true
+    mkdir -p output

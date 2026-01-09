@@ -168,7 +168,7 @@ def check(
         cfg.packs = [p.strip() for p in pack.split(",")]
 
     # Run analysis
-    engine = Engine(cfg)
+    engine = Engine(cfg, debug=debug)
 
     if not quiet:
         console.info(f"Dinocheck v{__version__} - Analyzing...", err=True)
@@ -199,8 +199,8 @@ def check(
     try:
         result = engine.analyze(
             paths=paths or [Path(".")],
-            rule_filter=rule.split(",") if rule else None,
-            on_progress=on_progress if verbose else None,
+            rule_filter=[r.strip() for r in rule.split(",") if r.strip()] if rule else None,
+            on_progress=on_progress if verbose and not quiet else None,
             diff_only=diff,
             no_cache=no_cache,
         )
@@ -253,7 +253,9 @@ def packs_list(
     )
 
     for pack in get_all_packs():
-        status = "enabled" if pack.name in cfg.packs else "disabled"
+        # None means all packs enabled, otherwise check membership
+        enabled = cfg.packs is None or pack.name in cfg.packs
+        status = "enabled" if enabled else "disabled"
         status_style = "green" if status == "enabled" else "dim"
         table.add_row(
             pack.name,
@@ -346,7 +348,7 @@ def cache_clear(
 
     cache = SQLiteCache(Path(DEFAULT_CACHE_DB), ttl_hours=168)
 
-    hours = older * 24 if older else None
+    hours = older * 24 if older is not None else None
     deleted = cache.clear(hours)
 
     console.success(f"Cleared {deleted} cache entries")
@@ -570,13 +572,15 @@ def init(
 # Dinocheck - Your vibe coding companion
 # https://github.com/diegogm/dinocheck
 
-# Rule packs to enable
-packs:
-  - python
-  # - django  # Uncomment for Django projects
+# All rule packs are enabled by default.
+# To exclude specific packs, uncomment and add to exclude_packs:
+# exclude_packs:
+#   - vue
+#   - django
 
 # LLM configuration
 model: openai/gpt-4o-mini  # Or: anthropic/claude-3-5-sonnet, ollama/llama3
+# base_url: https://api.example.com/v1  # Custom OpenAI-compatible endpoint
 language: en
 
 # Analysis budget (max LLM calls per run)

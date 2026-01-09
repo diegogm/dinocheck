@@ -1,0 +1,10 @@
+name: docker
+version: "0.1.0"
+description: |
+  Docker and Dockerfile best practices pack.
+  Provides security, performance, and maintainability rules for container images.
+
+  Rules are organized by category:
+  - security/: Image security and vulnerability prevention
+  - build/: Build optimization and layer efficiency
+  - runtime/: Container runtime configuration

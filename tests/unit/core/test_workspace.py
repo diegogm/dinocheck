@@ -159,4 +159,4 @@ class TestGitDiffIntegration:
         files = list(scanner.discover([], diff_only=True))
 
         # Should be empty since all files are committed
-        assert not any(f.path.name == "committed.py" for f in files)
+        assert len(files) == 0, f"Expected no files, got: {[f.path.name for f in files]}"

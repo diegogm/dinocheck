@@ -1,0 +1,11 @@
+name: typescript
+version: "0.1.0"
+description: |
+  TypeScript and JavaScript best practices pack.
+  Provides type safety, security, and reliability rules for TS/JS projects.
+
+  Rules are organized by category:
+  - types/: Type safety and proper typing patterns
+  - security/: Input validation and XSS prevention
+  - async/: Promise and async/await patterns
+  - reliability/: Error handling and edge cases

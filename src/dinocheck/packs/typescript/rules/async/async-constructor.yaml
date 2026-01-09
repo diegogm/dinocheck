@@ -1,0 +1,47 @@
+id: typescript/async-constructor
+name: Async operations in constructor
+level: major
+category: async
+description: |
+  Constructors cannot be async in JavaScript/TypeScript. Performing async
+  operations in constructors leads to partially initialized objects, race
+  conditions, and errors that are difficult to handle properly.
+checklist:
+  - Constructor contains await (which is a syntax error) or .then().
+  - Constructor starts async operations without waiting for completion.
+  - Object properties set asynchronously after construction.
+fix: |
+  Use a static factory method pattern. Create an async static method that
+  performs async initialization and returns a fully initialized instance.
+
+tags:
+  - typescript
+  - async
+  - patterns
+
+triggers:
+  file_patterns:
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.mts"
+  code_patterns:
+    - "constructor"
+    - "\\.then\\("
+    - "fetch\\("
+
+examples:
+  bad: |
+    class UserService {
+      constructor() {
+        this.loadConfig().then(c => this.config = c);
+      }
+    }
+  good: |
+    class UserService {
+      private constructor(private config: Config) {}
+
+      static async create(): Promise<UserService> {
+        const config = await loadConfig();
+        return new UserService(config);
+      }
+    }

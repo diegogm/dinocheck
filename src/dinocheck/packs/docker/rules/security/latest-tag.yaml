@@ -1,0 +1,37 @@
+id: docker/latest-tag
+name: Using latest or unpinned base image
+level: major
+category: security
+description: |
+  Using :latest or untagged base images leads to unpredictable builds. The image
+  can change without notice, breaking builds or introducing vulnerabilities.
+  Pinning to specific versions ensures reproducibility and security auditing.
+checklist:
+  - FROM instruction uses :latest tag explicitly.
+  - FROM instruction has no tag (implicitly :latest).
+  - Base image is not pinned to a specific digest or version.
+fix: |
+  Pin base images to specific versions or SHA digests. Prefer slim/alpine
+  variants when possible. Example: python:3.11.7-slim-bookworm
+
+tags:
+  - docker
+  - security
+  - reproducibility
+
+triggers:
+  file_patterns:
+    - "**/Dockerfile"
+    - "**/Dockerfile.*"
+    - "**/*.dockerfile"
+  code_patterns:
+    - "FROM.*:latest"
+    - "^FROM [a-z]+$"
+
+examples:
+  bad: |
+    FROM python:latest
+    FROM node
+  good: |
+    FROM python:3.11.7-slim-bookworm
+    FROM node:20.10.0-alpine3.19@sha256:abc123...

@@ -1,0 +1,10 @@
+name: sh
+version: "0.1.0"
+description: |
+  Shell script (bash/sh) best practices pack.
+  Provides security, reliability, and portability rules for shell scripts.
+
+  Rules are organized by category:
+  - security/: Command injection and unsafe patterns
+  - reliability/: Error handling and robustness
+  - portability/: POSIX compliance and cross-platform issues

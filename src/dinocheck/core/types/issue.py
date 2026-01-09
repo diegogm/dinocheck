@@ -41,6 +41,7 @@ class Issue:
             "why": self.why,
             "do": self.do,
             "pack": self.pack,
+            "source": self.source,
             "confidence": self.confidence,
             "tags": self.tags,
             "snippet": self.snippet,

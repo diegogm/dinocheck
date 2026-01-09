@@ -40,8 +40,9 @@ class Engine:
     5. Calculates score
     """
 
-    def __init__(self, config: DinocheckConfig):
+    def __init__(self, config: DinocheckConfig, debug: bool = False):
         self.config = config
+        self.debug = debug
         self.workspace = GitWorkspaceScanner()
         self.scorer = ScoreCalculator()
         self.compositor = PackCompositor()
@@ -63,7 +64,7 @@ class Engine:
         return LiteLLMProvider(
             model=self.config.model,
             api_key=api_key,
-            cache_db=Path(DEFAULT_CACHE_DB),
+            base_url=self.config.base_url,
         )
 
     def analyze(
@@ -106,12 +107,11 @@ class Engine:
                 on_progress(step, details)
 
         # 1. Compose packs
-        progress("compose_packs", f"Loading packs: {', '.join(self.config.packs)}")
-        composed_pack = self.compositor.compose(self.config.packs)
+        pack_desc = ", ".join(self.config.packs) if self.config.packs else "all"
+        progress("compose_packs", f"Loading packs: {pack_desc}")
+        composed_pack = self.compositor.compose(self.config.packs, self.config.exclude_packs)
         progress("compose_packs", f"Loaded {len(composed_pack.rules)} rules")
-        logger.info(
-            "Loaded %d rules from packs: %s", len(composed_pack.rules), ", ".join(self.config.packs)
-        )
+        logger.info("Loaded %d rules from packs: %s", len(composed_pack.rules), composed_pack.name)
         for rule in composed_pack.rules:
             logger.debug("  Rule: %s (%s) - %s", rule.id, rule.level.value, rule.name)
 
@@ -366,14 +366,17 @@ class Engine:
         issues = self._response_to_issues(response, file_ctx, composed_pack.name)
 
         # Log the call and get cost
+        response_json = response.model_dump_json()
         cost_usd = self.cache.log_llm_call(
             model=self.config.model,
             pack=composed_pack.name,
             files=[str(file_ctx.path)],
             prompt_tokens=self.provider.estimate_tokens(prompt),
-            completion_tokens=self.provider.estimate_tokens(str(response.model_dump())),
+            completion_tokens=self.provider.estimate_tokens(response_json),
             duration_ms=duration_ms,
             issues_found=len(issues),
+            prompt_text=prompt if self.debug else None,
+            response_text=response_json if self.debug else None,
         )
 
         return issues, cost_usd

@@ -108,7 +108,7 @@ class SQLiteCache(Cache):
     def clear(self, older_than_hours: int | None = None) -> int:
         """Clear cache entries, optionally older than threshold."""
         with self._connect() as conn:
-            if older_than_hours:
+            if older_than_hours is not None:
                 cursor = conn.execute(
                     "DELETE FROM cache WHERE created_at < datetime('now', ?)",
                     (f"-{older_than_hours} hours",),

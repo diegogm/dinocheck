@@ -1,0 +1,38 @@
+id: sh/insecure-temp-files
+name: Insecure temporary file handling
+level: major
+category: security
+description: |
+  Using predictable temp file names in /tmp creates race conditions and
+  symlink attacks. Attackers can predict filenames and create symlinks
+  to sensitive files, causing the script to overwrite them.
+checklist:
+  - Hardcoded paths like /tmp/myfile.txt.
+  - Predictable temp file patterns based on script name or PID alone.
+  - Temp files not cleaned up on script exit.
+fix: |
+  Use mktemp to create secure temporary files. Set up a trap to clean up
+  on exit. Consider using a temp directory for multiple temp files.
+
+tags:
+  - shell
+  - security
+  - temp-files
+
+triggers:
+  file_patterns:
+    - "**/*.sh"
+    - "**/*.bash"
+  code_patterns:
+    - "/tmp/"
+    - "\\$TMPDIR"
+    - "tempfile"
+
+examples:
+  bad: |
+    TEMP_FILE="/tmp/script_output.txt"
+    echo "$data" > "$TEMP_FILE"
+  good: |
+    TEMP_FILE=$(mktemp)
+    trap 'rm -f "$TEMP_FILE"' EXIT
+    echo "$data" > "$TEMP_FILE"

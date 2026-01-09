@@ -1,0 +1,41 @@
+id: typescript/type-assertion-abuse
+name: Unsafe type assertion
+level: major
+category: types
+description: |
+  Type assertions (as Type) override the compiler's type inference. When used
+  incorrectly, they mask type errors and cause runtime failures. They should
+  only be used when you have more information than the compiler.
+checklist:
+  - Assertion to a completely unrelated type.
+  - Using 'as unknown as Type' to force incompatible types.
+  - Assertion used to fix type errors without understanding the cause.
+  - API responses cast directly to types without validation.
+fix: |
+  Let TypeScript infer types when possible. Use type guards or validation
+  functions for runtime data. For API responses, use a validation library
+  like Zod to verify the shape at runtime.
+
+tags:
+  - typescript
+  - types
+  - safety
+
+triggers:
+  file_patterns:
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.mts"
+  code_patterns:
+    - " as "
+    - "as unknown as"
+
+examples:
+  bad: |
+    const data = JSON.parse(response) as UserData;
+    const element = event.target as unknown as HTMLInputElement;
+  good: |
+    const data = UserDataSchema.parse(JSON.parse(response));
+    if (event.target instanceof HTMLInputElement) {
+      const element = event.target;
+    }

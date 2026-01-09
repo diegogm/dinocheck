@@ -1,0 +1,40 @@
+id: sh/unquoted-variables
+name: Unquoted variable expansion
+level: major
+category: security
+description: |
+  Unquoted variables undergo word splitting and glob expansion, which can lead
+  to unexpected behavior, security vulnerabilities, or broken scripts when
+  values contain spaces, wildcards, or special characters.
+checklist:
+  - Variables used without double quotes in commands.
+  - Path variables that might contain spaces are unquoted.
+  - User input or external data used without quoting.
+fix: |
+  Always double-quote variable expansions: "$var" instead of $var.
+  Use "${var}" for clarity and to enable parameter expansion features.
+
+tags:
+  - shell
+  - security
+  - reliability
+
+triggers:
+  file_patterns:
+    - "**/*.sh"
+    - "**/*.bash"
+    - "**/.*rc"
+  code_patterns:
+    - "\\$[A-Za-z_][A-Za-z0-9_]*[^\"']"
+    - "rm.*\\$"
+    - "cd \\$"
+
+examples:
+  bad: |
+    rm -rf $DIRECTORY
+    cd $PATH_TO_PROJECT
+    echo $USER_INPUT
+  good: |
+    rm -rf "$DIRECTORY"
+    cd "$PATH_TO_PROJECT"
+    echo "$USER_INPUT"

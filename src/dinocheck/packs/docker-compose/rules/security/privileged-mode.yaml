@@ -1,0 +1,46 @@
+id: docker-compose/privileged-mode
+name: Container running in privileged mode
+level: critical
+category: security
+description: |
+  Privileged mode gives the container full access to the host system,
+  effectively disabling all container isolation. A compromised container
+  can access host devices, modify kernel parameters, and escape to the host.
+checklist:
+  - Service has privileged: true.
+  - Service has cap_add: ALL or SYS_ADMIN without need.
+  - Unnecessary capabilities granted for the workload.
+fix: |
+  Remove privileged: true and grant only the specific capabilities needed.
+  Use cap_drop: ALL first, then add only required caps with cap_add.
+  Most applications don't need any special capabilities.
+
+tags:
+  - docker-compose
+  - security
+  - container
+
+triggers:
+  file_patterns:
+    - "**/docker-compose*.yml"
+    - "**/docker-compose*.yaml"
+    - "**/compose*.yml"
+    - "**/compose*.yaml"
+  code_patterns:
+    - "privileged:"
+    - "cap_add:"
+
+examples:
+  bad: |
+    services:
+      app:
+        image: myapp
+        privileged: true
+  good: |
+    services:
+      app:
+        image: myapp
+        cap_drop:
+          - ALL
+        cap_add:
+          - NET_BIND_SERVICE

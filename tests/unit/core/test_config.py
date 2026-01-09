@@ -1,5 +1,7 @@
 """Tests for configuration loading."""
 
+import pytest
+
 from dinocheck.core.config import ConfigManager, DinocheckConfig
 
 
@@ -9,7 +11,7 @@ class TestDinocheckConfig:
     def test_default_values(self):
         """Should have sensible defaults."""
         config = DinocheckConfig()
-        assert config.packs == ["python"]
+        assert config.packs is None  # None means all packs enabled
         assert config.language == "en"
         assert config.max_llm_calls >= 1
 
@@ -76,10 +78,10 @@ language: es
         config_file = tmp_path / "nonexistent.yaml"
 
         manager = ConfigManager(config_file)
-        config = manager.load()
 
-        # Should have defaults
-        assert config.packs == ["python"]
+        # Should raise error when explicit config path doesn't exist
+        with pytest.raises(FileNotFoundError, match="Config file not found"):
+            manager.load()
 
     def test_load_with_env_override(self, tmp_path, monkeypatch):
         """Should override with environment variables."""

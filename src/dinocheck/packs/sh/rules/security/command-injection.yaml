@@ -1,0 +1,39 @@
+id: sh/command-injection
+name: Potential command injection
+level: critical
+category: security
+description: |
+  Using eval, backticks with user input, or unsanitized variables in commands
+  can lead to command injection vulnerabilities. Attackers can execute
+  arbitrary commands by crafting malicious input.
+checklist:
+  - eval is used with variables containing user input.
+  - Backticks or $() contain unvalidated external data.
+  - Variables from environment or arguments used directly in commands.
+fix: |
+  Avoid eval when possible. Use arrays for command arguments. Validate and
+  sanitize all external input. Use printf %q for escaping when necessary.
+
+tags:
+  - shell
+  - security
+  - injection
+
+triggers:
+  file_patterns:
+    - "**/*.sh"
+    - "**/*.bash"
+  code_patterns:
+    - "eval "
+    - "`.*\\$"
+    - "\\$\\(.*\\$"
+
+examples:
+  bad: |
+    eval "process_file $USER_INPUT"
+    result=`cat $filename`
+  good: |
+    # Use arrays and proper quoting
+    cmd=("process_file" "$USER_INPUT")
+    "${cmd[@]}"
+    result=$(cat -- "$filename")

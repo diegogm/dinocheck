@@ -1,0 +1,48 @@
+id: typescript/error-swallowing
+name: Silent error swallowing
+level: major
+category: reliability
+description: |
+  Empty catch blocks or catch blocks that only log errors silently swallow
+  failures. The application continues in an undefined state, making bugs
+  hard to detect and potentially causing data corruption.
+checklist:
+  - Empty catch blocks (catch {}).
+  - Catch blocks that only console.log without rethrowing or handling.
+  - Generic catch-all that doesn't distinguish error types.
+  - Errors caught but not propagated to callers.
+fix: |
+  Either handle the error appropriately (retry, fallback, user notification),
+  rethrow it, or wrap and rethrow with additional context. Log errors with
+  proper error tracking services, not just console.log.
+
+tags:
+  - typescript
+  - reliability
+  - error-handling
+
+triggers:
+  file_patterns:
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.mts"
+    - "**/*.js"
+    - "**/*.jsx"
+  code_patterns:
+    - "catch"
+    - "\\.catch\\("
+
+examples:
+  bad: |
+    try {
+      await saveData();
+    } catch (e) {
+      console.log(e);
+    }
+  good: |
+    try {
+      await saveData();
+    } catch (e) {
+      logger.error('Failed to save data', { error: e, context });
+      throw new SaveError('Data save failed', { cause: e });
+    }

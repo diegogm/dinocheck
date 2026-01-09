@@ -47,7 +47,7 @@ class MockProvider(LLMProvider):
                 return response_schema.model_validate(response)
 
         # Return empty response - use model_construct to bypass validation
-        # This works for any schema, not just ones with an 'issues' field
+        # Note: This skips validation so required fields without defaults will be unset
         return response_schema.model_construct()
 
     def estimate_tokens(self, text: str) -> int:

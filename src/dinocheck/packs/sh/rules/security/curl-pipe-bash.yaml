@@ -1,0 +1,38 @@
+id: sh/curl-pipe-bash
+name: Piping curl to shell
+level: critical
+category: security
+description: |
+  Piping curl output directly to bash/sh executes remote code without
+  inspection. The server could return malicious code, or a partial download
+  due to network issues could execute incomplete (and harmful) commands.
+checklist:
+  - curl output piped directly to bash or sh.
+  - wget output piped to shell interpreter.
+  - No verification of downloaded script before execution.
+fix: |
+  Download scripts first, inspect them, verify checksums if available,
+  then execute. At minimum, use curl -fsSL to fail on HTTP errors.
+
+tags:
+  - shell
+  - security
+  - remote-code
+
+triggers:
+  file_patterns:
+    - "**/*.sh"
+    - "**/*.bash"
+  code_patterns:
+    - "curl.*\\| *bash"
+    - "curl.*\\| *sh"
+    - "wget.*\\| *bash"
+
+examples:
+  bad: |
+    curl https://example.com/install.sh | bash
+    wget -qO- https://example.com/setup.sh | sh
+  good: |
+    curl -fsSL https://example.com/install.sh -o install.sh
+    sha256sum -c install.sh.sha256
+    bash install.sh

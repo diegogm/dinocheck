@@ -28,12 +28,15 @@ class Rule:
     @classmethod
     def from_yaml(cls, data: dict[str, Any]) -> "Rule":
         """Create a Rule from YAML data."""
-        level_str = data.get("level", "info").upper()
+        level_raw = data.get("level", "info")
+        level_str = str(level_raw).upper() if level_raw else "INFO"
         level = IssueLevel[level_str] if level_str in IssueLevel.__members__ else IssueLevel.INFO
 
+        triggers_data = data.get("triggers")
+        triggers_dict = triggers_data if isinstance(triggers_data, dict) else {}
         triggers = RuleTrigger(
-            file_patterns=data.get("triggers", {}).get("file_patterns", []),
-            code_patterns=data.get("triggers", {}).get("code_patterns", []),
+            file_patterns=triggers_dict.get("file_patterns", []),
+            code_patterns=triggers_dict.get("code_patterns", []),
         )
 
         return cls(

@@ -112,13 +112,13 @@ def book_list(request):
             ],
         )
 
-        # Should be valid JSON if it succeeded
+        # Verify exit code is expected
+        assert result.exit_code in (0, 1, 2), f"Unexpected exit code: {result.exit_code}"
+
+        # Should be valid JSON if analysis completed (exit 0 or 1)
         if result.exit_code in (0, 1):
-            try:
-                output = json.loads(result.stdout)
-                assert "issues" in output or "error" in result.stdout.lower()
-            except json.JSONDecodeError:
-                pass
+            output = json.loads(result.stdout)  # Raises JSONDecodeError if invalid
+            assert "issues" in output or "error" in result.stdout.lower()
 
 
 class TestInitCommand:

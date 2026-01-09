@@ -1,0 +1,46 @@
+id: docker-compose/missing-restart-policy
+name: Missing or incorrect restart policy
+level: minor
+category: reliability
+description: |
+  Without a restart policy, containers won't automatically recover from
+  crashes or host reboots. This leads to silent failures and service
+  unavailability. The default "no" restart policy is rarely what you want
+  in production.
+checklist:
+  - Service has no restart policy defined.
+  - Using restart: always which retries forever even for broken configs.
+  - No consideration for how the service handles repeated restarts.
+fix: |
+  Use restart: unless-stopped for most services. Use restart: on-failure
+  with max_retries for services that might have configuration issues.
+  Avoid restart: always as it can mask fundamental problems.
+
+tags:
+  - docker-compose
+  - reliability
+  - availability
+
+triggers:
+  file_patterns:
+    - "**/docker-compose*.yml"
+    - "**/docker-compose*.yaml"
+    - "**/compose*.yml"
+    - "**/compose*.yaml"
+  code_patterns:
+    - "services:"
+    - "image:"
+
+examples:
+  bad: |
+    services:
+      app:
+        image: myapp
+        # No restart policy - won't restart on crash
+  good: |
+    services:
+      app:
+        image: myapp
+        restart: unless-stopped
+        # Or with limits:
+        # restart: on-failure:5

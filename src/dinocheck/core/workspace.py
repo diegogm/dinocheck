@@ -1,5 +1,6 @@
 """Workspace scanning and git diff integration."""
 
+import contextlib
 import re
 from collections.abc import Iterator
 from pathlib import Path
@@ -16,6 +17,7 @@ class GitWorkspaceScanner(IWorkspaceScanner):
     def __init__(self, repo_path: Path | None = None):
         self.repo_path = repo_path or Path.cwd()
         self._repo: git.Repo | None = None
+        self._index_paths: set[str] | None = None
 
     @property
     def repo(self) -> git.Repo | None:
@@ -26,6 +28,16 @@ class GitWorkspaceScanner(IWorkspaceScanner):
             except git.InvalidGitRepositoryError:
                 self._repo = None
         return self._repo
+
+    @property
+    def index_paths(self) -> set[str]:
+        """Get set of paths in git index, caching the result."""
+        if self._index_paths is None:
+            if self.repo:
+                self._index_paths = {str(e.path) for e in self.repo.index.entries.values()}
+            else:
+                self._index_paths = set()
+        return self._index_paths
 
     def discover(
         self,
@@ -62,22 +74,32 @@ class GitWorkspaceScanner(IWorkspaceScanner):
             # Changed files (staged and unstaged)
             changed: set[Path] = set()
 
-            # Unstaged changes
+            # Unstaged changes (include b_path for renames)
             for item in self.repo.index.diff(None):
                 if item.a_path and item.a_path.endswith(".py"):
                     changed.add(Path(item.a_path))
+                if item.b_path and item.b_path.endswith(".py"):
+                    changed.add(Path(item.b_path))
 
-            # Staged changes (only if there are commits)
-            try:
-                _ = self.repo.head.commit  # Check if HEAD exists
+            # Staged changes - check if HEAD exists
+            has_head = False
+            with contextlib.suppress(ValueError):
+                # ValueError raised for empty repo with no HEAD reference
+                has_head = self.repo.head.is_valid()
+
+            if has_head:
+                # Has commits - diff against HEAD
                 for item in self.repo.index.diff("HEAD"):
                     if item.a_path and item.a_path.endswith(".py"):
                         changed.add(Path(item.a_path))
                     if item.b_path and item.b_path.endswith(".py"):
                         changed.add(Path(item.b_path))
-            except ValueError:
-                # No commits yet, skip staged diff against HEAD
-                pass
+            else:
+                # No commits yet - all staged files are new
+                for entry in self.repo.index.entries.values():
+                    path_str = str(entry.path)
+                    if path_str.endswith(".py"):
+                        changed.add(Path(path_str))
 
             # Untracked files
             for untracked in self.repo.untracked_files:
@@ -135,13 +157,24 @@ class GitWorkspaceScanner(IWorkspaceScanner):
 
         try:
             # Get diff against HEAD
-            working_dir = self.repo.working_dir
-            relative_path = path.relative_to(Path(str(working_dir)))
-            diff = self.repo.git.diff("HEAD", "--", str(relative_path), unified=3)
+            working_dir = Path(str(self.repo.working_dir))
+            # Resolve to absolute path to handle relative paths
+            abs_path = path.resolve() if not path.is_absolute() else path
+            relative_path = abs_path.relative_to(working_dir)
+
+            # Check if HEAD exists (repo has at least one commit)
+            has_head = self.repo.head.is_valid()
+            if has_head:
+                diff = self.repo.git.diff("HEAD", "--", str(relative_path), unified=3)
+            else:
+                # Empty repo without HEAD - treat file as new
+                diff = None
 
             if not diff:
                 # Check if file is untracked/new
-                diff = self.repo.git.diff("--no-index", "/dev/null", str(path), unified=3)
+                with contextlib.suppress(git.GitCommandError):
+                    # --no-index exits with 1 when there are differences, but still outputs diff
+                    diff = self.repo.git.diff("--no-index", "/dev/null", str(path), unified=3)
                 if not diff:
                     return []
 
@@ -207,7 +240,10 @@ class GitWorkspaceScanner(IWorkspaceScanner):
             return False
 
         try:
-            relative_path = str(path.relative_to(self.repo.working_dir))
+            # Resolve to absolute path to handle relative paths
+            abs_path = path.resolve() if not path.is_absolute() else path
+            # Use as_posix() for cross-platform compatibility (git always uses forward slashes)
+            relative_path = abs_path.relative_to(self.repo.working_dir).as_posix()
 
             # Check if untracked
             if relative_path in self.repo.untracked_files:
@@ -222,7 +258,7 @@ class GitWorkspaceScanner(IWorkspaceScanner):
                         return True
             except ValueError:
                 # No HEAD yet (empty repo), all staged files are new
-                if relative_path in [e.path for e in self.repo.index.entries.values()]:
+                if relative_path in self.index_paths:
                     return True
 
             return False

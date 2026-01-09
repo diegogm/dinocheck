@@ -52,7 +52,7 @@ def mock_provider_with_issues():
     """Mock provider that returns issues."""
     return MockProvider(
         responses={
-            "default": {
+            "book_list": {  # Key must be found in the prompt (file content)
                 "issues": [
                     {
                         "rule_id": "django/n-plus-one",
@@ -122,14 +122,14 @@ def hello():
         engine = Engine(engine_config)
         engine.provider = MockProvider()
 
-        # First analysis
-        result1 = engine.analyze([file_path])
+        # First analysis - should call LLM
+        result1 = engine.analyze([file_path], no_cache=True)
+        assert result1.meta["cache_hits"] == 0
 
         # Second analysis should use cache
         result2 = engine.analyze([file_path])
-
-        # Results should be consistent
-        assert len(result1.issues) == len(result2.issues)
+        assert result2.meta["cache_hits"] > 0, "Second analysis should use cache"
+        assert result2.meta["llm_calls"] == 0, "Should not call LLM when cached"
 
     def test_analyze_django_views(self, engine_config, tmp_path):
         """Should analyze Django views file."""
@@ -161,15 +161,44 @@ class OrderViewSet:
         file_path.write_text("x = 1")
 
         engine = Engine(engine_config)
+        engine.provider = MockProvider(
+            responses={
+                "x = 1": {
+                    "issues": [
+                        {
+                            "rule_id": "django/n-plus-one",
+                            "level": "major",
+                            "location": {"start_line": 1, "end_line": 1},
+                            "title": "Test issue 1",
+                            "why": "Test",
+                            "do": ["Fix"],
+                            "confidence": 0.9,
+                        },
+                        {
+                            "rule_id": "python/other-rule",
+                            "level": "minor",
+                            "location": {"start_line": 1, "end_line": 1},
+                            "title": "Test issue 2",
+                            "why": "Test",
+                            "do": ["Fix"],
+                            "confidence": 0.9,
+                        },
+                    ]
+                }
+            }
+        )
 
         # Analyze with specific rule filter
         result = engine.analyze(
             [file_path],
             rule_filter=["django/n-plus-one"],
+            no_cache=True,
         )
 
-        # Should complete without error
+        # Should only return issues matching the filter
         assert isinstance(result.issues, list)
+        for issue in result.issues:
+            assert "n-plus-one" in issue.rule_id, f"Unexpected rule: {issue.rule_id}"
 
     def test_analyze_multiple_files(self, engine_config, tmp_path):
         """Should analyze multiple files."""
@@ -207,10 +236,11 @@ def book_list(request):
         engine = Engine(engine_config)
         engine.provider = mock_provider_with_issues
 
-        result = engine.analyze([views_path])
+        result = engine.analyze([views_path], no_cache=True)
 
-        # Should complete analysis
+        # Should complete analysis and find issues
         assert isinstance(result.issues, list)
+        assert len(result.issues) > 0, "Mock provider should have returned issues"
 
 
 class TestEngineScoring:

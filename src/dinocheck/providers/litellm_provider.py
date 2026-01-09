@@ -3,18 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import time
 import warnings
-from pathlib import Path
-from typing import TYPE_CHECKING
 
 import litellm
 from pydantic import BaseModel
 
 from dinocheck.core.interfaces import LLMProvider
-
-if TYPE_CHECKING:
-    from dinocheck.core.cache import SQLiteCache
 
 # Suppress LiteLLM debug info messages
 litellm.suppress_debug_info = True
@@ -48,28 +42,17 @@ class LiteLLMProvider(LLMProvider):
         model: str = "gpt-4o-mini",
         api_key: str | None = None,
         base_url: str | None = None,
-        cache_db: Path | None = None,
         max_concurrent: int = 4,
     ):
         self.model = model
         self.api_key = api_key
         self.base_url = base_url
-        self.cache_db = cache_db
         self._max_concurrent = max_concurrent
-        self._cache: SQLiteCache | None = None
 
     @property
     def max_concurrent(self) -> int:
         """Maximum concurrent LLM requests."""
         return self._max_concurrent
-
-    def _get_cache(self) -> SQLiteCache | None:
-        """Get or create cache instance (lazy initialization)."""
-        if self.cache_db and self._cache is None:
-            from dinocheck.core.cache import SQLiteCache
-
-            self._cache = SQLiteCache(self.cache_db)
-        return self._cache
 
     def complete_structured_sync(
         self,
@@ -87,8 +70,6 @@ class LiteLLMProvider(LLMProvider):
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-
-        start_time = time.time()
 
         try:
             # Build kwargs, only include optional params if provided
@@ -110,32 +91,21 @@ class LiteLLMProvider(LLMProvider):
             # LiteLLM synchronous completion
             response = litellm.completion(**kwargs)
 
-            content = response.choices[0].message.content
-            duration_ms = int((time.time() - start_time) * 1000)
+            # Validate response structure
+            if not response.choices:
+                raise RuntimeError("LLM returned no choices")
+            choice = response.choices[0]
+            if not choice.message or not choice.message.content:
+                raise RuntimeError("LLM returned empty message content")
+            content = choice.message.content
 
             # Parse response into Pydantic model
             result = response_schema.model_validate_json(content)
 
-            # Log the call if cache is available and usage metadata exists
-            cache = self._get_cache()
-            if cache and response.usage:
-                # Get issue count from response if it has issues
-                issues_found = 0
-                if hasattr(result, "issues"):
-                    issues_found = len(result.issues)
-
-                cache.log_llm_call(
-                    model=self.model,
-                    pack="unknown",  # Will be set by caller
-                    files=[],  # Will be set by caller
-                    prompt_tokens=response.usage.prompt_tokens or 0,
-                    completion_tokens=response.usage.completion_tokens or 0,
-                    duration_ms=duration_ms,
-                    issues_found=issues_found,
-                )
-
             return result
 
+        except RuntimeError:
+            raise
         except Exception as e:
             raise RuntimeError(f"LLM call failed: {e}") from e
 

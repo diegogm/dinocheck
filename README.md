@@ -81,7 +81,7 @@ This fits the vibe coding workflow: you write code with AI assistance, and Dinoc
 | Feature | Description |
 |---------|-------------|
 | **LLM-First Analysis** | Uses GPT-4, Claude, or local models for semantic code review |
-| **Rule Packs** | Python and Django packs with 49 rules |
+| **Rule Packs** | Python, Django, TypeScript, Docker, Compose, Shell, Vue |
 | **Smart Caching** | SQLite cache avoids re-analyzing unchanged files |
 | **Cost Tracking** | Monitor LLM usage and costs with `dino logs` |
 | **Multi-Language** | Get feedback in English, Spanish, French, etc. |
@@ -110,9 +110,10 @@ export OPENAI_API_KEY=sk-...
 Example `dino.yaml`:
 
 ```yaml
-packs:
-  - python
-  - django
+# All packs enabled by default. Exclude what you don't need:
+# exclude_packs:
+#   - vue
+#   - django
 
 model: openai/gpt-4o-mini  # or anthropic/claude-3-5-sonnet, ollama/llama3
 language: en
@@ -165,27 +166,17 @@ dino logs cost
 
 ## Rule Packs
 
-### Python Pack (26 rules)
+| Pack | Description |
+|------|-------------|
+| **python** | Security, correctness, testing, and reliability rules for Python |
+| **django** | ORM, transactions, DRF, migrations, and Celery task rules |
+| **typescript** | Type safety, async patterns, and security for TS/JS |
+| **docker** | Dockerfile security, build optimization, and runtime config |
+| **docker-compose** | Compose security, networking, and reliability |
+| **sh** | Shell script security, error handling, and portability |
+| **vue** | Vue.js reactivity, templates, and XSS prevention |
 
-| Category | Rules |
-|----------|-------|
-| **Security** | SQL injection, insecure deserialization, mass assignment, timing attacks, input validation, unsafe eval, sensitive data exposure, error info leaks, open redirects |
-| **Correctness** | Inverted conditions, unreachable code, copy-paste bugs, missing edge cases, business logic errors, naming vs intention mismatches |
-| **Testing** | Wrong assertions, flaky patterns, mocks hiding bugs, missing negative tests |
-| **Reliability** | Concurrency safety, error handling, resource lifecycle |
-| **Maintainability** | Misleading comments, stale TODOs, API contract breaks |
-
-### Django Pack (23 rules)
-
-| Category | Rules |
-|----------|-------|
-| **ORM** | N+1 queries, missing select_related, queryset performance, template queries, signal hidden logic, cache stale data |
-| **Transactions** | Atomic scope, select_for_update, F-expressions, on_commit side effects |
-| **DRF** | Permission classes, throttling, async blocking calls, serializer mismatches |
-| **Security** | CSRF exempt misuse, serializer field whitelist |
-| **Migrations** | Data loss, large indexes, NOT NULL two-phase |
-| **Tasks** | Non-idempotent Celery tasks |
-| **Testing** | Missing auth tests, business logic coverage |
+Use `dino packs info <pack>` to see all rules in a pack.
 
 ## Output Formats
 

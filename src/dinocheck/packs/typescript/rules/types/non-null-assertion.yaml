@@ -1,0 +1,41 @@
+id: typescript/non-null-assertion
+name: Unsafe non-null assertion
+level: major
+category: types
+description: |
+  The non-null assertion operator (!) tells TypeScript to trust that a value
+  is not null/undefined without checking. If wrong, this causes runtime errors.
+  It's often used to silence the compiler without fixing the underlying issue.
+checklist:
+  - Non-null assertion on values that could genuinely be null.
+  - Chained assertions like obj!.prop!.value.
+  - Assertion used instead of proper null checking or optional chaining.
+fix: |
+  Use optional chaining (?.), nullish coalescing (??), or explicit null checks.
+  Only use ! when you have absolute certainty the value exists (e.g., after
+  a type guard or in controlled initialization).
+
+tags:
+  - typescript
+  - types
+  - null-safety
+
+triggers:
+  file_patterns:
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.mts"
+  code_patterns:
+    - "!\\."
+    - "!\\["
+    - "!;"
+
+examples:
+  bad: |
+    const user = users.find(u => u.id === id)!;
+    console.log(user.name);
+  good: |
+    const user = users.find(u => u.id === id);
+    if (!user) throw new Error(`User ${id} not found`);
+    console.log(user.name);
+    // Or: console.log(user?.name ?? 'Unknown');

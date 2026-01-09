@@ -1,0 +1,46 @@
+id: sh/bashisms-in-sh
+name: Bash-specific syntax in POSIX shell
+level: minor
+category: portability
+description: |
+  Scripts with #!/bin/sh shebang should be POSIX-compliant. Bash-specific
+  features like [[ ]], arrays, or process substitution will fail on systems
+  where /bin/sh is dash, ash, or another POSIX shell.
+checklist:
+  - Script uses #!/bin/sh but contains [[ ]] tests.
+  - Arrays syntax used in a #!/bin/sh script.
+  - Process substitution <() or >() in POSIX shell.
+  - Bash-specific variable expansions like ${var,,}.
+fix: |
+  Either change shebang to #!/bin/bash (or #!/usr/bin/env bash), or replace
+  bash-specific features with POSIX equivalents.
+
+tags:
+  - shell
+  - portability
+  - posix
+
+triggers:
+  file_patterns:
+    - "**/*.sh"
+  code_patterns:
+    - "#!/bin/sh"
+    - "\\[\\["
+    - "declare -a"
+
+examples:
+  bad: |
+    #!/bin/sh
+    if [[ "$var" == "test" ]]; then
+        echo "${var^^}"
+    fi
+  good: |
+    #!/bin/bash
+    if [[ "$var" == "test" ]]; then
+        echo "${var^^}"
+    fi
+    # Or POSIX-compliant:
+    #!/bin/sh
+    if [ "$var" = "test" ]; then
+        echo "$var" | tr '[:lower:]' '[:upper:]'
+    fi

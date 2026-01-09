@@ -1,0 +1,45 @@
+id: typescript/floating-promise
+name: Unhandled floating promise
+level: critical
+category: async
+description: |
+  A floating promise is a Promise that is not awaited, returned, or explicitly
+  handled. Errors from floating promises are silently swallowed, making bugs
+  hard to detect and debug. They can also cause race conditions.
+checklist:
+  - Async function called without await or .then().
+  - Promise-returning function result not stored or awaited.
+  - Missing await in async function that should be sequential.
+fix: |
+  Always await promises or explicitly handle them with .catch(). If you
+  intentionally want fire-and-forget, add void operator and a comment
+  explaining why: void doAsync().catch(console.error);
+
+tags:
+  - typescript
+  - async
+  - error-handling
+
+triggers:
+  file_patterns:
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.mts"
+    - "**/*.js"
+    - "**/*.jsx"
+  code_patterns:
+    - "async "
+    - "\\.then\\("
+    - "Promise\\."
+
+examples:
+  bad: |
+    function handleClick() {
+      saveData(formData); // Promise ignored!
+      navigate('/success');
+    }
+  good: |
+    async function handleClick() {
+      await saveData(formData);
+      navigate('/success');
+    }

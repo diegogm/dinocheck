@@ -1,0 +1,10 @@
+name: docker-compose
+version: "0.1.0"
+description: |
+  Docker Compose best practices pack.
+  Provides security, reliability, and configuration rules for compose files.
+
+  Rules are organized by category:
+  - security/: Secrets and privilege management
+  - reliability/: Health checks and restart policies
+  - networking/: Network isolation and port exposure

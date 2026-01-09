@@ -140,7 +140,7 @@ def load_rules_from_directory(rules_dir: Path) -> list[Rule]:
     """
     rules: list[Rule] = []
 
-    if not rules_dir.exists():
+    if not rules_dir.exists() or not rules_dir.is_dir():
         return rules
 
     for yaml_file in rules_dir.glob("**/*.yaml"):
@@ -191,18 +191,42 @@ class CustomRulesPack(Pack):
         return self._rules
 
 
+def get_all_pack_names() -> list[str]:
+    """Get names of all available packs."""
+    _ensure_builtin_packs()
+    return list(_pack_registry.keys())
+
+
 class PackCompositor:
     """Composes multiple packs with proper precedence."""
 
-    def compose(self, pack_names: list[str], overlays: list[Pack] | None = None) -> "ComposedPack":
+    def compose(
+        self,
+        pack_names: list[str] | None = None,
+        exclude_packs: list[str] | None = None,
+        overlays: list[Pack] | None = None,
+    ) -> "ComposedPack":
         """
         Compose packs with proper precedence.
+
+        Args:
+            pack_names: List of pack names to include. None means all packs.
+            exclude_packs: List of pack names to exclude.
+            overlays: Additional packs to overlay on top.
 
         Composition order (later overrides earlier):
         1. Language pack (base rules)
         2. Framework pack (extends/overrides)
         3. Team/repo overlays (final overrides)
         """
+        # If pack_names is None, use all available packs
+        if pack_names is None:
+            pack_names = get_all_pack_names()
+
+        # Apply exclusions (use set for O(1) membership check)
+        exclude_set = set(exclude_packs) if exclude_packs else set()
+        pack_names = [p for p in pack_names if p not in exclude_set]
+
         packs = get_packs(pack_names)
         overlays = overlays or []
 
@@ -214,7 +238,7 @@ class PackCompositor:
                 all_rules[rule.id] = rule
 
         return ComposedPack(
-            name="+".join(pack_names),
+            name="+".join(pack_names) if pack_names else "none",
             version="composed",
             rules_dict=all_rules,
         )

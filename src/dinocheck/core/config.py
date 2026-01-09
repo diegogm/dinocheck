@@ -15,8 +15,10 @@ DEFAULT_CACHE_DB = ".dinocheck/cache.db"
 class DinocheckConfig(BaseModel):
     """Main Dinocheck configuration - simplified."""
 
-    packs: list[str] = Field(default_factory=lambda: ["python"])
+    packs: list[str] | None = None  # None = all packs enabled
+    exclude_packs: list[str] = Field(default_factory=list)
     model: str = "openai/gpt-5.1-codex"
+    base_url: str | None = None  # Custom API endpoint (OpenAI-compatible)
     language: str = "en"
     max_llm_calls: int = 10
     disabled_rules: list[str] = Field(default_factory=list)
@@ -90,13 +92,17 @@ class ConfigManager:
         """Load configuration from dino.yaml and .env files.
 
         Priority (highest to lowest):
-        1. Environment variables (DINO_*)
+        1. Environment variables (DINO_MODEL, DINO_LANGUAGE)
         2. .env file (in same directory as dino.yaml)
         3. dino.yaml
         4. Defaults
         """
         # Find config file first
         config_path = self._config_path or self.find_config_file()
+
+        # Error if explicit config path was provided but doesn't exist
+        if self._config_path and not self._config_path.exists():
+            raise FileNotFoundError(f"Config file not found: {self._config_path}")
 
         # Load .env from same directory as config file (or cwd if no config)
         env_path = config_path.parent / ".env" if config_path else Path.cwd() / ".env"
@@ -148,9 +154,10 @@ class ConfigManager:
             if not api_key:
                 errors.append(f"API key not found: {self.config.api_key_env}")
 
-        # Check packs
-        if not self.config.packs:
-            errors.append("No packs configured")
+        # Check packs - None means all packs, which is valid
+        # Only error if explicitly set to empty list
+        if self.config.packs is not None and len(self.config.packs) == 0:
+            errors.append("No packs configured (use packs: null for all packs)")
 
         # Check budget
         if self.config.max_llm_calls < 0:

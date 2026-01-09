@@ -1,0 +1,43 @@
+id: typescript/any-abuse
+name: Excessive use of any type
+level: major
+category: types
+description: |
+  Using 'any' defeats TypeScript's type checking. It disables all type safety
+  for that value, allowing bugs to slip through that the compiler would
+  otherwise catch. It also breaks IDE autocomplete and refactoring tools.
+checklist:
+  - Explicit any type annotations.
+  - Variables implicitly typed as any due to missing types.
+  - Function parameters or return types using any.
+  - any used to bypass legitimate type errors instead of fixing them.
+fix: |
+  Use specific types, generics, or 'unknown' (which requires type checking
+  before use). For third-party libraries without types, create proper type
+  definitions or use declaration files.
+
+tags:
+  - typescript
+  - types
+  - safety
+
+triggers:
+  file_patterns:
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.mts"
+  code_patterns:
+    - ": any"
+    - "as any"
+    - "<any>"
+
+examples:
+  bad: |
+    function process(data: any): any {
+      return data.map((x: any) => x.value);
+    }
+  good: |
+    interface Item { value: string; }
+    function process(data: Item[]): string[] {
+      return data.map(x => x.value);
+    }

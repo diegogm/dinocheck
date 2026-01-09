@@ -58,32 +58,49 @@ class CodeExtractor:
         except SyntaxError:
             return None
 
-        context_parts: list[str] = []
+        # Find the most specific (smallest span) class and function containing the line
+        best_class: ast.ClassDef | None = None
+        best_class_span = float("inf")
+        best_func: ast.FunctionDef | ast.AsyncFunctionDef | None = None
+        best_func_span = float("inf")
 
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and cls._node_contains_line(node, line):
-                context_parts = [f"class {node.name}"]
-                # Check for method inside class
-                for child in ast.iter_child_nodes(node):
-                    if isinstance(  # noqa: UP038
-                        child, (ast.FunctionDef, ast.AsyncFunctionDef)
-                    ) and cls._node_contains_line(child, line):
-                        context_parts.append(child.name)
-                        break
+                span = cls._node_span(node)
+                if span < best_class_span:
+                    best_class = node
+                    best_class_span = span
 
-            elif (
-                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))  # noqa: UP038
-                and cls._node_contains_line(node, line)
-                and not context_parts
-            ):
-                context_parts = [f"function {node.name}"]
+            elif isinstance(  # noqa: UP038
+                node, (ast.FunctionDef, ast.AsyncFunctionDef)
+            ) and cls._node_contains_line(node, line):
+                span = cls._node_span(node)
+                if span < best_func_span:
+                    best_func = node
+                    best_func_span = span
 
-        if not context_parts:
-            return None
+        # Build context from best matches
+        if best_class is not None:
+            # Check if best_func is a method of best_class (direct child)
+            for child in ast.iter_child_nodes(best_class):
+                if child is best_func:
+                    return f"in class {best_class.name}.{best_func.name}()"
+            # Function is not a direct method, could be nested - use function if more specific
+            if best_func is not None and best_func_span < best_class_span:
+                return f"in function {best_func.name}"
+            return f"in class {best_class.name}"
 
-        if len(context_parts) == 1:
-            return f"in {context_parts[0]}"
-        return f"in {context_parts[0]}.{context_parts[1]}()"
+        if best_func is not None:
+            return f"in function {best_func.name}"
+
+        return None
+
+    @classmethod
+    def _node_span(cls, node: ast.AST) -> int:
+        """Return the line span of a node."""
+        lineno = getattr(node, "lineno", 0)
+        end_lineno = getattr(node, "end_lineno", lineno)
+        return end_lineno - lineno + 1
 
     @classmethod
     def _node_contains_line(cls, node: ast.AST, line: int) -> bool:

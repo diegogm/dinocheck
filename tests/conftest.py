@@ -96,10 +96,12 @@ def sample_issues():
 
 @pytest.fixture
 def django_test_code():
-    """Sample Django code with known issues.
+    """Sample Django code with INTENTIONAL anti-patterns for testing.
 
-    NOTE: This code intentionally contains anti-patterns (N+1 queries,
-    missing ownership filters) to test that dinocheck detects them.
+    WARNING: This fixture contains BAD CODE ON PURPOSE.
+    The N+1 queries and missing filters are intentional test cases
+    to verify that dinocheck correctly identifies these issues.
+    DO NOT "fix" this code - it exists to be detected as problematic.
     """
     return """
 from django.shortcuts import render
@@ -107,7 +109,7 @@ from rest_framework.viewsets import ModelViewSet
 from .models import Book, Order
 
 def book_list(request):
-    # N+1 query - should trigger
+    # INTENTIONAL N+1 QUERY - This is a test case, not production code
     books = Book.objects.all()
     return render(request, "books.html", {
         "books": [{"title": b.title, "author": b.author.name} for b in books]
@@ -133,15 +135,17 @@ def empty_git_repo(tmp_path):
     """Create an empty git repository."""
     import subprocess
 
-    subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+    subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
     subprocess.run(
         ["git", "config", "user.email", "test@test.com"],
         cwd=tmp_path,
         capture_output=True,
+        check=True,
     )
     subprocess.run(
         ["git", "config", "user.name", "Test User"],
         cwd=tmp_path,
         capture_output=True,
+        check=True,
     )
     return tmp_path

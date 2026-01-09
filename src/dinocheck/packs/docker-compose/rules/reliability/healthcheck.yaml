@@ -1,0 +1,54 @@
+id: docker-compose/missing-healthcheck
+name: Missing health check configuration
+level: minor
+category: reliability
+description: |
+  Without health checks, Docker cannot determine if the application inside
+  the container is actually functioning. A container may be "running" while
+  the application is deadlocked, crashed, or unable to serve requests.
+checklist:
+  - Service has no healthcheck configuration.
+  - Dependent services use depends_on without condition: service_healthy.
+  - Service exposes ports but has no health verification.
+fix: |
+  Add healthcheck to services. For HTTP services, use curl to hit a health
+  endpoint. Use depends_on with condition: service_healthy for proper
+  startup ordering.
+
+tags:
+  - docker-compose
+  - reliability
+  - observability
+
+triggers:
+  file_patterns:
+    - "**/docker-compose*.yml"
+    - "**/docker-compose*.yaml"
+    - "**/compose*.yml"
+    - "**/compose*.yaml"
+  code_patterns:
+    - "ports:"
+    - "expose:"
+    - "depends_on:"
+
+examples:
+  bad: |
+    services:
+      web:
+        depends_on:
+          - db
+      db:
+        image: postgres
+  good: |
+    services:
+      web:
+        depends_on:
+          db:
+            condition: service_healthy
+      db:
+        image: postgres
+        healthcheck:
+          test: ["CMD-SHELL", "pg_isready -U postgres"]
+          interval: 10s
+          timeout: 5s
+          retries: 5

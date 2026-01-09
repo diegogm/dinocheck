@@ -1,0 +1,57 @@
+id: docker-compose/exposed-host-ports
+name: Unnecessary host port exposure
+level: major
+category: networking
+description: |
+  Binding container ports to the host exposes services to the network.
+  Services that only need to communicate with other containers should use
+  Docker networks instead of host ports. Exposed ports increase attack surface.
+checklist:
+  - Internal services (databases, caches) bound to host ports.
+  - Port 0.0.0.0 bindings (accessible from all interfaces).
+  - Services exposed that should only be internal.
+fix: |
+  Use Docker networks for inter-container communication. Only expose ports
+  that need external access. Bind to 127.0.0.1 for local-only access.
+  Use expose: instead of ports: for internal services.
+
+tags:
+  - docker-compose
+  - networking
+  - security
+
+triggers:
+  file_patterns:
+    - "**/docker-compose*.yml"
+    - "**/docker-compose*.yaml"
+    - "**/compose*.yml"
+    - "**/compose*.yaml"
+  code_patterns:
+    - "ports:"
+    - "\"\\d+:\\d+\""
+
+examples:
+  bad: |
+    services:
+      db:
+        image: postgres
+        ports:
+          - "5432:5432"  # DB exposed to host!
+      redis:
+        image: redis
+        ports:
+          - "6379:6379"  # Cache exposed!
+  good: |
+    services:
+      db:
+        image: postgres
+        expose:
+          - "5432"  # Only accessible within Docker network
+        networks:
+          - backend
+      redis:
+        image: redis
+        networks:
+          - backend
+    networks:
+      backend:

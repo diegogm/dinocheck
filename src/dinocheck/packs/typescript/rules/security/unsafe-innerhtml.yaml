@@ -1,0 +1,42 @@
+id: typescript/unsafe-innerhtml
+name: Unsafe innerHTML usage
+level: critical
+category: security
+description: |
+  Setting innerHTML with user-controlled content creates XSS vulnerabilities.
+  Attackers can inject malicious scripts that execute in users' browsers,
+  stealing credentials or performing actions on their behalf.
+checklist:
+  - innerHTML set with user input or external data.
+  - Template strings containing user data assigned to innerHTML.
+  - dangerouslySetInnerHTML in React without sanitization.
+fix: |
+  Use textContent for plain text. For HTML content, use a sanitizer like
+  DOMPurify. In React, avoid dangerouslySetInnerHTML when possible, or
+  sanitize the content first.
+
+tags:
+  - typescript
+  - security
+  - xss
+
+triggers:
+  file_patterns:
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.mts"
+    - "**/*.js"
+    - "**/*.jsx"
+  code_patterns:
+    - "innerHTML"
+    - "outerHTML"
+    - "dangerouslySetInnerHTML"
+    - "insertAdjacentHTML"
+
+examples:
+  bad: |
+    element.innerHTML = `<div>${userComment}</div>`;
+    <div dangerouslySetInnerHTML={{ __html: comment }} />
+  good: |
+    element.textContent = userComment;
+    <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(comment) }} />
