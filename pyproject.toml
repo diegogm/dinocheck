@@ -143,3 +143,7 @@ fail_under = 80
 dev = [
     "pre-commit>=4.0.1",
 ]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+]

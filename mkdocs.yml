@@ -1,0 +1,28 @@
+site_name: Dinocheck
+site_description: LLM-powered code critic for vibe coding
+site_url: https://diegogm.github.io/dinocheck/
+repo_url: https://github.com/diegogm/dinocheck
+repo_name: diegogm/dinocheck
+
+theme:
+  name: material
+  favicon: assets/favicon.png
+  logo: assets/favicon.png
+  palette:
+    primary: green
+  features:
+    - navigation.sections
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Configuration: configuration.md
+  - Rules: rules.md
+  - Coding Agents: integrations.md
+  - CLI Reference: cli.md
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - tables

@@ -14,6 +14,7 @@
   <a href="https://pypi.org/project/dinocheck/"><img src="https://img.shields.io/pypi/v/dinocheck.svg" alt="PyPI version"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11--3.13-blue.svg" alt="Python 3.11+"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://diegogm.github.io/dinocheck/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-blue" alt="Documentation"></a>
 </p>
 
 ---
@@ -216,6 +217,16 @@ jobs:
 | **Google** | `gemini/gemini-pro` |
 
 See [LiteLLM docs](https://docs.litellm.ai/docs/providers) for 100+ supported providers.
+
+## Documentation
+
+Full documentation available at: **https://diegogm.github.io/dinocheck/**
+
+### Build docs locally
+
+```bash
+fab docs
+```
 
 ## Development
 

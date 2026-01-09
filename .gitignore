@@ -53,6 +53,9 @@ htmlcov/
 dino.yaml
 src/dinocheck/_version.py
 
+# Documentation
+site/
+
 # OS
 .DS_Store
 Thumbs.db

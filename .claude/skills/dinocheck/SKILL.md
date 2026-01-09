@@ -21,12 +21,21 @@ Run dinocheck to get AI-powered code review feedback.
 
 ```bash
 # Check current directory
-fab dino check
+dino check
+
+# Check specific files or directories
+dino check src/
+
+# Check only changed files (git diff)
+dino check --diff
+
+# Verbose output with progress
+dino check -v
 ```
 
 ## Workflow
 
-1. Run `fab dino check` on the relevant code
+1. Run `dino check` on the relevant code
 2. Review the issues found
 3. Address critical and major issues first
-4. Use `fab dino -a "explain <rule-id>"` for more details on any rule
+4. Use `dino explain <rule-id>` for more details on any rule

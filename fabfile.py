@@ -10,6 +10,7 @@ Usage:
     fab predeploy     # Run pre-deploy checks (ruff strict + tests)
     fab publish       # Publish to PyPI (runs predeploy first)
     fab dino          # Run dino CLI (e.g., fab dino -- check src/)
+    fab docs          # Serve documentation locally
 """
 
 import os
@@ -232,3 +233,10 @@ def ci(c):
     console.print()
     _banner("CI Passed")
     _success("All checks passed!")
+
+
+@task
+def docs(c):
+    """Serve documentation locally at http://localhost:8000."""
+    _step("Starting documentation server at http://localhost:8000")
+    _run(c, "uv run --group docs mkdocs serve")

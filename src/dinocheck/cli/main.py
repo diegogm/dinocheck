@@ -594,39 +594,104 @@ max_llm_calls: 10
     config_path.write_text(default_config)
     console.success(f"Created config: {config_path}")
 
-    # Check if .claude folder exists and offer to create skill
-    claude_dir = path / ".claude"
-    if claude_dir.is_dir():
-        _offer_claude_skill(path, claude_dir, force)
+    # Offer to create skills for detected agents
+    agent_configs = [
+        ("Claude Code", path / ".claude", _create_claude_skill),
+        ("OpenAI Codex", path / ".codex", _create_codex_skill),
+        ("Gemini CLI", path / ".gemini", _create_gemini_skill),
+    ]
 
-    # Check if .codex folder exists and offer to create skill
-    codex_dir = path / ".codex"
-    if codex_dir.is_dir():
-        _offer_codex_skill(path, codex_dir, force)
+    for agent_name, agent_dir, create_fn in agent_configs:
+        if agent_dir.is_dir():
+            create_skill = typer.confirm(
+                f"\nDetected {agent_dir.name} folder. Create a {agent_name} skill for dinocheck?",
+                default=True,
+            )
+            if create_skill:
+                create_fn(path, agent_dir, force)
 
-    # Check if .gemini folder exists and offer to create skill
-    gemini_dir = path / ".gemini"
-    if gemini_dir.is_dir():
-        _offer_gemini_skill(path, gemini_dir, force)
+
+@app.command()
+def skill(
+    path: Annotated[
+        Path,
+        typer.Argument(help="Directory to create skill in"),
+    ] = Path("."),
+    agent: Annotated[
+        str | None,
+        typer.Option(
+            "--agent",
+            "-a",
+            help="Specific agent: claude, codex, or gemini",
+            click_type=click.Choice(["claude", "codex", "gemini"]),
+        ),
+    ] = None,
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            "-f",
+            help="Overwrite existing skill",
+        ),
+    ] = False,
+) -> None:
+    """Create agent skill for Claude Code, Codex, or Gemini CLI.
+
+    Creates a skill file that allows AI coding agents to use dinocheck
+    for code review. The skill is created in the agent's configuration folder.
+
+    Examples:
+        dino skill                    # Create for all detected agents
+        dino skill --agent claude     # Create only for Claude Code
+        dino skill --agent codex      # Create only for OpenAI Codex
+        dino skill --agent gemini     # Create only for Gemini CLI
+        dino skill --force            # Overwrite existing skills
+    """
+    agents_found = []
+    agents_created = []
+
+    # Define agent configurations
+    agent_configs = {
+        "claude": (path / ".claude", _create_claude_skill),
+        "codex": (path / ".codex", _create_codex_skill),
+        "gemini": (path / ".gemini", _create_gemini_skill),
+    }
+
+    if agent:
+        # Specific agent requested
+        agent_dir, create_fn = agent_configs[agent]
+        if not agent_dir.is_dir():
+            console.error(f"Agent folder not found: {agent_dir}")
+            console.print(f"Create it with: mkdir {agent_dir}", style="dim")
+            raise typer.Exit(1)
+        if create_fn(path, agent_dir, force):
+            agents_created.append(agent)
+    else:
+        # Auto-detect agents
+        for agent_name, (agent_dir, create_fn) in agent_configs.items():
+            if agent_dir.is_dir():
+                agents_found.append(agent_name)
+                if create_fn(path, agent_dir, force):
+                    agents_created.append(agent_name)
+
+        if not agents_found:
+            console.warning("No agent folders detected (.claude, .codex, .gemini)")
+            console.print("Create one first or use --agent to specify", style="dim")
+            raise typer.Exit(1)
+
+    if agents_created:
+        console.success(f"Created skills for: {', '.join(agents_created)}")
+    elif agents_found:
+        console.info("All skills already exist. Use --force to overwrite.")
 
 
-def _offer_claude_skill(path: Path, claude_dir: Path, force: bool) -> None:
-    """Offer to create a Claude Code skill for dinocheck."""
+def _create_claude_skill(path: Path, claude_dir: Path, force: bool) -> bool:
+    """Create Claude Code skill. Returns True if created."""
     skill_dir = claude_dir / "skills" / "dinocheck"
     skill_file = skill_dir / "SKILL.md"
 
     if skill_file.exists() and not force:
-        console.info("Claude Code skill already exists", err=True)
-        return
-
-    # Ask user if they want to create the skill
-    create_skill = typer.confirm(
-        "\nDetected .claude folder. Create a Claude Code skill for dinocheck?",
-        default=True,
-    )
-
-    if not create_skill:
-        return
+        return False
 
     skill_content = """\
 ---
@@ -674,26 +739,17 @@ dino check -v
 
     skill_dir.mkdir(parents=True, exist_ok=True)
     skill_file.write_text(skill_content)
-    console.success(f"Created Claude Code skill: {skill_file}")
+    console.print(f"  Created: {skill_file}", style="dim")
+    return True
 
 
-def _offer_codex_skill(path: Path, codex_dir: Path, force: bool) -> None:
-    """Offer to create an OpenAI Codex skill for dinocheck."""
+def _create_codex_skill(path: Path, codex_dir: Path, force: bool) -> bool:
+    """Create OpenAI Codex skill. Returns True if created."""
     skill_dir = codex_dir / "skills" / "dinocheck"
     skill_file = skill_dir / "SKILL.md"
 
     if skill_file.exists() and not force:
-        console.info("Codex skill already exists", err=True)
-        return
-
-    # Ask user if they want to create the skill
-    create_skill = typer.confirm(
-        "\nDetected .codex folder. Create a Codex skill for dinocheck?",
-        default=True,
-    )
-
-    if not create_skill:
-        return
+        return False
 
     skill_content = """\
 ---
@@ -740,26 +796,17 @@ dino check -v
 
     skill_dir.mkdir(parents=True, exist_ok=True)
     skill_file.write_text(skill_content)
-    console.success(f"Created Codex skill: {skill_file}")
+    console.print(f"  Created: {skill_file}", style="dim")
+    return True
 
 
-def _offer_gemini_skill(path: Path, gemini_dir: Path, force: bool) -> None:
-    """Offer to create a Gemini CLI skill for dinocheck."""
+def _create_gemini_skill(path: Path, gemini_dir: Path, force: bool) -> bool:
+    """Create Gemini CLI skill. Returns True if created."""
     skill_dir = gemini_dir / "skills" / "dinocheck"
     skill_file = skill_dir / "SKILL.md"
 
     if skill_file.exists() and not force:
-        console.info("Gemini CLI skill already exists", err=True)
-        return
-
-    # Ask user if they want to create the skill
-    create_skill = typer.confirm(
-        "\nDetected .gemini folder. Create a Gemini CLI skill for dinocheck?",
-        default=True,
-    )
-
-    if not create_skill:
-        return
+        return False
 
     skill_content = """\
 ---
@@ -806,7 +853,8 @@ dino check -v
 
     skill_dir.mkdir(parents=True, exist_ok=True)
     skill_file.write_text(skill_content)
-    console.success(f"Created Gemini CLI skill: {skill_file}")
+    console.print(f"  Created: {skill_file}", style="dim")
+    return True
 
 
 @app.command()
