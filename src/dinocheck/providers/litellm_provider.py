@@ -111,6 +111,8 @@ class LiteLLMProvider(LLMProvider):
                 kwargs["max_tokens"] = max_tokens
             if temperature is not None:
                 kwargs["temperature"] = temperature
+            if self.base_url is not None:
+                kwargs["base_url"] = self.base_url
 
             # LiteLLM synchronous completion
             response = litellm.completion(**kwargs)
