@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 import time
 import warnings
 from pathlib import Path
@@ -59,14 +58,6 @@ class LiteLLMProvider(LLMProvider):
         self._max_concurrent = max_concurrent
         self._cache: SQLiteCache | None = None
 
-        # Set API key if provided
-        if api_key:
-            # LiteLLM reads from env, so we set it there
-            if "anthropic" in model.lower() or "claude" in model.lower():
-                os.environ["ANTHROPIC_API_KEY"] = api_key
-            else:
-                os.environ["OPENAI_API_KEY"] = api_key
-
     @property
     def max_concurrent(self) -> int:
         """Maximum concurrent LLM requests."""
@@ -113,6 +104,8 @@ class LiteLLMProvider(LLMProvider):
                 kwargs["temperature"] = temperature
             if self.base_url is not None:
                 kwargs["base_url"] = self.base_url
+            if self.api_key is not None:
+                kwargs["api_key"] = self.api_key
 
             # LiteLLM synchronous completion
             response = litellm.completion(**kwargs)

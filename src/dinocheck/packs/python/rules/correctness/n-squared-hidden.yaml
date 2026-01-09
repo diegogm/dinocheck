@@ -1,0 +1,57 @@
+id: python/n-squared-hidden
+name: Hidden O(n²) Complexity
+level: major
+category: correctness
+description: |
+  Detects hidden O(n²) complexity patterns that look innocent but scale poorly.
+
+  Common patterns:
+  - `if item in list` inside a loop (should be a set)
+  - `list.index()` or `list.count()` inside a loop
+  - Nested loops over the same collection
+  - Repeated list concatenation with +=
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "for .+ in .+:"
+    - "while "
+    - "\\.index\\("
+    - "\\.count\\("
+    - " in \\w+\\s*:"
+
+checklist:
+  - Is there an `in` check against a list inside a loop? Should be a set
+  - Is list.index() or list.count() called inside a loop?
+  - Are there nested loops over collections that could be avoided?
+  - Is string concatenation done repeatedly in a loop? Should use join()
+  - Could a dict/set lookup replace linear search?
+
+fix: |
+  Convert lists to sets for membership testing: seen = set(items)
+  Use dict for lookups instead of repeated list searches.
+  Use ''.join() instead of repeated string concatenation.
+
+tags:
+  - correctness
+  - performance
+  - complexity
+
+examples:
+  bad: |
+    def find_duplicates(items):
+        duplicates = []
+        for item in items:
+            if items.count(item) > 1 and item not in duplicates:
+                duplicates.append(item)
+        return duplicates  # O(n²) - count() and `in list` are both O(n)
+  good: |
+    def find_duplicates(items):
+        seen = set()
+        duplicates = set()
+        for item in items:
+            if item in seen:
+                duplicates.add(item)
+            seen.add(item)
+        return list(duplicates)  # O(n) - set operations are O(1)

@@ -1,0 +1,50 @@
+id: python/blocking-in-async
+name: Blocking Call in Async Context
+level: major
+category: reliability
+description: |
+  Detects blocking/synchronous calls inside async functions that will block
+  the event loop and defeat the purpose of async code.
+
+  Common offenders: time.sleep(), requests.get(), open() for large files,
+  synchronous database calls.
+
+triggers:
+  file_patterns:
+    - "**/*.py"
+  code_patterns:
+    - "async def"
+    - "await"
+
+checklist:
+  - Is there a time.sleep() call inside an async function? Should be asyncio.sleep()
+  - Are there requests.get/post calls? Should use aiohttp or httpx
+  - Are there synchronous file I/O operations on large files?
+  - Are there synchronous database queries? Should use async drivers
+  - Is subprocess.run() used? Should use asyncio.create_subprocess_exec()
+  - Could this blocking call be wrapped with asyncio.to_thread()?
+
+fix: |
+  Replace blocking calls with async equivalents:
+  - time.sleep() -> asyncio.sleep()
+  - requests -> aiohttp or httpx
+  - open() -> aiofiles
+  - Or wrap with asyncio.to_thread() for unavoidable sync calls.
+
+tags:
+  - reliability
+  - async
+  - performance
+
+examples:
+  bad: |
+    async def fetch_data():
+        time.sleep(1)  # Blocks entire event loop!
+        response = requests.get(url)  # Also blocks!
+        return response.json()
+  good: |
+    async def fetch_data():
+        await asyncio.sleep(1)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                return await response.json()

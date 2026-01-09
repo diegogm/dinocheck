@@ -116,5 +116,5 @@ class CodeExtractor:
         try:
             content = path.read_text()
             return cls.extract_context(content, line)
-        except (OSError, UnicodeDecodeError, SyntaxError):
+        except (OSError, UnicodeDecodeError):
             return None

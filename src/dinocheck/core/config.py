@@ -23,9 +23,9 @@ class DinocheckConfig(BaseModel):
 
     @property
     def provider(self) -> str:
-        """Extract provider from model string."""
+        """Extract provider from model string (normalized to lowercase)."""
         if "/" in self.model:
-            return self.model.split("/")[0]
+            return self.model.split("/")[0].lower()
         return "openai"
 
     @property

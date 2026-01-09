@@ -1,0 +1,48 @@
+id: python/test-without-assertion
+name: Test Without Assertion
+level: major
+category: testing
+description: |
+  Detects test functions that don't assert anything, giving false confidence
+  that code works correctly.
+
+  A test that only calls code without verifying results will pass even if
+  the code is completely broken. Every test should verify expected behavior.
+
+triggers:
+  file_patterns:
+    - "**/test_*.py"
+    - "**/*_test.py"
+    - "**/tests/*.py"
+  code_patterns:
+    - "def test_"
+    - "async def test_"
+
+checklist:
+  - Does the test function contain any assert statements?
+  - Does it use pytest.raises() or self.assertRaises()?
+  - Does it use mock assertions like .assert_called_with()?
+  - Is this an integration test that relies on exceptions for failure?
+  - Could this test pass even if the code under test is broken?
+
+fix: |
+  Add assertions to verify expected behavior:
+  - assert result == expected
+  - assert error in str(exception)
+  - mock.assert_called_once_with(...)
+
+tags:
+  - testing
+  - quality
+  - assertions
+
+examples:
+  bad: |
+    def test_create_user():
+        user = create_user("john", "john@example.com")
+        # Test passes but verifies nothing!
+  good: |
+    def test_create_user():
+        user = create_user("john", "john@example.com")
+        assert user.name == "john"
+        assert user.email == "john@example.com"
