@@ -22,6 +22,17 @@ language: en
 # Max LLM calls per run (default: 1)
 # max_llm_calls: 1
 
+# Analyze only specific directories (default: current directory)
+# include_paths:
+#   - src/
+#   - lib/
+
+# Exclude paths from analysis (glob patterns)
+# exclude_paths:
+#   - migrations
+#   - tests/fixtures
+#   - "*.generated.py"
+
 # Disable specific rules
 # disabled_rules:
 #   - django/bare-except

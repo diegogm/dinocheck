@@ -43,7 +43,7 @@ class Engine:
     def __init__(self, config: DinocheckConfig, debug: bool = False):
         self.config = config
         self.debug = debug
-        self.workspace = GitWorkspaceScanner()
+        self.workspace = GitWorkspaceScanner(exclude_patterns=config.exclude_paths)
         self.scorer = ScoreCalculator()
         self.compositor = PackCompositor()
 
@@ -105,6 +105,11 @@ class Engine:
         def progress(step: str, details: str = "") -> None:
             if on_progress:
                 on_progress(step, details)
+
+        # 0. Apply include_paths from config when using default path
+        if paths == [Path(".")] and self.config.include_paths:
+            paths = [Path(p) for p in self.config.include_paths]
+            logger.debug("Using include_paths from config: %s", [str(p) for p in paths])
 
         # 1. Compose packs
         pack_desc = ", ".join(self.config.packs) if self.config.packs else "all"

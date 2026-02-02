@@ -22,6 +22,8 @@ class DinocheckConfig(BaseModel):
     language: str = "en"
     max_llm_calls: int = 10
     disabled_rules: list[str] = Field(default_factory=list)
+    exclude_paths: list[str] = Field(default_factory=list)
+    include_paths: list[str] | None = None  # None = current directory
 
     @property
     def provider(self) -> str:

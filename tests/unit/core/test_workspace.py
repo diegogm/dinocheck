@@ -100,6 +100,144 @@ class TestWorkspaceScanner:
         assert files == []
 
 
+class TestExcludePatterns:
+    """Tests for exclude_patterns filtering."""
+
+    def test_exclude_directory_by_name(self, tmp_path):
+        """Should exclude directories matching pattern."""
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "app.py").write_text("x = 1")
+        (tmp_path / "migrations").mkdir()
+        (tmp_path / "migrations" / "0001_initial.py").write_text("y = 2")
+
+        scanner = GitWorkspaceScanner(exclude_patterns=["migrations"])
+        files = list(scanner.discover([tmp_path], diff_only=False))
+
+        paths = [f.path.name for f in files]
+        assert "app.py" in paths
+        assert "0001_initial.py" not in paths
+
+    def test_exclude_nested_directory(self, tmp_path):
+        """Should exclude nested directories matching pattern."""
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "views.py").write_text("x = 1")
+        nested = tmp_path / "src" / "app" / "migrations"
+        nested.mkdir(parents=True)
+        (nested / "0001.py").write_text("y = 2")
+
+        scanner = GitWorkspaceScanner(exclude_patterns=["migrations"])
+        files = list(scanner.discover([tmp_path], diff_only=False))
+
+        paths = [f.path.name for f in files]
+        assert "views.py" in paths
+        assert "0001.py" not in paths
+
+    def test_exclude_file_pattern(self, tmp_path):
+        """Should exclude files matching glob pattern."""
+        (tmp_path / "views.py").write_text("x = 1")
+        (tmp_path / "views_test.py").write_text("y = 2")
+
+        scanner = GitWorkspaceScanner(exclude_patterns=["*_test.py"])
+        files = list(scanner.discover([tmp_path], diff_only=False))
+
+        paths = [f.path.name for f in files]
+        assert "views.py" in paths
+        assert "views_test.py" not in paths
+
+    def test_exclude_multiple_patterns(self, tmp_path):
+        """Should support multiple exclude patterns."""
+        (tmp_path / "app.py").write_text("x = 1")
+        (tmp_path / "migrations").mkdir()
+        (tmp_path / "migrations" / "0001.py").write_text("y = 2")
+        (tmp_path / "tests").mkdir()
+        (tmp_path / "tests" / "test_app.py").write_text("z = 3")
+
+        scanner = GitWorkspaceScanner(exclude_patterns=["migrations", "tests"])
+        files = list(scanner.discover([tmp_path], diff_only=False))
+
+        paths = [f.path.name for f in files]
+        assert "app.py" in paths
+        assert "0001.py" not in paths
+        assert "test_app.py" not in paths
+
+    def test_exclude_relative_path_pattern(self, tmp_path):
+        """Should exclude files matching a path-style pattern like tests/fixtures."""
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "app.py").write_text("x = 1")
+        fixtures = tmp_path / "tests" / "fixtures"
+        fixtures.mkdir(parents=True)
+        (fixtures / "data.py").write_text("y = 2")
+        (tmp_path / "tests" / "test_app.py").write_text("z = 3")
+
+        scanner = GitWorkspaceScanner(repo_path=tmp_path, exclude_patterns=["tests/fixtures"])
+        files = list(scanner.discover([tmp_path], diff_only=False))
+
+        paths = [f.path.name for f in files]
+        assert "app.py" in paths
+        assert "test_app.py" in paths
+        assert "data.py" not in paths
+
+    def test_exclude_path_pattern_when_scanning_subdirectory(self, tmp_path):
+        """Should exclude using repo-relative paths even when scanning a subdirectory."""
+        # Create: project/tests/fixtures/data.py and project/tests/test_app.py
+        fixtures = tmp_path / "tests" / "fixtures"
+        fixtures.mkdir(parents=True)
+        (fixtures / "data.py").write_text("y = 2")
+        (tmp_path / "tests" / "test_app.py").write_text("z = 3")
+
+        # Scan the "tests/" subdirectory with a path-style pattern
+        scanner = GitWorkspaceScanner(
+            repo_path=tmp_path,
+            exclude_patterns=["tests/fixtures"],
+        )
+        files = list(scanner.discover([tmp_path / "tests"], diff_only=False))
+
+        paths = [f.path.name for f in files]
+        assert "test_app.py" in paths
+        assert "data.py" not in paths
+
+    def test_no_exclude_patterns(self, tmp_path):
+        """Should discover all files when no exclude patterns."""
+        (tmp_path / "app.py").write_text("x = 1")
+        (tmp_path / "migrations").mkdir()
+        (tmp_path / "migrations" / "0001.py").write_text("y = 2")
+
+        scanner = GitWorkspaceScanner()
+        files = list(scanner.discover([tmp_path], diff_only=False))
+
+        paths = [f.path.name for f in files]
+        assert "app.py" in paths
+        assert "0001.py" in paths
+
+    def test_exclude_with_diff_mode(self, empty_git_repo):
+        """Should apply exclude patterns in diff mode too."""
+        import subprocess
+
+        repo = empty_git_repo
+
+        # Create and commit initial files
+        (repo / "app.py").write_text("x = 1")
+        (repo / "migrations").mkdir()
+        (repo / "migrations" / "0001.py").write_text("y = 1")
+        subprocess.run(["git", "add", "."], cwd=repo, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "initial"],
+            cwd=repo,
+            capture_output=True,
+        )
+
+        # Modify both files
+        (repo / "app.py").write_text("x = 2")
+        (repo / "migrations" / "0001.py").write_text("y = 2")
+
+        scanner = GitWorkspaceScanner(repo_path=repo, exclude_patterns=["migrations"])
+        files = list(scanner.discover([], diff_only=True))
+
+        paths = [f.path.name for f in files]
+        assert "app.py" in paths
+        assert "0001.py" not in paths
+
+
 class TestGitDiffIntegration:
     """Tests for git diff integration."""
 

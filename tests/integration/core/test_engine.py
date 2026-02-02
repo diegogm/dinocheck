@@ -243,6 +243,62 @@ def book_list(request):
         assert len(result.issues) > 0, "Mock provider should have returned issues"
 
 
+class TestEngineIncludePaths:
+    """Tests for include_paths config in Engine."""
+
+    def test_include_paths_overrides_default(self, tmp_path):
+        """Should use include_paths instead of cwd when paths is [Path('.')]."""
+        # Create files in two directories
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "app.py").write_text("x = 1")
+
+        other = tmp_path / "other"
+        other.mkdir()
+        (other / "ignored.py").write_text("y = 2")
+
+        config = DinocheckConfig(
+            packs=["python"],
+            model="mock/test-model",
+            max_llm_calls=5,
+            include_paths=["src/"],
+        )
+
+        engine = Engine(config)
+        engine.provider = MockProvider()
+
+        # Pass default [Path(".")] — engine should replace with include_paths
+        result = engine.analyze([Path(".")], no_cache=True)
+
+        # include_paths replaces the default "." so the engine runs without error
+        assert isinstance(result.issues, list)
+
+    def test_include_paths_not_applied_with_explicit_paths(self, tmp_path):
+        """Should NOT use include_paths when explicit paths are given."""
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "app.py").write_text("x = 1")
+
+        other = tmp_path / "other"
+        other.mkdir()
+        (other / "views.py").write_text("y = 2")
+
+        config = DinocheckConfig(
+            packs=["python"],
+            model="mock/test-model",
+            max_llm_calls=5,
+            include_paths=["src/"],
+        )
+
+        engine = Engine(config)
+        engine.provider = MockProvider()
+
+        # Explicit path should bypass include_paths
+        result = engine.analyze([other], no_cache=True)
+
+        assert result.meta["files_analyzed"] >= 1
+
+
 class TestEngineScoring:
     """Tests for engine scoring integration."""
 

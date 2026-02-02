@@ -3,6 +3,7 @@
 import contextlib
 import re
 from collections.abc import Iterator
+from fnmatch import fnmatch
 from pathlib import Path
 
 import git
@@ -14,8 +15,13 @@ from dinocheck.core.types import DiffHunk, FileContext
 class GitWorkspaceScanner(IWorkspaceScanner):
     """Scans workspace for files using git for diff detection."""
 
-    def __init__(self, repo_path: Path | None = None):
+    def __init__(
+        self,
+        repo_path: Path | None = None,
+        exclude_patterns: list[str] | None = None,
+    ):
         self.repo_path = repo_path or Path.cwd()
+        self.exclude_patterns = exclude_patterns or []
         self._repo: git.Repo | None = None
         self._index_paths: set[str] | None = None
 
@@ -28,6 +34,13 @@ class GitWorkspaceScanner(IWorkspaceScanner):
             except git.InvalidGitRepositoryError:
                 self._repo = None
         return self._repo
+
+    @property
+    def _exclude_base(self) -> Path:
+        """Base directory for exclude pattern matching (repo root or cwd)."""
+        if self.repo:
+            return Path(str(self.repo.working_dir))
+        return self.repo_path
 
     @property
     def index_paths(self) -> set[str]:
@@ -106,16 +119,51 @@ class GitWorkspaceScanner(IWorkspaceScanner):
                 if untracked.endswith(".py"):
                     changed.add(Path(untracked))
 
+            repo_root = Path(str(self.repo.working_dir))
             for file_path in changed:
                 # Git paths are relative to repo root, not self.repo_path
-                repo_root = Path(str(self.repo.working_dir))
                 full_path = repo_root / file_path
-                if full_path.exists():
+                if full_path.exists() and not self._should_exclude(full_path):
                     yield from self._file_to_context(full_path, diff_only=True)
 
         except git.GitCommandError:
             # If git fails, fall back to no files
             pass
+
+    def _should_exclude(self, path: Path) -> bool:
+        """Check if a path should be excluded based on exclude_patterns.
+
+        Patterns are matched against paths relative to the repo/project root,
+        ensuring consistent behavior regardless of which subdirectory is scanned.
+
+        Matching modes:
+        - Individual directory/file name components (e.g., "migrations" matches any dir named migrations)
+        - The full relative path and all parent paths via fnmatch
+          (e.g., "tests/fixtures" matches tests/fixtures/data.py)
+        """
+        if not self.exclude_patterns:
+            return False
+
+        try:
+            relative = path.resolve().relative_to(self._exclude_base.resolve())
+        except ValueError:
+            relative = path
+
+        for pattern in self.exclude_patterns:
+            # Match against any path component (directory or filename)
+            if any(fnmatch(part, pattern) for part in relative.parts):
+                return True
+            # Match against the full relative path and all parent paths
+            current = relative
+            while True:
+                if fnmatch(str(current), pattern):
+                    return True
+                parent = current.parent
+                if parent == current:
+                    break
+                current = parent
+
+        return False
 
     def _discover_directory(self, directory: Path, diff_only: bool) -> Iterator[FileContext]:
         """Discover Python files in a directory."""
@@ -125,6 +173,8 @@ class GitWorkspaceScanner(IWorkspaceScanner):
             if any(part.startswith(".") and part not in (".", "..") for part in path.parts):
                 continue
             if any(part in ("__pycache__", "node_modules", ".venv", "venv") for part in path.parts):
+                continue
+            if self._should_exclude(path):
                 continue
 
             yield from self._file_to_context(path, diff_only)

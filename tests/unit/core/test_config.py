@@ -48,6 +48,53 @@ class TestDinocheckConfig:
         assert "python/foo" in config.disabled_rules
 
 
+class TestPathFiltering:
+    """Tests for exclude_paths and include_paths config fields."""
+
+    def test_exclude_paths_default_empty(self):
+        """Should default to empty list."""
+        config = DinocheckConfig()
+        assert config.exclude_paths == []
+
+    def test_include_paths_default_none(self):
+        """Should default to None."""
+        config = DinocheckConfig()
+        assert config.include_paths is None
+
+    def test_exclude_paths_from_yaml(self, tmp_path, monkeypatch):
+        """Should load exclude_paths from YAML."""
+        monkeypatch.chdir(tmp_path)
+
+        config_file = tmp_path / "dino.yaml"
+        config_file.write_text("""
+exclude_paths:
+  - migrations
+  - tests/fixtures
+  - "*.generated.py"
+""")
+
+        manager = ConfigManager(config_file)
+        config = manager.load()
+
+        assert config.exclude_paths == ["migrations", "tests/fixtures", "*.generated.py"]
+
+    def test_include_paths_from_yaml(self, tmp_path, monkeypatch):
+        """Should load include_paths from YAML."""
+        monkeypatch.chdir(tmp_path)
+
+        config_file = tmp_path / "dino.yaml"
+        config_file.write_text("""
+include_paths:
+  - src/
+  - lib/
+""")
+
+        manager = ConfigManager(config_file)
+        config = manager.load()
+
+        assert config.include_paths == ["src/", "lib/"]
+
+
 class TestConfigManager:
     """Tests for ConfigManager."""
 

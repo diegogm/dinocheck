@@ -586,6 +586,17 @@ language: en
 # Analysis budget (max LLM calls per run)
 max_llm_calls: 10
 
+# Analyze only specific directories (default: current directory)
+# include_paths:
+#   - src/
+#   - lib/
+
+# Exclude paths from analysis (glob patterns)
+# exclude_paths:
+#   - migrations
+#   - tests/fixtures
+#   - "*.generated.py"
+
 # Disable specific rules (by ID)
 # disabled_rules:
 #   - python/some-rule-id
