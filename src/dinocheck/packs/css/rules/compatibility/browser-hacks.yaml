@@ -1,0 +1,58 @@
+id: css/browser-hacks
+name: CSS Browser Hacks
+level: major
+category: compatibility
+description: |
+  CSS hacks that target specific browsers (_property, *property,
+  underscore hacks) are brittle and often unnecessary with modern
+  browsers. They make code harder to maintain and can break when
+  browsers update. Feature queries (@supports) provide a cleaner
+  alternative for progressive enhancement.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "_\\w+:"
+    - "\\*\\w+:"
+    - "\\\\9"
+    - "\\\\0"
+    - "@media screen\\\\0"
+checklist:
+  - Is a browser-specific hack being used?
+  - What browser was this targeting?
+  - Is that browser still in the support matrix?
+  - Could @supports or feature detection replace this?
+fix: |
+  Remove browser hacks and use modern alternatives:
+
+  1. Use @supports for feature detection:
+     @supports (display: grid) {
+       .container { display: grid; }
+     }
+
+  2. Use progressive enhancement
+  3. Review browser support requirements
+  4. Consider dropping support for very old browsers
+tags:
+  - compatibility
+  - browsers
+  - hacks
+examples:
+  bad: |
+    .element {
+      color: red;
+      *color: blue;  /* IE7 hack */
+      _color: green; /* IE6 hack */
+    }
+  good: |
+    .element {
+      color: red;
+    }
+    @supports (color: oklch(0.5 0.2 180)) {
+      .element {
+        color: oklch(0.5 0.2 180);
+      }
+    }

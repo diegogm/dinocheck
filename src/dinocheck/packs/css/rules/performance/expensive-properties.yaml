@@ -1,0 +1,46 @@
+id: css/expensive-properties
+name: Expensive CSS Properties
+level: info
+category: performance
+description: |
+  Some CSS properties trigger expensive browser operations like
+  layout recalculation (reflow), repaint, or composite operations.
+  Properties like box-shadow, filter, and backdrop-filter can
+  significantly impact performance, especially during animations.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "box-shadow:"
+    - "filter:"
+    - "backdrop-filter:"
+    - "clip-path:"
+checklist:
+  - Is this property used on elements that animate or change frequently?
+  - Are multiple expensive properties combined on the same element?
+  - Could will-change be used to optimize this?
+  - Is the effect necessary for the user experience?
+fix: |
+  For animated elements, consider using transform and opacity which
+  are GPU-accelerated. Use will-change sparingly to hint at upcoming
+  changes. Consider reducing complexity of shadows and filters on
+  frequently updated elements.
+tags:
+  - performance
+  - rendering
+examples:
+  bad: |
+    .card:hover {
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      filter: blur(2px);
+    }
+  good: |
+    .card {
+      will-change: transform;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+    }

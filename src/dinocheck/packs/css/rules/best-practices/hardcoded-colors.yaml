@@ -1,0 +1,62 @@
+id: css/hardcoded-colors
+name: Hardcoded Color Values
+level: minor
+category: best-practices
+description: |
+  Hardcoded color values scattered throughout CSS make it
+  difficult to maintain consistent theming and impossible to
+  implement dark mode or theme switching. Using CSS custom
+  properties for colors enables design systems and theming.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "#[a-fA-F0-9]{3,8}"
+    - "rgb\\("
+    - "rgba\\("
+    - "hsl\\("
+checklist:
+  - Are colors defined inline instead of using variables?
+  - Could this color be part of a design token system?
+  - Is this a one-off color or used elsewhere?
+  - Would theme switching be affected by this hardcoded value?
+fix: |
+  Define colors as CSS custom properties:
+
+  :root {
+    --color-primary: #3b82f6;
+    --color-text: #1f2937;
+    --color-background: #ffffff;
+  }
+
+  [data-theme="dark"] {
+    --color-text: #f9fafb;
+    --color-background: #111827;
+  }
+
+  Then use: color: var(--color-text);
+tags:
+  - best-practices
+  - theming
+  - design-system
+examples:
+  bad: |
+    .button {
+      background: #3b82f6;
+      color: #ffffff;
+    }
+    .header {
+      background: #3b82f6;
+    }
+  good: |
+    :root {
+      --color-primary: #3b82f6;
+      --color-on-primary: #ffffff;
+    }
+    .button {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+    }

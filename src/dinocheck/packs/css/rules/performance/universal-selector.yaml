@@ -1,0 +1,46 @@
+id: css/universal-selector
+name: Universal Selector Performance
+level: minor
+category: performance
+description: |
+  The universal selector (*) matches every element in the DOM.
+  When used alone or at the end of a selector chain, it forces
+  the browser to check every single element, which can impact
+  rendering performance on large pages.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "\\*\\s*\\{"
+    - "\\s\\*\\s*\\{"
+    - ">\\s*\\*"
+checklist:
+  - Is the universal selector used alone (* { })?
+  - Is it used at the end of a descendant selector (div *)?
+  - Could a more specific selector achieve the same result?
+  - Is this a CSS reset that only runs once?
+fix: |
+  Replace universal selectors with more specific selectors when possible.
+  If using for CSS resets, consider using modern alternatives like
+  :where() for lower specificity or limiting scope.
+tags:
+  - performance
+  - selectors
+examples:
+  bad: |
+    * {
+      box-sizing: border-box;
+    }
+    .container * {
+      margin: 0;
+    }
+  good: |
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    .container > * {
+      margin: 0;
+    }

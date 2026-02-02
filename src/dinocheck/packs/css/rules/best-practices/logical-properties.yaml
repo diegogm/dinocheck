@@ -1,0 +1,61 @@
+id: css/logical-properties
+name: Physical Properties Instead of Logical
+level: info
+category: best-practices
+description: |
+  Physical properties (left, right, top, bottom) don't adapt
+  to different writing modes or text directions. CSS logical
+  properties (inline-start, inline-end, block-start, block-end)
+  automatically adjust for RTL languages and vertical writing,
+  making internationalization easier.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "margin-left:"
+    - "margin-right:"
+    - "padding-left:"
+    - "padding-right:"
+    - "text-align:\\s*left"
+    - "text-align:\\s*right"
+    - "border-left:"
+    - "border-right:"
+checklist:
+  - Does the site need to support RTL languages?
+  - Could logical properties replace physical ones?
+  - Are margin/padding directions tied to text flow?
+  - Would this element layout change in RTL mode?
+fix: |
+  Replace physical properties with logical equivalents:
+
+  Physical → Logical
+  margin-left → margin-inline-start
+  margin-right → margin-inline-end
+  padding-left → padding-inline-start
+  padding-right → padding-inline-end
+  text-align: left → text-align: start
+  left/right → inset-inline-start/end
+  border-left → border-inline-start
+
+  Use physical properties only for decorative elements
+  that shouldn't flip in RTL (like shadows).
+tags:
+  - best-practices
+  - i18n
+  - rtl
+examples:
+  bad: |
+    .sidebar {
+      margin-left: 20px;
+      padding-right: 16px;
+      text-align: left;
+    }
+  good: |
+    .sidebar {
+      margin-inline-start: 20px;
+      padding-inline-end: 16px;
+      text-align: start;
+    }

@@ -1,0 +1,50 @@
+id: css/color-contrast
+name: Potential Color Contrast Issues
+level: major
+category: accessibility
+description: |
+  Low color contrast between text and background makes content
+  difficult to read for users with visual impairments. WCAG 2.1
+  requires 4.5:1 contrast for normal text and 3:1 for large text.
+  Light grays on white or dark grays on black are common issues.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "color:\\s*#[a-fA-F0-9]"
+    - "color:\\s*rgb"
+    - "color:\\s*hsl"
+    - "color:\\s*gray"
+    - "color:\\s*grey"
+checklist:
+  - Are text colors defined without corresponding background colors?
+  - Are light gray colors (#999, #aaa, #ccc) used for text?
+  - Is there sufficient contrast between text and background?
+  - Are placeholder texts and disabled states readable?
+fix: |
+  Verify contrast ratios using tools like WebAIM Contrast Checker.
+  For body text, ensure at least 4.5:1 contrast ratio.
+  For large text (18px+ or 14px+ bold), ensure at least 3:1.
+  Consider using CSS custom properties for consistent color themes.
+tags:
+  - accessibility
+  - wcag
+  - color
+examples:
+  bad: |
+    .text-muted {
+      color: #999;
+    }
+    .placeholder {
+      color: #ccc;
+    }
+  good: |
+    .text-muted {
+      color: #595959; /* 7:1 on white */
+    }
+    .placeholder {
+      color: #767676; /* 4.5:1 on white */
+    }

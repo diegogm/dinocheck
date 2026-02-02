@@ -1,0 +1,54 @@
+id: css/magic-numbers
+name: Magic Numbers in CSS
+level: minor
+category: maintainability
+description: |
+  Magic numbers are unexplained numeric values that make code
+  harder to understand and maintain. Values like "37px" or "143"
+  provide no context about their purpose. Using CSS custom
+  properties or semantic variable names improves maintainability.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - ":\\s*\\d+px"
+    - ":\\s*\\d+em"
+    - ":\\s*\\d+rem"
+    - "z-index:\\s*\\d{3,}"
+checklist:
+  - Are there unexplained specific values (like 47px, 183px)?
+  - Could these values be CSS custom properties?
+  - Are z-index values arbitrary large numbers?
+  - Do values align with a design system or spacing scale?
+fix: |
+  Replace magic numbers with meaningful custom properties:
+
+  :root {
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --header-height: 64px;
+    --z-modal: 100;
+    --z-tooltip: 200;
+  }
+
+  Use a spacing scale (4px, 8px, 16px, 24px, 32px, 48px, 64px)
+  for consistent rhythm in your design.
+tags:
+  - maintainability
+  - design-system
+examples:
+  bad: |
+    .modal {
+      top: 73px;
+      z-index: 9999;
+      padding: 17px;
+    }
+  good: |
+    .modal {
+      top: var(--header-height);
+      z-index: var(--z-modal);
+      padding: var(--spacing-md);
+    }

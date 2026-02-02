@@ -1,0 +1,63 @@
+id: css/motion-sensitivity
+name: Motion Without Reduced Motion Support
+level: major
+category: accessibility
+description: |
+  Animations and transitions can cause discomfort or health issues
+  for users with vestibular disorders. WCAG 2.1 Success Criterion
+  2.3.3 requires respecting the prefers-reduced-motion media query.
+  Large or continuous animations should be disabled or minimized
+  when the user prefers reduced motion.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "animation:"
+    - "animation-name:"
+    - "@keyframes"
+    - "transition:"
+checklist:
+  - Are there significant animations that could cause discomfort?
+  - Is prefers-reduced-motion media query respected?
+  - Do animations have reasonable durations (<500ms)?
+  - Are parallax or scroll-triggered animations handled?
+fix: |
+  Wrap animations in a prefers-reduced-motion media query:
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  Or conditionally enable animations:
+
+  @media (prefers-reduced-motion: no-preference) {
+    .element {
+      animation: slide 0.3s ease;
+    }
+  }
+tags:
+  - accessibility
+  - wcag
+  - motion
+  - animation
+examples:
+  bad: |
+    .hero {
+      animation: pulse 2s infinite;
+    }
+  good: |
+    .hero {
+      animation: pulse 2s infinite;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hero {
+        animation: none;
+      }
+    }

@@ -1,0 +1,49 @@
+id: css/high-specificity
+name: Excessively High Specificity
+level: minor
+category: maintainability
+description: |
+  High specificity selectors using multiple IDs, deeply nested
+  rules, or overly qualified selectors create maintenance problems.
+  They're hard to override and lead to specificity wars. Modern
+  CSS should aim for low, consistent specificity.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "#\\w+\\s+#"
+    - "#\\w+.*#\\w+"
+    - "#\\w+\\.\\w+\\.\\w+"
+checklist:
+  - Are multiple IDs used in a single selector?
+  - Is an ID selector qualified with classes or elements?
+  - Could this be rewritten with classes only?
+  - Is :where() or :is() appropriate to reduce specificity?
+fix: |
+  Use class-based selectors with consistent, low specificity:
+  - Avoid ID selectors in CSS (use for JS hooks only)
+  - Use :where() for zero-specificity wrappers
+  - Use @layer to manage specificity between style sources
+  - Follow BEM or similar methodology for flat selectors
+tags:
+  - maintainability
+  - specificity
+  - selectors
+examples:
+  bad: |
+    #header #nav #menu .item a {
+      color: blue;
+    }
+    div#sidebar.active {
+      display: block;
+    }
+  good: |
+    .nav__link {
+      color: blue;
+    }
+    .sidebar--active {
+      display: block;
+    }

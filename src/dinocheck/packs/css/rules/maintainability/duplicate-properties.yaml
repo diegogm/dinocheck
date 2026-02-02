@@ -1,0 +1,66 @@
+id: css/duplicate-properties
+name: Duplicate Properties in Same Rule
+level: minor
+category: maintainability
+description: |
+  Duplicate properties in the same rule block are usually mistakes
+  or leftover from testing. The second declaration always wins,
+  making the first one dead code. Sometimes this is intentional
+  for fallbacks, but it should be documented.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "display:.*display:"
+    - "color:.*color:"
+    - "background:.*background:"
+    - "margin:.*margin:"
+    - "padding:.*padding:"
+checklist:
+  - Is the same property declared multiple times in one rule?
+  - Is this intentional for browser fallbacks?
+  - If it's a fallback, is the modern value second?
+  - Could this be refactored to avoid duplication?
+fix: |
+  Remove accidental duplicates. For intentional fallbacks,
+  add a comment explaining the purpose:
+
+  .element {
+    /* Fallback for older browsers */
+    display: block;
+    display: flex;
+  }
+
+  Consider using @supports for clearer fallback logic:
+
+  .element {
+    display: block;
+  }
+  @supports (display: flex) {
+    .element {
+      display: flex;
+    }
+  }
+tags:
+  - maintainability
+  - dead-code
+examples:
+  bad: |
+    .button {
+      color: red;
+      padding: 10px;
+      color: blue;
+    }
+  good: |
+    .button {
+      color: blue;
+      padding: 10px;
+    }
+    /* Or for fallbacks: */
+    .container {
+      display: block; /* Fallback */
+      display: grid;
+    }

@@ -1,0 +1,59 @@
+id: css/units-consistency
+name: Inconsistent CSS Units
+level: minor
+category: best-practices
+description: |
+  Mixing different units (px, em, rem, %) without a consistent
+  strategy makes layouts harder to maintain and can cause
+  unexpected scaling issues. A common convention is rem for
+  typography, px for borders, and relative units for layout.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "font-size:\\s*\\d+px"
+    - "line-height:\\s*\\d+px"
+    - "margin:.*px.*em"
+    - "padding:.*em.*px"
+checklist:
+  - Is there a consistent unit strategy for typography?
+  - Are font sizes using rem for accessibility?
+  - Are border widths using px for consistency?
+  - Are spacing values following a consistent system?
+fix: |
+  Establish consistent unit conventions:
+
+  - Typography: rem (respects user font preferences)
+  - Spacing/margins: rem or a spacing scale variable
+  - Borders: px (1px borders shouldn't scale)
+  - Media queries: em (works best across browsers)
+  - Line-height: unitless (relative to font-size)
+
+  body {
+    font-size: 1rem;      /* 16px default */
+    line-height: 1.5;     /* Unitless */
+  }
+tags:
+  - best-practices
+  - typography
+  - units
+examples:
+  bad: |
+    body {
+      font-size: 14px;
+    }
+    .title {
+      font-size: 24px;
+      line-height: 28px;
+    }
+  good: |
+    body {
+      font-size: 1rem;
+    }
+    .title {
+      font-size: 1.5rem;
+      line-height: 1.2;
+    }

@@ -1,0 +1,6 @@
+name: css
+version: "0.1.0"
+description: |
+  CSS rule pack for stylesheets.
+  Covers performance, accessibility, maintainability,
+  compatibility, and best practices.

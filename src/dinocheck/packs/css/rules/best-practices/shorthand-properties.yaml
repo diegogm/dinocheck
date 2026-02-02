@@ -1,0 +1,55 @@
+id: css/shorthand-properties
+name: Shorthand Property Gotchas
+level: info
+category: best-practices
+description: |
+  CSS shorthand properties (margin, padding, background, font)
+  reset all sub-properties to their initial values, not just
+  the ones you specify. This can unintentionally override
+  previously set values. Be intentional about using shorthand
+  vs longhand properties.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "background:\\s*[^;]+"
+    - "font:\\s*[^;]+"
+    - "animation:\\s*[^;]+"
+    - "flex:\\s*[^;]+"
+checklist:
+  - Is shorthand resetting properties unintentionally?
+  - Would longhand be clearer for partial changes?
+  - Are all values in the shorthand necessary?
+  - Is the order of values correct for the shorthand?
+fix: |
+  Use longhand when changing specific properties:
+
+  /* Shorthand resets background-image to none! */
+  .bad { background: red; }
+
+  /* Longhand preserves background-image */
+  .good { background-color: red; }
+
+  Use shorthand only when setting all or most properties,
+  especially for margin, padding, and inset.
+tags:
+  - best-practices
+  - shorthand
+examples:
+  bad: |
+    .element {
+      background-image: url('pattern.svg');
+    }
+    .element:hover {
+      background: blue; /* Removes background-image! */
+    }
+  good: |
+    .element {
+      background-image: url('pattern.svg');
+    }
+    .element:hover {
+      background-color: blue;
+    }

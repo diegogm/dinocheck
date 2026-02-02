@@ -1,0 +1,50 @@
+id: css/outline-none
+name: Focus Outline Removal
+level: critical
+category: accessibility
+description: |
+  Removing focus outlines without providing an alternative makes
+  it impossible for keyboard users to see which element is focused.
+  This is a WCAG 2.1 Level AA violation (Success Criterion 2.4.7).
+  Focus indicators are essential for keyboard navigation.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "outline:\\s*none"
+    - "outline:\\s*0"
+    - "outline-width:\\s*0"
+checklist:
+  - Is outline:none used without a visible alternative focus style?
+  - Is there a custom focus indicator (border, box-shadow, background)?
+  - Does the focus style have sufficient contrast?
+  - Is this applied to interactive elements (buttons, links, inputs)?
+fix: |
+  Instead of removing outlines entirely, provide a custom focus style:
+  - Use :focus-visible to only show focus for keyboard users
+  - Provide a visible alternative like box-shadow or border
+  - Ensure focus indicator has 3:1 contrast ratio minimum
+tags:
+  - accessibility
+  - wcag
+  - focus
+examples:
+  bad: |
+    button:focus {
+      outline: none;
+    }
+    a:focus {
+      outline: 0;
+    }
+  good: |
+    button:focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: 2px;
+    }
+    a:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+    }

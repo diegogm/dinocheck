@@ -1,0 +1,55 @@
+id: css/vendor-prefixes
+name: Manual Vendor Prefixes
+level: minor
+category: compatibility
+description: |
+  Manually writing vendor prefixes (-webkit-, -moz-, -ms-) is
+  error-prone and hard to maintain. Many prefixed properties are
+  now unnecessary, and missing prefixes can cause inconsistencies.
+  Tools like Autoprefixer handle this automatically based on
+  your browser support targets.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "-webkit-"
+    - "-moz-"
+    - "-ms-"
+    - "-o-"
+checklist:
+  - Are vendor prefixes being added manually?
+  - Is Autoprefixer or similar tool configured in the build?
+  - Are the prefixed properties still necessary for target browsers?
+  - Is the unprefixed property also included?
+fix: |
+  Remove manual vendor prefixes and use Autoprefixer:
+
+  1. Install: npm install autoprefixer postcss
+  2. Configure browserslist in package.json:
+     "browserslist": ["> 1%", "last 2 versions"]
+  3. Autoprefixer will add only needed prefixes
+
+  Many properties no longer need prefixes (flexbox, grid, transforms).
+  Check caniuse.com for current browser support.
+tags:
+  - compatibility
+  - browsers
+  - build-tools
+examples:
+  bad: |
+    .flex {
+      -webkit-display: flex;
+      -ms-display: flex;
+      display: flex;
+      -webkit-justify-content: center;
+      justify-content: center;
+    }
+  good: |
+    /* Let Autoprefixer handle prefixes */
+    .flex {
+      display: flex;
+      justify-content: center;
+    }

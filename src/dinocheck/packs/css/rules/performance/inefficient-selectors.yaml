@@ -1,0 +1,48 @@
+id: css/inefficient-selectors
+name: Inefficient CSS Selectors
+level: minor
+category: performance
+description: |
+  Deeply nested selectors and overly qualified selectors force
+  the browser to do more work matching elements. Browsers read
+  selectors right-to-left, so inefficient rightmost selectors
+  cause the most performance impact.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "\\s+\\w+\\s+\\w+\\s+\\w+\\s+\\w+\\s+\\w+\\s*\\{"
+    - "body\\s+\\w+"
+    - "html\\s+\\w+"
+checklist:
+  - Are there selectors with more than 3-4 levels of nesting?
+  - Are element selectors (div, span) used where classes would work?
+  - Is the selector over-qualified (div.class instead of .class)?
+  - Could BEM or flat selectors simplify this?
+fix: |
+  Flatten selector hierarchies using class-based selectors.
+  Avoid qualifying class selectors with element types unless
+  necessary. Use methodologies like BEM to create flat,
+  predictable selectors.
+tags:
+  - performance
+  - selectors
+  - maintainability
+examples:
+  bad: |
+    body div.container ul li a.link span {
+      color: blue;
+    }
+    div.button {
+      padding: 10px;
+    }
+  good: |
+    .nav__link-text {
+      color: blue;
+    }
+    .button {
+      padding: 10px;
+    }

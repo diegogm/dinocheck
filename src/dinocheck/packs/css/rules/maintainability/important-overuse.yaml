@@ -1,0 +1,57 @@
+id: css/important-overuse
+name: Excessive !important Usage
+level: major
+category: maintainability
+description: |
+  The !important declaration overrides normal specificity rules
+  and makes CSS harder to maintain. Once used, it often leads
+  to a cascade of more !important declarations to override the
+  first one. It should be reserved for utility classes or truly
+  exceptional cases.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "!important"
+checklist:
+  - Is !important used to fix a specificity issue?
+  - Could the selector be made more specific instead?
+  - Is this a utility class that intentionally needs !important?
+  - Are there multiple !important declarations competing?
+fix: |
+  Instead of !important, consider:
+  1. Increasing selector specificity naturally
+  2. Reordering stylesheets so overrides come later
+  3. Using CSS layers (@layer) for controlled precedence
+  4. Refactoring to avoid the specificity conflict
+
+  Reserve !important for:
+  - Utility classes (like .hidden, .sr-only)
+  - Overriding third-party styles you can't modify
+tags:
+  - maintainability
+  - specificity
+examples:
+  bad: |
+    .button {
+      color: blue !important;
+      padding: 10px !important;
+    }
+    .header .button {
+      color: red !important;
+    }
+  good: |
+    .button {
+      color: blue;
+      padding: 10px;
+    }
+    .header .button {
+      color: red;
+    }
+    /* Utility - !important is OK */
+    .hidden {
+      display: none !important;
+    }

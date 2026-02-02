@@ -1,0 +1,49 @@
+id: css/deprecated-properties
+name: Deprecated CSS Properties
+level: major
+category: compatibility
+description: |
+  Some CSS properties have been deprecated and replaced with
+  modern alternatives. Using deprecated properties may cause
+  inconsistent behavior across browsers and could stop working
+  in future browser versions.
+triggers:
+  file_patterns:
+    - "**/*.css"
+    - "**/*.scss"
+    - "**/*.sass"
+    - "**/*.less"
+  code_patterns:
+    - "clip:"
+    - "zoom:"
+    - "word-wrap:"
+    - "@-webkit-keyframes"
+checklist:
+  - Is a deprecated property being used?
+  - What is the modern replacement?
+  - Does the deprecated usage affect older browser support?
+  - Is there a polyfill or fallback strategy needed?
+fix: |
+  Replace deprecated properties with modern alternatives:
+
+  - clip: rect() → clip-path: inset()
+  - zoom: → transform: scale()
+  - word-wrap: → overflow-wrap:
+  - @-webkit-keyframes → @keyframes
+
+  Check MDN Web Docs for current property status and alternatives.
+tags:
+  - compatibility
+  - deprecated
+  - modernization
+examples:
+  bad: |
+    .element {
+      clip: rect(0, 100px, 100px, 0);
+      zoom: 1.5;
+    }
+  good: |
+    .element {
+      clip-path: inset(0 0 0 0);
+      transform: scale(1.5);
+    }
