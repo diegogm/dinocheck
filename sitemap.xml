@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://diegogm.github.io/dinocheck/</loc>
+         <lastmod>2026-02-04</lastmod>
+    </url>
+    <url>
+         <loc>https://diegogm.github.io/dinocheck/cli/</loc>
+         <lastmod>2026-02-04</lastmod>
+    </url>
+    <url>
+         <loc>https://diegogm.github.io/dinocheck/configuration/</loc>
+         <lastmod>2026-02-04</lastmod>
+    </url>
+    <url>
+         <loc>https://diegogm.github.io/dinocheck/getting-started/</loc>
+         <lastmod>2026-02-04</lastmod>
+    </url>
+    <url>
+         <loc>https://diegogm.github.io/dinocheck/integrations/</loc>
+         <lastmod>2026-02-04</lastmod>
+    </url>
+    <url>
+         <loc>https://diegogm.github.io/dinocheck/rules/</loc>
+         <lastmod>2026-02-04</lastmod>
+    </url>
+</urlset>
