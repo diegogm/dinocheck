@@ -1,0 +1,65 @@
+id: react/unnecessary-rerender
+name: Unnecessary Component Re-render
+level: major
+category: performance
+description: |
+  Detects patterns that cause unnecessary re-renders in React components.
+  Common causes include creating new function references on every render,
+  passing new object references as props, or missing memoization for
+  expensive computations.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "onClick=\\{\\(\\) =>"
+    - "onChange=\\{\\(\\) =>"
+    - "onSubmit=\\{\\(\\) =>"
+    - "=\\{\\(\\) =>"
+
+checklist:
+  - Are anonymous functions created inline as event handler props?
+  - Could useCallback prevent re-creating the function on every render?
+  - Are expensive computations repeated on every render without useMemo?
+  - Does the parent component pass new references to memoized children?
+  - Are context values causing widespread re-renders?
+
+fix: |
+  Wrap callback functions with useCallback and expensive computations
+  with useMemo. Extract inline handlers to named functions within the
+  component. Use React.memo on child components that receive stable props.
+
+tags:
+  - performance
+  - rendering
+  - memoization
+
+examples:
+  bad: |
+    function Parent({ items }) {
+      return items.map(item => (
+        <ExpensiveChild
+          key={item.id}
+          onClick={() => handleClick(item.id)}
+          data={items.filter(i => i.category === item.category)}
+        />
+      ));
+    }
+  good: |
+    function Parent({ items }) {
+      const handleItemClick = useCallback((id) => {
+        handleClick(id);
+      }, []);
+
+      const categorizedItems = useMemo(() => {
+        return groupByCategory(items);
+      }, [items]);
+
+      return items.map(item => (
+        <ExpensiveChild
+          key={item.id}
+          onClick={handleItemClick}
+          data={categorizedItems[item.category]}
+        />
+      ));
+    }

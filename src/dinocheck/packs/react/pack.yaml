@@ -1,0 +1,13 @@
+name: react
+version: "0.1.0"
+description: |
+  React rule pack for JSX components.
+  Covers hooks, performance, security, common patterns,
+  and accessibility best practices for React applications.
+
+  Rules are organized by category:
+  - hooks/: React hooks rules and conventions
+  - performance/: Rendering and performance optimizations
+  - security/: XSS and injection prevention
+  - patterns/: Common React anti-patterns
+  - accessibility/: WCAG and a11y compliance

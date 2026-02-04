@@ -8,7 +8,9 @@ Dinocheck includes rule packs for different languages and frameworks. All packs 
 |------|-------------|
 | **python** | Security, correctness, testing, and reliability rules for Python |
 | **django** | ORM, transactions, DRF, migrations, and Celery task rules |
+| **react** | Hooks, performance, security, patterns, and accessibility for JSX |
 | **typescript** | Type safety, async patterns, and security for TS/JS |
+| **css** | Performance, accessibility, maintainability, and compatibility for CSS |
 | **docker** | Dockerfile security, build optimization, and runtime config |
 | **docker-compose** | Compose security, networking, and reliability |
 | **sh** | Shell script security, error handling, and portability |
@@ -50,6 +52,30 @@ Rules for Django applications, ORM, and Django REST Framework.
 - **drf** - Serializer validation, permission classes, pagination
 - **migrations** - Data migrations, schema changes, rollbacks
 - **tasks** - Celery task idempotency, retries, timeouts
+
+## React Pack
+
+Rules for React components in JSX files.
+
+**Categories:**
+
+- **hooks** - Exhaustive deps, conditional hooks, stale closures, naming conventions
+- **performance** - Inline objects in JSX, missing keys, unnecessary re-renders, large components
+- **security** - dangerouslySetInnerHTML, unsafe href, user input injection
+- **patterns** - Prop drilling, direct state mutation, useEffect fetch cleanup, index as key
+- **accessibility** - Missing alt text, click without keyboard support, missing form labels
+
+## CSS Pack
+
+Rules for CSS stylesheets.
+
+**Categories:**
+
+- **performance** - Universal selectors, inefficient selectors, layout thrashing
+- **accessibility** - Color contrast, focus indicators, reduced motion
+- **maintainability** - Specificity issues, magic numbers, redundant rules
+- **compatibility** - Vendor prefixes, unsupported properties
+- **best-practices** - Important overuse, shorthand consistency
 
 ## TypeScript Pack
 

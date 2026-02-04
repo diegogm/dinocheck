@@ -1,0 +1,58 @@
+id: react/missing-form-labels
+name: Missing Form Input Labels
+level: major
+category: accessibility
+description: |
+  Detects form inputs without associated labels. Screen readers rely on
+  labels to announce the purpose of form controls. Without labels, users
+  with visual impairments cannot understand what information is expected
+  in each field. This violates WCAG 2.1 Level A (Guideline 1.3.1).
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "<input"
+    - "<select"
+    - "<textarea"
+
+checklist:
+  - Does every input/select/textarea have an associated label?
+  - Is the label connected via htmlFor matching the input's id?
+  - Alternatively, is the input wrapped inside a <label> element?
+  - Is aria-label or aria-labelledby used for visually hidden labels?
+  - Does the placeholder attribute substitute for a proper label (it shouldn't)?
+
+fix: |
+  Add a <label> element with htmlFor matching the input's id attribute.
+  Alternatively, wrap the input inside a <label> element. If a visual
+  label is not desired, use aria-label on the input.
+
+tags:
+  - accessibility
+  - wcag
+  - forms
+
+examples:
+  bad: |
+    function LoginForm() {
+      return (
+        <form>
+          <input type="email" placeholder="Email" />
+          <input type="password" placeholder="Password" />
+          <button type="submit">Log In</button>
+        </form>
+      );
+    }
+  good: |
+    function LoginForm() {
+      return (
+        <form>
+          <label htmlFor="email">Email</label>
+          <input id="email" type="email" />
+          <label htmlFor="password">Password</label>
+          <input id="password" type="password" />
+          <button type="submit">Log In</button>
+        </form>
+      );
+    }

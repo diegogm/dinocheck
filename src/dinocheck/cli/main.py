@@ -342,7 +342,7 @@ def cache_clear(
         ),
     ] = None,
 ) -> None:
-    """Clear all cached results."""
+    """Clear cached results. Clears all entries, or only entries older than N days if --older is provided."""
     from dinocheck.core.cache import SQLiteCache
     from dinocheck.core.config import DEFAULT_CACHE_DB
 

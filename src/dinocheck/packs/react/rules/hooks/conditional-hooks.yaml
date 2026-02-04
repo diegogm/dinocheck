@@ -1,0 +1,57 @@
+id: react/conditional-hooks
+name: Conditional Hook Call
+level: critical
+category: correctness
+description: |
+  Detects hooks called inside conditionals, loops, or nested functions.
+  React relies on the order of hook calls being identical on every render.
+  Calling hooks conditionally breaks this invariant and causes unpredictable
+  behavior, crashes, or corrupted state.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "if\\s*\\(.*use[A-Z]"
+    - "\\?.*use[A-Z]"
+    - "for\\s*\\(.*use[A-Z]"
+    - "while\\s*\\(.*use[A-Z]"
+
+checklist:
+  - Is any hook (useState, useEffect, useMemo, etc.) called inside an if/else block?
+  - Is any hook called inside a loop (for, while, forEach)?
+  - Is any hook called inside a nested function or callback?
+  - Is there an early return before a hook call?
+  - Could the hook call order change between renders?
+
+fix: |
+  Move all hook calls to the top level of the component or custom hook.
+  If you need conditional logic, call the hook unconditionally and use
+  the condition inside the hook's callback or after the hook call.
+
+tags:
+  - hooks
+  - correctness
+  - rules-of-hooks
+
+examples:
+  bad: |
+    function UserProfile({ userId }) {
+      if (userId) {
+        const [user, setUser] = useState(null);
+        useEffect(() => {
+          fetchUser(userId).then(setUser);
+        }, [userId]);
+      }
+      return <div>{user?.name}</div>;
+    }
+  good: |
+    function UserProfile({ userId }) {
+      const [user, setUser] = useState(null);
+      useEffect(() => {
+        if (userId) {
+          fetchUser(userId).then(setUser);
+        }
+      }, [userId]);
+      return <div>{user?.name}</div>;
+    }

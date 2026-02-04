@@ -1,0 +1,50 @@
+id: react/dangerously-set-innerhtml
+name: Unsafe dangerouslySetInnerHTML
+level: critical
+category: security
+description: |
+  Detects usage of dangerouslySetInnerHTML with unsanitized input.
+  This React prop bypasses the virtual DOM and injects raw HTML directly
+  into the page, creating a cross-site scripting (XSS) vulnerability if
+  the HTML content comes from user input or untrusted sources.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "dangerouslySetInnerHTML"
+    - "__html"
+
+checklist:
+  - Is dangerouslySetInnerHTML used in any component?
+  - Does the HTML content come from user input, URL parameters, or an API?
+  - Is the HTML sanitized with a library like DOMPurify before injection?
+  - Could the content be rendered using JSX instead of raw HTML?
+  - Is the content from a trusted, controlled source (e.g., CMS with sanitization)?
+
+fix: |
+  Avoid dangerouslySetInnerHTML when possible. If raw HTML rendering is
+  necessary, sanitize the content using DOMPurify or a similar library
+  before passing it to dangerouslySetInnerHTML.
+
+tags:
+  - security
+  - xss
+  - html
+
+examples:
+  bad: |
+    function Comment({ comment }) {
+      return (
+        <div dangerouslySetInnerHTML={{ __html: comment.body }} />
+      );
+    }
+  good: |
+    import DOMPurify from 'dompurify';
+
+    function Comment({ comment }) {
+      const sanitized = DOMPurify.sanitize(comment.body);
+      return (
+        <div dangerouslySetInnerHTML={{ __html: sanitized }} />
+      );
+    }

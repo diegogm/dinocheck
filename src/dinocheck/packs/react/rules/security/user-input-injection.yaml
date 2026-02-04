@@ -1,0 +1,60 @@
+id: react/user-input-injection
+name: Unsanitized User Input Rendering
+level: critical
+category: security
+description: |
+  Detects rendering of unsanitized user input in JSX that could lead to
+  injection attacks. While React auto-escapes strings in JSX, dangerous
+  patterns like constructing HTML strings, using eval, or inserting user
+  input into script tags can still create vulnerabilities.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "eval\\("
+    - "new Function\\("
+    - "innerHTML"
+    - "document\\.write"
+    - "\\$\\{.*\\}.*<script"
+
+checklist:
+  - Is user input passed to eval() or new Function()?
+  - Is user input concatenated into HTML strings?
+  - Is innerHTML used directly instead of React's virtual DOM?
+  - Is user input inserted into script tags or event handler attributes?
+  - Could user input bypass React's built-in escaping?
+  - Is document.write() used with user-controlled content?
+
+fix: |
+  Always render user input through JSX expressions, which auto-escape
+  content. Never use eval(), new Function(), or innerHTML with user input.
+  If dynamic HTML is required, sanitize with DOMPurify first.
+
+tags:
+  - security
+  - xss
+  - injection
+
+examples:
+  bad: |
+    function SearchResults({ query }) {
+      // eval with user input
+      const result = eval(query);
+      // innerHTML bypass
+      document.getElementById('output').innerHTML = query;
+      return <div>{result}</div>;
+    }
+  good: |
+    function SearchResults({ query }) {
+      const [results, setResults] = useState([]);
+      useEffect(() => {
+        fetchResults(query).then(setResults);
+      }, [query]);
+      return (
+        <div>
+          <p>Results for: {query}</p>
+          {results.map(r => <div key={r.id}>{r.text}</div>)}
+        </div>
+      );
+    }

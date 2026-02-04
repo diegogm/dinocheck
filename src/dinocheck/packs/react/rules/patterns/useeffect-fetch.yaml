@@ -1,0 +1,64 @@
+id: react/useeffect-fetch
+name: Data Fetching Without Cleanup
+level: minor
+category: reliability
+description: |
+  Detects data fetching in useEffect without proper cleanup or cancellation.
+  If the component unmounts before the fetch completes, the callback may
+  try to update state on an unmounted component, causing a memory leak
+  warning. Race conditions can also occur when dependencies change rapidly.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "useEffect.*fetch"
+    - "useEffect.*axios"
+    - "useEffect.*\\.get\\("
+    - "useEffect.*\\.post\\("
+
+checklist:
+  - Is fetch() or an HTTP client called inside useEffect?
+  - Does the useEffect return a cleanup function?
+  - Is there an AbortController to cancel pending requests on unmount?
+  - Is there a boolean flag to prevent state updates after unmount?
+  - Could race conditions occur if dependencies change rapidly?
+  - Would a data-fetching library (React Query, SWR) be more appropriate?
+
+fix: |
+  Add an AbortController to cancel the fetch request in the useEffect
+  cleanup function. Pass the controller's signal to fetch(). Alternatively,
+  use a data-fetching library like React Query or SWR that handles
+  cancellation, caching, and race conditions automatically.
+
+tags:
+  - reliability
+  - data-fetching
+  - effects
+
+examples:
+  bad: |
+    function UserProfile({ userId }) {
+      const [user, setUser] = useState(null);
+      useEffect(() => {
+        fetch(`/api/users/${userId}`)
+          .then(r => r.json())
+          .then(setUser);  // May update unmounted component
+      }, [userId]);
+      return <div>{user?.name}</div>;
+    }
+  good: |
+    function UserProfile({ userId }) {
+      const [user, setUser] = useState(null);
+      useEffect(() => {
+        const controller = new AbortController();
+        fetch(`/api/users/${userId}`, { signal: controller.signal })
+          .then(r => r.json())
+          .then(setUser)
+          .catch(e => {
+            if (e.name !== 'AbortError') throw e;
+          });
+        return () => controller.abort();
+      }, [userId]);
+      return <div>{user?.name}</div>;
+    }

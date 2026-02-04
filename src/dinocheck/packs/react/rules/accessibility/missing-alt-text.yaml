@@ -1,0 +1,53 @@
+id: react/missing-alt-text
+name: Missing Image Alt Text
+level: major
+category: accessibility
+description: |
+  Detects img elements and Image components without alt text in JSX.
+  Alt text is essential for screen readers, SEO, and when images fail
+  to load. Missing alt attributes make content inaccessible to users
+  with visual impairments and violate WCAG 2.1 Level A guidelines.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "<img"
+    - "<Image"
+
+checklist:
+  - Does every <img> element have an alt attribute?
+  - Is the alt text descriptive and meaningful (not just "image" or "photo")?
+  - For decorative images, is alt="" used (empty string, not missing)?
+  - Do custom Image components pass alt text through to the underlying img?
+  - Are background images with important content given text alternatives?
+
+fix: |
+  Add a descriptive alt attribute to every img element. For decorative
+  images that don't convey information, use an empty alt="" attribute.
+  Never omit the alt attribute entirely.
+
+tags:
+  - accessibility
+  - wcag
+  - images
+
+examples:
+  bad: |
+    function Avatar({ user }) {
+      return (
+        <div>
+          <img src={user.avatarUrl} />
+          <img src="/icons/star.png" />
+        </div>
+      );
+    }
+  good: |
+    function Avatar({ user }) {
+      return (
+        <div>
+          <img src={user.avatarUrl} alt={`${user.name}'s avatar`} />
+          <img src="/icons/star.png" alt="" />  {/* Decorative */}
+        </div>
+      );
+    }

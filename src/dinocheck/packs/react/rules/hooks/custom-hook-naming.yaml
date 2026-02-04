@@ -1,0 +1,51 @@
+id: react/custom-hook-naming
+name: Custom Hook Naming Convention
+level: minor
+category: maintainability
+description: |
+  Detects custom hooks that do not follow the "use" prefix convention.
+  React requires custom hooks to start with "use" so that the linter
+  and framework can enforce the Rules of Hooks. Functions that call
+  hooks but aren't named with "use" will not be checked for hook rule
+  violations.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "function \\w+.*\\{[\\s\\S]*use[A-Z]"
+    - "const \\w+ = \\(.*\\) =>.*use[A-Z]"
+
+checklist:
+  - Does the function call any React hooks (useState, useEffect, etc.)?
+  - Does the function name start with "use" followed by an uppercase letter?
+  - Is the function exported and intended to be reused as a hook?
+  - Could this function be confused with a regular utility function?
+
+fix: |
+  Rename the function to start with "use" followed by an uppercase letter.
+  For example, rename fetchData() to useFetchData() if it calls React hooks
+  internally.
+
+tags:
+  - hooks
+  - naming
+  - conventions
+
+examples:
+  bad: |
+    function fetchUserData(userId) {
+      const [data, setData] = useState(null);
+      useEffect(() => {
+        fetch(`/api/users/${userId}`).then(r => r.json()).then(setData);
+      }, [userId]);
+      return data;
+    }
+  good: |
+    function useFetchUserData(userId) {
+      const [data, setData] = useState(null);
+      useEffect(() => {
+        fetch(`/api/users/${userId}`).then(r => r.json()).then(setData);
+      }, [userId]);
+      return data;
+    }

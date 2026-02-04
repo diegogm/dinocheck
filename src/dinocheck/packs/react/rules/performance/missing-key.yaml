@@ -1,0 +1,56 @@
+id: react/missing-key
+name: Missing Key Prop in List
+level: critical
+category: correctness
+description: |
+  Detects missing or improper key props when rendering lists of elements.
+  React uses keys to identify which items have changed, been added, or
+  been removed. Without stable, unique keys, React cannot efficiently
+  update the DOM and may produce incorrect UI or lose component state.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "\\.map\\("
+    - "\\.flatMap\\("
+    - "\\.reduce\\("
+
+checklist:
+  - Does the .map() callback return a JSX element?
+  - Does each returned element have a key prop?
+  - Is the key unique among siblings?
+  - Is the key stable across re-renders (not a random value)?
+  - Is the key meaningful (not just the array index for dynamic lists)?
+
+fix: |
+  Add a unique, stable key prop to each element returned from .map().
+  Use a unique identifier from the data (e.g., item.id) rather than
+  the array index.
+
+tags:
+  - correctness
+  - rendering
+  - lists
+
+examples:
+  bad: |
+    function TodoList({ todos }) {
+      return (
+        <ul>
+          {todos.map(todo => (
+            <li>{todo.text}</li>
+          ))}
+        </ul>
+      );
+    }
+  good: |
+    function TodoList({ todos }) {
+      return (
+        <ul>
+          {todos.map(todo => (
+            <li key={todo.id}>{todo.text}</li>
+          ))}
+        </ul>
+      );
+    }

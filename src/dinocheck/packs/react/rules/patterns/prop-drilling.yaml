@@ -1,0 +1,65 @@
+id: react/prop-drilling
+name: Excessive Prop Drilling
+level: major
+category: maintainability
+description: |
+  Detects excessive prop drilling where props are passed through multiple
+  intermediate components that don't use them. This makes the code harder
+  to maintain, refactor, and understand because changes to the prop
+  require updating every component in the chain.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "props\\."
+    - "\\.\\.\\.(props|rest)"
+    - "\\{.*,.*,.*,.*\\}"
+
+checklist:
+  - Is the same prop passed through 3 or more component levels?
+  - Do intermediate components only forward the prop without using it?
+  - Are many props spread through intermediate components with {...rest}?
+  - Would React Context or a state management library simplify the data flow?
+  - Is component composition (children/render props) a better fit?
+
+fix: |
+  Use React Context for data that many components at different nesting
+  levels need. Alternatively, use component composition by passing
+  components as children or render props to skip intermediate layers.
+
+tags:
+  - maintainability
+  - architecture
+  - props
+
+examples:
+  bad: |
+    function App() {
+      const [user, setUser] = useState(null);
+      return <Layout user={user} />;
+    }
+    function Layout({ user }) {
+      return <Sidebar user={user} />;  // Just forwarding
+    }
+    function Sidebar({ user }) {
+      return <UserMenu user={user} />;  // Just forwarding
+    }
+    function UserMenu({ user }) {
+      return <span>{user.name}</span>;
+    }
+  good: |
+    const UserContext = createContext(null);
+
+    function App() {
+      const [user, setUser] = useState(null);
+      return (
+        <UserContext.Provider value={user}>
+          <Layout />
+        </UserContext.Provider>
+      );
+    }
+    function UserMenu() {
+      const user = useContext(UserContext);
+      return <span>{user.name}</span>;
+    }

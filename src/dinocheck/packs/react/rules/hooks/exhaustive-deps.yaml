@@ -1,0 +1,52 @@
+id: react/exhaustive-deps
+name: Missing Hook Dependencies
+level: major
+category: correctness
+description: |
+  Detects missing dependencies in useEffect, useMemo, and useCallback
+  dependency arrays. When a hook reads a value from props or state but
+  that value is not listed in the dependency array, the hook may use
+  stale data and produce incorrect behavior.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "useEffect\\("
+    - "useMemo\\("
+    - "useCallback\\("
+
+checklist:
+  - Does the hook reference any props or state variables inside its callback?
+  - Are all referenced props and state variables listed in the dependency array?
+  - Is the dependency array present but incomplete?
+  - Are there functions defined outside the hook that capture reactive values?
+  - Could a missing dependency cause the hook to use stale data?
+
+fix: |
+  Add all reactive values (props, state, and derived values) used inside the
+  hook to the dependency array. If a function is used as a dependency, wrap it
+  in useCallback or move it inside the hook.
+
+tags:
+  - hooks
+  - correctness
+  - dependencies
+
+examples:
+  bad: |
+    function SearchResults({ query }) {
+      const [results, setResults] = useState([]);
+      useEffect(() => {
+        fetchResults(query).then(setResults);
+      }, []);  // Missing 'query' dependency
+      return <ul>{results.map(r => <li key={r.id}>{r.name}</li>)}</ul>;
+    }
+  good: |
+    function SearchResults({ query }) {
+      const [results, setResults] = useState([]);
+      useEffect(() => {
+        fetchResults(query).then(setResults);
+      }, [query]);  // All dependencies listed
+      return <ul>{results.map(r => <li key={r.id}>{r.name}</li>)}</ul>;
+    }

@@ -1,0 +1,56 @@
+id: react/direct-state-mutation
+name: Direct State Mutation
+level: critical
+category: correctness
+description: |
+  Detects direct mutation of React state instead of using the setter
+  function. React state must be treated as immutable — mutating it directly
+  does not trigger a re-render and leads to stale UI, lost updates, and
+  bugs that are difficult to reproduce.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "\\.push\\("
+    - "\\.splice\\("
+    - "\\.sort\\("
+    - "\\.reverse\\("
+    - "\\w+\\.\\w+\\s*="
+    - "useState"
+
+checklist:
+  - Is a state array being mutated with push(), splice(), pop(), or shift()?
+  - Is a state array being sorted in place with sort() or reverse()?
+  - Is a state object's property being assigned directly?
+  - Is the state being cloned/spread before modification?
+  - Is the setter function from useState being used to update state?
+
+fix: |
+  Always create a new copy of the state before modifying it. Use spread
+  syntax, Array.map(), Array.filter(), or structuredClone() to create
+  new references, then pass the new value to the setter function.
+
+tags:
+  - correctness
+  - state
+  - immutability
+
+examples:
+  bad: |
+    function TodoList() {
+      const [todos, setTodos] = useState([]);
+      const addTodo = (text) => {
+        todos.push({ text, done: false });  // Mutates state directly!
+        setTodos(todos);  // Same reference, won't re-render
+      };
+      return <ul>{todos.map(t => <li key={t.text}>{t.text}</li>)}</ul>;
+    }
+  good: |
+    function TodoList() {
+      const [todos, setTodos] = useState([]);
+      const addTodo = (text) => {
+        setTodos(prev => [...prev, { text, done: false }]);
+      };
+      return <ul>{todos.map(t => <li key={t.text}>{t.text}</li>)}</ul>;
+    }

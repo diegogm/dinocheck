@@ -1,0 +1,57 @@
+id: react/index-as-key
+name: Array Index as Key
+level: major
+category: correctness
+description: |
+  Detects usage of array index as the key prop in dynamically rendered
+  lists. When items are reordered, inserted, or deleted, index-based keys
+  cause React to misidentify elements, leading to incorrect DOM updates,
+  lost component state, and visual glitches.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "\\.map\\(.*index"
+    - "key=\\{.*index"
+    - "key=\\{i\\}"
+    - "key=\\{idx\\}"
+
+checklist:
+  - Is the array index (or a variable named i, idx, index) used as the key?
+  - Can the list be reordered, filtered, or have items added/removed?
+  - Does each item have a unique, stable identifier that could be used instead?
+  - Is this a static list that never changes (where index keys are acceptable)?
+  - Do list items contain interactive elements or local state?
+
+fix: |
+  Use a unique, stable identifier from the data as the key prop (e.g.,
+  item.id, item.uuid). If no unique identifier exists, generate one when
+  the data is created or fetched, not during rendering.
+
+tags:
+  - correctness
+  - rendering
+  - lists
+
+examples:
+  bad: |
+    function TaskList({ tasks }) {
+      return (
+        <ul>
+          {tasks.map((task, index) => (
+            <TaskItem key={index} task={task} />
+          ))}
+        </ul>
+      );
+    }
+  good: |
+    function TaskList({ tasks }) {
+      return (
+        <ul>
+          {tasks.map(task => (
+            <TaskItem key={task.id} task={task} />
+          ))}
+        </ul>
+      );
+    }

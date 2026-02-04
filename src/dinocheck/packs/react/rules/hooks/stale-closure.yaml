@@ -1,0 +1,59 @@
+id: react/stale-closure
+name: Stale Closure in Hook
+level: major
+category: correctness
+description: |
+  Detects stale closures where a hook callback captures outdated values
+  of state or props. This commonly happens with setInterval, setTimeout,
+  or event listeners set up in useEffect that reference state variables
+  without proper dependency tracking.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "setInterval\\("
+    - "setTimeout\\("
+    - "addEventListener\\("
+    - "useEffect\\("
+
+checklist:
+  - Does a setInterval or setTimeout callback reference state or props?
+  - Is the interval/timeout set up in useEffect without the referenced values in deps?
+  - Does an event listener callback reference state that may change?
+  - Could using a ref or functional state update avoid the stale closure?
+  - Is useRef used to hold mutable values that need to be current?
+
+fix: |
+  Use functional state updates (setState(prev => ...)) to avoid depending
+  on the current state value. Alternatively, store the current value in a
+  ref with useRef and read from the ref inside callbacks.
+
+tags:
+  - hooks
+  - correctness
+  - closures
+
+examples:
+  bad: |
+    function Counter() {
+      const [count, setCount] = useState(0);
+      useEffect(() => {
+        const id = setInterval(() => {
+          setCount(count + 1);  // Always uses initial count (0)
+        }, 1000);
+        return () => clearInterval(id);
+      }, []);
+      return <span>{count}</span>;
+    }
+  good: |
+    function Counter() {
+      const [count, setCount] = useState(0);
+      useEffect(() => {
+        const id = setInterval(() => {
+          setCount(prev => prev + 1);  // Functional update avoids stale closure
+        }, 1000);
+        return () => clearInterval(id);
+      }, []);
+      return <span>{count}</span>;
+    }

@@ -1,1 +1,1 @@
-"""LLM integration for Dinocheck."""
+"""LLM schemas and prompt building for Dinocheck."""

@@ -1,0 +1,55 @@
+id: react/inline-objects-jsx
+name: Inline Object Creation in JSX
+level: minor
+category: performance
+description: |
+  Detects inline object or array literals created directly in JSX props.
+  Every render creates a new object reference, causing child components
+  to re-render even if the actual values haven't changed. This defeats
+  React.memo and shallow comparison optimizations.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "style=\\{\\{"
+    - "=\\{\\[.*\\]\\}"
+    - "=\\{\\{.*\\}\\}"
+
+checklist:
+  - Are object literals passed directly as JSX props (e.g., style={{ ... }})?
+  - Are array literals created inline in JSX props?
+  - Is the component or its children wrapped in React.memo?
+  - Could the object be extracted to a constant or useMemo?
+  - Does this inline object cause measurable re-renders?
+
+fix: |
+  Extract inline objects to constants outside the component or memoize
+  them with useMemo. For style objects, define them as module-level
+  constants or use CSS classes instead.
+
+tags:
+  - performance
+  - rendering
+  - jsx
+
+examples:
+  bad: |
+    function Banner({ text }) {
+      return (
+        <div style={{ padding: 20, backgroundColor: 'blue' }}>
+          <Text config={{ bold: true, size: 'large' }}>{text}</Text>
+        </div>
+      );
+    }
+  good: |
+    const bannerStyle = { padding: 20, backgroundColor: 'blue' };
+    const textConfig = { bold: true, size: 'large' };
+
+    function Banner({ text }) {
+      return (
+        <div style={bannerStyle}>
+          <Text config={textConfig}>{text}</Text>
+        </div>
+      );
+    }

@@ -1,6 +1,7 @@
 """Workspace scanning and git diff integration."""
 
 import contextlib
+import logging
 import re
 from collections.abc import Iterator
 from fnmatch import fnmatch
@@ -10,6 +11,8 @@ import git
 
 from dinocheck.core.interfaces import WorkspaceScanner as IWorkspaceScanner
 from dinocheck.core.types import DiffHunk, FileContext
+
+logger = logging.getLogger("dinocheck")
 
 
 class GitWorkspaceScanner(IWorkspaceScanner):
@@ -126,9 +129,8 @@ class GitWorkspaceScanner(IWorkspaceScanner):
                 if full_path.exists() and not self._should_exclude(full_path):
                     yield from self._file_to_context(full_path, diff_only=True)
 
-        except git.GitCommandError:
-            # If git fails, fall back to no files
-            pass
+        except git.GitCommandError as e:
+            logger.warning("Git diff failed, no changed files discovered: %s", e)
 
     def _should_exclude(self, path: Path) -> bool:
         """Check if a path should be excluded based on exclude_patterns.

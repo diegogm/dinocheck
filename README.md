@@ -82,7 +82,7 @@ This fits the vibe coding workflow: you write code with AI assistance, and Dinoc
 | Feature | Description |
 |---------|-------------|
 | **LLM-First Analysis** | Uses GPT-4, Claude, or local models for semantic code review |
-| **Rule Packs** | Python, Django, TypeScript, Docker, Compose, Shell, Vue |
+| **Rule Packs** | Python, Django, React, TypeScript, CSS, Docker, Compose, Shell, Vue |
 | **Smart Caching** | SQLite cache avoids re-analyzing unchanged files |
 | **Cost Tracking** | Monitor LLM usage and costs with `dino logs` |
 | **Multi-Language** | Get feedback in English, Spanish, French, etc. |
@@ -171,7 +171,9 @@ dino logs cost
 |------|-------------|
 | **python** | Security, correctness, testing, and reliability rules for Python |
 | **django** | ORM, transactions, DRF, migrations, and Celery task rules |
+| **react** | Hooks, performance, security, patterns, and accessibility for JSX |
 | **typescript** | Type safety, async patterns, and security for TS/JS |
+| **css** | Performance, accessibility, maintainability, and compatibility for CSS |
 | **docker** | Dockerfile security, build optimization, and runtime config |
 | **docker-compose** | Compose security, networking, and reliability |
 | **sh** | Shell script security, error handling, and portability |

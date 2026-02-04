@@ -1,0 +1,53 @@
+id: react/unsafe-href
+name: Unsafe href from User Input
+level: major
+category: security
+description: |
+  Detects anchor tags where the href attribute is set using user-controlled
+  input without validation. Attackers can inject javascript: URLs or other
+  dangerous schemes to execute arbitrary code when the link is clicked.
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "href=\\{"
+    - "<a\\s"
+
+checklist:
+  - Is the href value derived from user input, URL parameters, or an API?
+  - Is the href validated to only allow safe protocols (http, https, mailto)?
+  - "Could a javascript: or data: URL be injected through the href?"
+  - Is there a URL allowlist or sanitization function applied?
+  - Are links with dynamic hrefs opened with rel="noopener noreferrer"?
+
+fix: |
+  Validate that the href starts with a safe protocol (http://, https://,
+  mailto:, or /) before rendering. Use a URL validation function to reject
+  javascript:, data:, and vbscript: schemes.
+
+tags:
+  - security
+  - xss
+  - links
+
+examples:
+  bad: |
+    function UserLink({ url, label }) {
+      return <a href={url}>{label}</a>;
+    }
+    // An attacker can pass url="javascript:alert('XSS')"
+  good: |
+    function isSafeUrl(url) {
+      try {
+        const parsed = new URL(url);
+        return ['http:', 'https:', 'mailto:'].includes(parsed.protocol);
+      } catch {
+        return false;
+      }
+    }
+
+    function UserLink({ url, label }) {
+      const href = isSafeUrl(url) ? url : '#';
+      return <a href={href} rel="noopener noreferrer">{label}</a>;
+    }

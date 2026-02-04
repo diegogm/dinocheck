@@ -1,0 +1,71 @@
+id: react/click-without-keyboard
+name: Click Handler Without Keyboard Support
+level: major
+category: accessibility
+description: |
+  Detects elements with onClick handlers that lack corresponding keyboard
+  event handlers. Users who navigate with keyboards or assistive devices
+  cannot interact with elements that only respond to mouse clicks. This
+  violates WCAG 2.1 Level A (Guideline 2.1 - Keyboard Accessible).
+
+triggers:
+  file_patterns:
+    - "**/*.jsx"
+  code_patterns:
+    - "onClick=\\{"
+    - "<div.*onClick"
+    - "<span.*onClick"
+
+checklist:
+  - Does a non-interactive element (div, span, li) have an onClick handler?
+  - Is there a corresponding onKeyDown or onKeyUp handler?
+  - Does the element have role="button" or another appropriate ARIA role?
+  - Does the element have tabIndex to make it focusable?
+  - Could a native interactive element (button, a) be used instead?
+
+fix: |
+  Use semantic HTML elements like <button> or <a> instead of div/span with
+  click handlers. If a non-interactive element must be used, add role="button",
+  tabIndex={0}, and an onKeyDown handler that triggers on Enter and Space keys.
+
+tags:
+  - accessibility
+  - wcag
+  - keyboard
+
+examples:
+  bad: |
+    function Card({ item, onSelect }) {
+      return (
+        <div className="card" onClick={() => onSelect(item.id)}>
+          {item.name}
+        </div>
+      );
+    }
+  good: |
+    function Card({ item, onSelect }) {
+      return (
+        <button className="card" onClick={() => onSelect(item.id)}>
+          {item.name}
+        </button>
+      );
+    }
+    // Or if a div is required:
+    function Card({ item, onSelect }) {
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          onSelect(item.id);
+        }
+      };
+      return (
+        <div
+          className="card"
+          role="button"
+          tabIndex={0}
+          onClick={() => onSelect(item.id)}
+          onKeyDown={handleKeyDown}
+        >
+          {item.name}
+        </div>
+      );
+    }
