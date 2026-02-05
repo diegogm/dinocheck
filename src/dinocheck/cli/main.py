@@ -165,7 +165,7 @@ def check(
 
     # Filter packs if specified
     if pack:
-        cfg.packs = [p.strip() for p in pack.split(",")]
+        cfg.packs = [p.strip() for p in pack.split(",") if p.strip()]
 
     # Run analysis
     engine = Engine(cfg, debug=debug)

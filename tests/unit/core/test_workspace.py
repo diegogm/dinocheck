@@ -32,6 +32,7 @@ class TestWorkspaceScanner:
         files = list(scanner.discover([tmp_path], diff_only=False))
 
         # Should find Python files, not markdown
+        assert not any(f.path.suffix == ".md" for f in files)
         py_files = [f for f in files if f.path.suffix == ".py"]
         assert len(py_files) >= 2
 
