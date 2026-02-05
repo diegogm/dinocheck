@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from dinocheck.core.interfaces import Cache
+from dinocheck.core.migrations import MIGRATIONS, Migrator
 from dinocheck.core.types import CacheStats, CostSummary, Issue, IssueLevel, LLMCallLog, Location
 
 __all__ = ["SQLiteCache"]
@@ -43,13 +44,13 @@ class SQLiteCache(Cache):
         cost_usd REAL NOT NULL,
         duration_ms INTEGER NOT NULL,
         issues_found INTEGER NOT NULL,
-        cached INTEGER DEFAULT 0,
-        prompt_text TEXT,
-        response_text TEXT
+        cached INTEGER DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_llm_logs_timestamp ON llm_logs(timestamp);
     CREATE INDEX IF NOT EXISTS idx_llm_logs_model ON llm_logs(model);
     """
+
+    CURRENT_VERSION = 1
 
     def __init__(self, db_path: Path, ttl_hours: int = 168):
         self.db_path = db_path
@@ -57,10 +58,14 @@ class SQLiteCache(Cache):
         self._ensure_db()
 
     def _ensure_db(self) -> None:
-        """Ensure database and tables exist."""
+        """Ensure database and tables exist, applying pending migrations."""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        migrator = Migrator(MIGRATIONS)
         with self._connect() as conn:
             conn.executescript(self.SCHEMA)
+            current = migrator.get_version(conn)
+            if current < self.CURRENT_VERSION:
+                migrator.apply_pending(conn, self.CURRENT_VERSION)
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
@@ -147,8 +152,6 @@ class SQLiteCache(Cache):
         duration_ms: int,
         issues_found: int,
         cost_usd: float | None = None,
-        prompt_text: str | None = None,
-        response_text: str | None = None,
         cached: bool = False,
     ) -> float:
         """Log an LLM call and return the cost in USD."""
@@ -162,9 +165,8 @@ class SQLiteCache(Cache):
             conn.execute(
                 """INSERT INTO llm_logs
                    (id, model, pack, files_json, prompt_tokens, completion_tokens,
-                    total_tokens, cost_usd, duration_ms, issues_found, cached,
-                    prompt_text, response_text)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    total_tokens, cost_usd, duration_ms, issues_found, cached)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     log_id,
                     model,
@@ -177,8 +179,6 @@ class SQLiteCache(Cache):
                     duration_ms,
                     issues_found,
                     1 if cached else 0,
-                    prompt_text,
-                    response_text,
                 ),
             )
 

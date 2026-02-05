@@ -1,10 +1,12 @@
 """Tests for SQLite cache."""
 
+import sqlite3
 from pathlib import Path
 
 import pytest
 
 from dinocheck.core.cache import SQLiteCache
+from dinocheck.core.migrations import MIGRATIONS, Migrator
 from dinocheck.core.types import Issue, IssueLevel, Location
 from dinocheck.utils.hashing import ContentHasher
 
@@ -220,3 +222,143 @@ class TestContentHasher:
         assert key.rules_hash
         assert len(key.file_hash) == 32
         assert len(key.rules_hash) == 32
+
+
+# Legacy schema with prompt_text and response_text columns (version 0)
+_LEGACY_SCHEMA = """
+CREATE TABLE IF NOT EXISTS cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    file_hash TEXT NOT NULL,
+    rules_hash TEXT NOT NULL,
+    issues_json TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(file_hash, rules_hash)
+);
+CREATE TABLE IF NOT EXISTS llm_logs (
+    id TEXT PRIMARY KEY,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    model TEXT NOT NULL,
+    pack TEXT NOT NULL,
+    files_json TEXT NOT NULL,
+    prompt_tokens INTEGER NOT NULL,
+    completion_tokens INTEGER NOT NULL,
+    total_tokens INTEGER NOT NULL,
+    cost_usd REAL NOT NULL,
+    duration_ms INTEGER NOT NULL,
+    issues_found INTEGER NOT NULL,
+    cached INTEGER DEFAULT 0,
+    prompt_text TEXT,
+    response_text TEXT
+);
+"""
+
+
+class TestMigrations:
+    """Tests for schema migration system."""
+
+    def test_new_database_has_current_version(self, tmp_path):
+        """A freshly created database should have CURRENT_VERSION."""
+        db_path = tmp_path / "new.db"
+        SQLiteCache(db_path, ttl_hours=1)
+        conn = sqlite3.connect(db_path)
+        try:
+            version = Migrator.get_version(conn)
+            assert version == SQLiteCache.CURRENT_VERSION
+        finally:
+            conn.close()
+
+    def test_migrate_from_legacy_database(self, tmp_path):
+        """Opening a legacy DB (version 0) should drop prompt/response columns and preserve data."""
+        db_path = tmp_path / "legacy.db"
+
+        # Create a legacy database at version 0 with old columns
+        conn = sqlite3.connect(db_path)
+        conn.executescript(_LEGACY_SCHEMA)
+        conn.execute(
+            """INSERT INTO llm_logs
+               (id, model, pack, files_json, prompt_tokens, completion_tokens,
+                total_tokens, cost_usd, duration_ms, issues_found, cached,
+                prompt_text, response_text)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "log-1",
+                "gpt-4o-mini",
+                "django",
+                '["views.py"]',
+                100,
+                50,
+                150,
+                0.01,
+                1500,
+                3,
+                0,
+                "prompt",
+                "response",
+            ),
+        )
+        conn.commit()
+        conn.close()
+
+        # Open with new code — migrations should run
+        cache = SQLiteCache(db_path, ttl_hours=1)
+
+        # Verify data preserved
+        logs = cache.get_llm_logs(limit=10)
+        assert len(logs) == 1
+        assert logs[0].model == "gpt-4o-mini"
+        assert logs[0].total_tokens == 150
+
+        # Verify columns are gone
+        conn = sqlite3.connect(db_path)
+        cursor = conn.execute("PRAGMA table_info(llm_logs)")
+        col_names = {row[1] for row in cursor.fetchall()}
+        assert "prompt_text" not in col_names
+        assert "response_text" not in col_names
+
+        # Verify version updated
+        assert Migrator.get_version(conn) == SQLiteCache.CURRENT_VERSION
+        conn.close()
+
+    def test_migration_is_idempotent(self, tmp_path):
+        """Running migrations twice should not raise errors."""
+        db_path = tmp_path / "idempotent.db"
+
+        # Create legacy database
+        conn = sqlite3.connect(db_path)
+        conn.executescript(_LEGACY_SCHEMA)
+        conn.commit()
+        conn.close()
+
+        # Open twice — second time migrations are already applied
+        SQLiteCache(db_path, ttl_hours=1)
+        SQLiteCache(db_path, ttl_hours=1)
+
+        # Verify version is correct
+        conn = sqlite3.connect(db_path)
+        assert Migrator.get_version(conn) == SQLiteCache.CURRENT_VERSION
+        conn.close()
+
+    def test_target_exceeds_available_migrations(self, tmp_path):
+        """Should raise ValueError when target version exceeds available migrations."""
+        db_path = tmp_path / "exceed.db"
+        conn = sqlite3.connect(db_path)
+        conn.executescript(_LEGACY_SCHEMA)
+        conn.commit()
+
+        migrator = Migrator(MIGRATIONS)
+        with pytest.raises(ValueError, match="exceeds available migrations"):
+            migrator.apply_pending(conn, len(MIGRATIONS) + 1)
+        conn.close()
+
+    def test_downgrade_raises_error(self, tmp_path):
+        """Should raise ValueError when attempting to downgrade."""
+        db_path = tmp_path / "downgrade.db"
+        conn = sqlite3.connect(db_path)
+        conn.executescript(_LEGACY_SCHEMA)
+        Migrator.set_version(conn, 1)
+        conn.commit()
+
+        migrator = Migrator(MIGRATIONS)
+        with pytest.raises(ValueError, match="Downgrade .* not supported"):
+            migrator.apply_pending(conn, 0)
+        conn.close()

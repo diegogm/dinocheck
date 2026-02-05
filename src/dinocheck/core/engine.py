@@ -380,8 +380,6 @@ class Engine:
             completion_tokens=self.provider.estimate_tokens(response_json),
             duration_ms=duration_ms,
             issues_found=len(issues),
-            prompt_text=prompt if self.debug else None,
-            response_text=response_json if self.debug else None,
         )
 
         return issues, cost_usd
