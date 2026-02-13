@@ -4,6 +4,7 @@ from io import StringIO
 from typing import ClassVar
 
 from rich.console import Console
+from rich.markup import escape
 from rich.text import Text
 
 from dinocheck.cli.console import _should_use_color
@@ -73,20 +74,20 @@ class TextFormatter(Formatter):
 
                     header = Text()
                     header.append(f"\n  [{level.upper()}]", style=f"bold {color}")
-                    header.append(f" {issue.title}")
+                    header.append(f" {issue.title}")  # Text.append is markup-safe
                     console.print(header)
 
                     console.print(f"     Rule: {issue.rule_id}", style="dim")
 
-                    # Why this is an issue
+                    # Why this is an issue (escape LLM output to prevent Rich markup errors)
                     console.print("\n     Why: ", style="bold", end="")
-                    console.print(issue.why)
+                    console.print(escape(issue.why))
 
                     # Actions to fix
                     if issue.do:
                         console.print("\n     Actions:", style="bold green")
                         for action in issue.do:
-                            console.print(f"       • {action}", style="green")
+                            console.print(f"       • {escape(action)}", style="green")
 
         else:
             console.print("\n✓ No issues found!", style="bold green")
