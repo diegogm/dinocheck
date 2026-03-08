@@ -15,6 +15,7 @@ Dinocheck includes rule packs for different languages and frameworks. All packs 
 | **docker-compose** | Compose security, networking, and reliability |
 | **sh** | Shell script security, error handling, and portability |
 | **vue** | Vue.js reactivity, templates, and XSS prevention |
+| **latex** | Academic writing quality, citations, references, and math notation |
 
 ## Pack Commands
 
@@ -127,6 +128,18 @@ Rules for Vue.js applications.
 - **reactivity** - Reactive pitfalls, computed vs methods, watchers
 - **security** - XSS in templates, v-html usage, sanitization
 - **templates** - Template best practices, slot usage, prop validation
+
+## LaTeX Pack
+
+Rules for LaTeX documents (`.tex`) used in papers, reports, and technical docs.
+
+**Categories:**
+
+- **correctness** - Escaping issues, command usage, compile-breaking patterns
+- **structure** - Labels, cross-references, and document organization
+- **citations** - Citation key consistency and bibliography hygiene
+- **math** - Clear math mode usage and notation consistency
+- **readability** - Avoiding manual formatting hacks and source clutter
 
 ## Excluding Packs
 

@@ -25,6 +25,14 @@ class TestPackLoader:
         assert pack.name == "django"
         assert len(pack.rules) > 0
 
+    def test_get_latex_pack(self):
+        """Should get LaTeX pack."""
+        pack = get_pack("latex")
+
+        assert pack is not None
+        assert pack.name == "latex"
+        assert len(pack.rules) > 0
+
     def test_get_unknown_pack(self):
         """Should raise error for unknown pack."""
         with pytest.raises(ValueError):
@@ -32,11 +40,12 @@ class TestPackLoader:
 
     def test_get_multiple_packs(self):
         """Should get multiple packs."""
-        packs = get_packs(["python", "django"])
+        packs = get_packs(["python", "django", "latex"])
 
-        assert len(packs) == 2
+        assert len(packs) == 3
         assert any(p.name == "python" for p in packs)
         assert any(p.name == "django" for p in packs)
+        assert any(p.name == "latex" for p in packs)
 
     def test_get_all_packs(self):
         """Should get all registered packs."""
@@ -45,6 +54,7 @@ class TestPackLoader:
         assert len(packs) >= 2
         assert any(p.name == "python" for p in packs)
         assert any(p.name == "django" for p in packs)
+        assert any(p.name == "latex" for p in packs)
 
 
 class TestPythonPack:

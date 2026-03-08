@@ -178,6 +178,7 @@ dino logs cost
 | **docker-compose** | Compose security, networking, and reliability |
 | **sh** | Shell script security, error handling, and portability |
 | **vue** | Vue.js reactivity, templates, and XSS prevention |
+| **latex** | Academic writing quality, citations, references, and math notation |
 
 Use `dino packs info <pack>` to see all rules in a pack.
 

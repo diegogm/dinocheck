@@ -1,0 +1,13 @@
+name: latex
+version: "0.1.0"
+description: |
+  LaTeX writing and document-quality pack.
+  Provides correctness, citation hygiene, math notation, and readability rules
+  for .tex sources used in papers, reports, and technical documentation.
+
+  Rules are organized by category:
+  - correctness/: Syntax and command usage issues
+  - structure/: Labels, references, and section organization
+  - citations/: Citation consistency and bibliography hygiene
+  - math/: Math mode and notation clarity
+  - readability/: Formatting and maintainability patterns
