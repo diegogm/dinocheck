@@ -1,0 +1,37 @@
+id: latex/unescaped-special-characters
+name: Unescaped special characters in text
+level: major
+category: correctness
+description: |
+  Detects likely LaTeX compilation or formatting issues caused by special
+  characters used directly in normal text. Characters like _, %, $, #, and &
+  generally need escaping outside dedicated contexts.
+
+checklist:
+  - Are _, %, $, #, or & used in prose without escaping?
+  - Are special characters intended as literals in section titles or captions?
+  - Could this cause compilation errors or missing text in output?
+fix: |
+  Escape special characters in regular text (`\_`, `\%`, `\$`, `\#`, `\&`).
+  If the content is code-like, use \texttt{}, \verb, or a listings environment
+  to avoid repeated escaping and improve readability.
+
+tags:
+  - latex
+  - correctness
+  - compilation
+
+triggers:
+  file_patterns:
+    - "**/*.tex"
+  code_patterns:
+    - "_"
+    - "%"
+    - '\\section\\{'
+    - '\\caption\\{'
+
+examples:
+  bad: |
+    The value_name field stores 100% of samples.
+  good: |
+    The value\_name field stores 100\% of samples.

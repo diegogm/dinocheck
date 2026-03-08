@@ -1,0 +1,44 @@
+id: latex/missing-labels-on-numbered-elements
+name: Missing labels on numbered elements
+level: minor
+category: structure
+description: |
+  Detects numbered figures, tables, equations, and sections that are likely to
+  be referenced later but do not define stable labels.
+
+checklist:
+  - Are figures/tables/equations introduced without \label{}?
+  - Are manual references like "Figure 3" used instead of \ref{} or \autoref{}?
+  - Would renumbering break cross-references in the document?
+fix: |
+  Add explicit \label{} entries close to numbered environments and reference
+  them using \ref{} or \autoref{} instead of hardcoded numbers.
+
+tags:
+  - latex
+  - structure
+  - references
+
+triggers:
+  file_patterns:
+    - "**/*.tex"
+  code_patterns:
+    - "\\begin\\{figure"
+    - "\\begin\\{table"
+    - "\\begin\\{equation"
+    - "Figure [0-9]+"
+
+examples:
+  bad: |
+    As shown in Figure 2, the latency increases.
+    \begin{figure}
+      \includegraphics{latency.pdf}
+      \caption{Latency vs load}
+    \end{figure}
+  good: |
+    As shown in Figure~\ref{fig:latency}, the latency increases.
+    \begin{figure}
+      \includegraphics{latency.pdf}
+      \caption{Latency vs load}
+      \label{fig:latency}
+    \end{figure}

@@ -1,0 +1,38 @@
+id: latex/citation-bibliography-consistency
+name: Citation and bibliography consistency
+level: major
+category: citations
+description: |
+  Detects suspicious citation usage where in-text citation keys may not match
+  bibliography entries, or bibliography setup appears incomplete.
+
+checklist:
+  - Are \cite{} keys likely missing from .bib entries?
+  - Is bibliography tooling configured (BibTeX/Biber) for cited works?
+  - Are there uncited references or citations with inconsistent key styles?
+fix: |
+  Verify all citation keys resolve correctly. Standardize key naming, remove
+  stale citations, and ensure bibliography commands/packages are configured
+  consistently for the chosen workflow.
+
+tags:
+  - latex
+  - citations
+  - references
+
+triggers:
+  file_patterns:
+    - "**/*.tex"
+  code_patterns:
+    - '\\cite\\{'
+    - '\\bibliography\\{'
+    - '\\addbibresource\\{'
+    - '\\printbibliography'
+
+examples:
+  bad: |
+    Prior work \cite{smith2021-transformer} reports strong results.
+    % No matching entry exists in bibliography
+  good: |
+    Prior work \cite{smith2021transformer} reports strong results.
+    \addbibresource{references.bib}

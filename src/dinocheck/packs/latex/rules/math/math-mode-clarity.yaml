@@ -1,0 +1,36 @@
+id: latex/math-mode-clarity
+name: Unclear or inconsistent math mode usage
+level: major
+category: math
+description: |
+  Detects math expressions that may be written in plain text mode or use
+  inconsistent delimiters, reducing readability and risking compilation issues.
+
+checklist:
+  - Are mathematical variables/operators written outside math mode?
+  - Are inline/display delimiters mixed inconsistently (`$...$`, `\(...\)`, `\[...\]`)?
+  - Are text commands used correctly inside equations (e.g., \text{})?
+fix: |
+  Wrap formulas in appropriate math environments and use consistent delimiters
+  across the document. Keep prose in text mode and use \text{} for words inside
+  equations.
+
+tags:
+  - latex
+  - math
+  - readability
+
+triggers:
+  file_patterns:
+    - "**/*.tex"
+  code_patterns:
+    - "="
+    - '\\frac'
+    - '\\sum'
+    - '\\int'
+
+examples:
+  bad: |
+    The loss is L = 1/n sum_i (y_i - \hat{y}_i)^2.
+  good: |
+    The loss is $L = \frac{1}{n}\sum_i (y_i - \hat{y}_i)^2$.

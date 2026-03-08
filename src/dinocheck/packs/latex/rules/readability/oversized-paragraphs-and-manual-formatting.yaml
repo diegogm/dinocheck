@@ -1,0 +1,40 @@
+id: latex/oversized-paragraphs-and-manual-formatting
+name: Oversized paragraphs and manual formatting
+level: minor
+category: readability
+description: |
+  Detects hard-to-maintain authoring patterns such as manual line breaks,
+  repeated spacing commands, or very long paragraphs that hide structure.
+
+checklist:
+  - Are `\\` line breaks used for layout in normal prose?
+  - Are repeated spacing hacks (`\vspace`, `\hspace`, `\newline`) replacing structure?
+  - Could long paragraphs be split into clearer sections or lists?
+fix: |
+  Prefer semantic structure (sections, paragraphs, lists, environments) over
+  manual spacing and forced line breaks. Keep source readable and stable under
+  style/template changes.
+
+tags:
+  - latex
+  - readability
+  - maintainability
+
+triggers:
+  file_patterns:
+    - "**/*.tex"
+  code_patterns:
+    - '\\\\'
+    - '\\vspace'
+    - '\\hspace'
+    - '\\newline'
+
+examples:
+  bad: |
+    We evaluated three settings.\\
+    The first setting...\\
+    \vspace{8pt}
+  good: |
+    We evaluated three settings.
+
+    The first setting focuses on...
