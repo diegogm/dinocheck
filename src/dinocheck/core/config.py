@@ -17,7 +17,7 @@ class DinocheckConfig(BaseModel):
 
     packs: list[str] | None = None  # None = all packs enabled
     exclude_packs: list[str] = Field(default_factory=list)
-    model: str = "openai/gpt-5.1-codex"
+    model: str = "openai/gpt-5.2-codex"
     base_url: str | None = None  # Custom API endpoint (OpenAI-compatible)
     language: str = "en"
     max_llm_calls: int = 10

@@ -38,7 +38,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 #   - vue
 #   - django
 
-model: openai/gpt-4o-mini  # or anthropic/claude-3-5-sonnet, ollama/llama3
+model: openai/gpt-5.2-codex  # or anthropic/claude-3-5-sonnet, ollama/llama3
 language: en
 ```
 

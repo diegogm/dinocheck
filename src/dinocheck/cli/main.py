@@ -579,7 +579,7 @@ def init(
 #   - django
 
 # LLM configuration
-model: openai/gpt-4o-mini  # Or: anthropic/claude-3-5-sonnet, ollama/llama3
+model: openai/gpt-5.2-codex  # Or: anthropic/claude-3-5-sonnet, ollama/llama3
 # base_url: https://api.example.com/v1  # Custom OpenAI-compatible endpoint
 language: en
 

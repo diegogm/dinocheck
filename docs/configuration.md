@@ -14,7 +14,7 @@ dino init
 
 ```yaml
 # LLM Model (provider/model format)
-model: openai/gpt-4o-mini
+model: openai/gpt-5.2-codex
 
 # Response language (en, es, fr, de, etc.)
 language: en
