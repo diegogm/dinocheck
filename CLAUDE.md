@@ -2,21 +2,16 @@
 
 ## Project Overview
 
-Dinocheck is an LLM-powered code critic for vibe coding. It's a linter that reviews code semantically - not pattern matching. It has two modes:
-
-- **agent (default)**: the host coding agent (Claude Code, Codex, Gemini CLI) performs the analysis via `dino brief` (files + rules + output contract) and `dino report` (validate, score, cache). Zero config, no API keys.
-- **api**: `dino check` calls an LLM API directly (GPT, Claude, Ollama via LiteLLM). For CI/headless.
+Dinocheck is an agent-native code critic for vibe coding. It's a linter that reviews code semantically - not pattern matching. The host coding agent (Claude Code, Codex, Gemini CLI) performs the analysis via `dino brief` (files + rules + output contract) and `dino report` (validate, score, cache). Zero config: no API keys, no models, no external LLM calls.
 
 ## Key Commands
 
 ```bash
-uv run dino brief --diff       # Agent mode step 1: emit review brief
-uv run dino report results.json # Agent mode step 2: validate + score findings
-uv run dino check              # API mode: analyze code (requires mode: api)
-uv run dino check --debug      # Analyze with detailed dino.log
-uv run dino check -v           # Verbose progress output
-uv run dino packs list         # List rule packs
-uv run dino logs cost          # View LLM costs
+uv run dino brief --diff        # Step 1: emit review brief for the agent
+uv run dino report results.json # Step 2: validate + score the agent's findings
+uv run dino brief --debug       # Write detailed dino.log
+uv run dino packs list          # List rule packs
+uv run dino logs list           # View analysis run history
 fab test                       # Run tests
 fab lint                       # Run linters (ruff + mypy)
 fab check                      # Run all checks
@@ -36,10 +31,9 @@ src/dinocheck/
 │       └── jsonl_formatter.py
 ├── core/
 │   ├── planner.py           # AnalysisPlanner: discovery, rule triggering, cache lookup
-│   ├── engine.py            # API-mode executor (LLM calls over a plan)
-│   ├── issue_factory.py     # IssueFactory: response -> Issue, filters, dedupe, limits
-│   ├── config.py            # YAML + .env config loading (mode: agent|api)
-│   ├── cache.py             # SQLite cache (keyed per analyzer) + LLM logging
+│   ├── issue_factory.py     # IssueFactory: findings -> Issue, filters, dedupe, limits
+│   ├── config.py            # YAML + .env config loading
+│   ├── cache.py             # SQLite cache (keyed per analyzer) + run logging
 │   ├── scoring.py           # Score calculation
 │   ├── workspace.py         # Git diff integration
 │   ├── interfaces.py        # Abstract base classes
@@ -53,19 +47,14 @@ src/dinocheck/
 │       ├── analysis_plan.py
 │       ├── file_analysis_task.py
 │       ├── analysis_result.py
-│       ├── completion_result.py
+│       ├── analysis_log.py
 │       ├── file_context.py
 │       ├── diff_hunk.py
-│       ├── llm_call_log.py
 │       └── cache_stats.py
-├── providers/
-│   ├── litellm_provider.py  # LiteLLM integration (api mode)
-│   └── mock.py              # Testing mock
 ├── llm/
-│   ├── schemas.py           # Pydantic structured outputs + AgentReport contract
+│   ├── schemas.py           # Pydantic output contract (AgentReport, CriticIssue)
 │   └── prompts/
-│       ├── critic.py        # CriticPromptBuilder for api-mode prompts
-│       └── brief.py         # BriefBuilder for agent-mode review briefs
+│       └── brief.py         # BriefBuilder for review briefs
 ├── skills/
 │   ├── loader.py            # SkillTemplates: packaged agent skill templates
 │   └── templates/           # claude.md / codex.md / gemini.md
@@ -111,12 +100,11 @@ tests/
 
 ## Design Decisions
 
-- **Agent-first**: Default mode delegates analysis to the host coding agent (`dino brief` -> agent -> `dino report`); the API mode is the fallback for CI
-- **LLM-first**: No pattern matching, pure LLM analysis
+- **Agent-native only**: The host coding agent performs all analysis (`dino brief` -> agent -> `dino report`). There is no API mode - dinocheck never calls an LLM itself. This decision is final.
+- **LLM-first**: No pattern matching, pure semantic analysis
 - **No fix command**: Linter only, doesn't modify code
-- **Structured outputs**: All LLM responses use Pydantic models
-- **SQLite cache**: Avoids re-analyzing unchanged files
-- **LiteLLM**: Unified interface to 100+ LLM providers
+- **Structured outputs**: The agent's findings are validated against Pydantic models
+- **SQLite cache**: Avoids re-analyzing unchanged files (keyed per analyzer)
 - **Vibe coding**: Designed for AI-assisted development workflows
 - **YAML rules**: All rules defined in YAML files (no hardcoded rules in Python)
 - **One class per file**: Types, formatters, and rules are each in separate files
@@ -148,11 +136,11 @@ tags:
 ## Configuration
 
 `dino.yaml` or `.env`:
-- `mode`: `agent` (default, host agent analyzes) or `api` (direct LLM calls)
-- `model`: LLM model for api mode (gpt-4o-mini, claude-3-5-sonnet, ollama/llama3)
 - `language`: Response language (en, es, fr, etc.)
-- `packs`: Enabled rule packs (python, django)
-- `custom_rules_dir`: Directory for custom YAML rules
+- `packs`: Enabled rule packs (python, django); all enabled by default
+- `exclude_packs` / `disabled_rules`: Opt out of packs or single rules
+- `include_paths` / `exclude_paths`: Scope the analysis
+- Custom rules: YAML files in `.dinocheck/rules/`
 
 ## Testing
 
@@ -167,7 +155,6 @@ fab ci             # Full CI pipeline
 - Python 3.11+
 - Ruff for linting/formatting
 - Mypy strict mode
-- Async/await for LLM calls
 - One class per file (no multi-class files)
 - Global imports (no local imports unless necessary)
 

@@ -3,23 +3,23 @@
 from dinocheck.core.interfaces import (
     Cache,
     Formatter,
-    LLMProvider,
     Pack,
     WorkspaceScanner,
 )
 from dinocheck.core.types import (
+    AnalysisLog,
     AnalysisResult,
     DiffHunk,
     FileContext,
     Issue,
     IssueLevel,
-    LLMCallLog,
     Location,
     Rule,
     RuleTrigger,
 )
 
 __all__ = [
+    "AnalysisLog",
     "AnalysisResult",
     "Cache",
     "DiffHunk",
@@ -27,8 +27,6 @@ __all__ = [
     "Formatter",
     "Issue",
     "IssueLevel",
-    "LLMCallLog",
-    "LLMProvider",
     "Location",
     "Pack",
     "Rule",

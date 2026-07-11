@@ -4,7 +4,7 @@
 
 ### `dino brief`
 
-Generate a review brief for the host coding agent (agent mode, step 1).
+Generate a review brief for the host coding agent (step 1).
 Selects files and matching rules and emits the instructions the agent needs
 to perform the analysis itself. No LLM API is called.
 
@@ -28,7 +28,7 @@ dino brief --rule n-plus-one
 
 ### `dino report`
 
-Validate and score the agent's findings (agent mode, step 2). Reads the
+Validate and score the agent's findings (step 2). Reads the
 results JSON produced from a brief, validates it against the output contract,
 deduplicates, scores, caches, and prints the formatted result.
 
@@ -40,28 +40,6 @@ dino report results.json -o review.txt
 
 Validation problems are reported precisely (exit code 2) so the agent can fix
 the JSON and retry.
-
-### `dino check`
-
-Analyze code by calling an LLM API directly. Requires `mode: api` in
-`dino.yaml` and an API key; in agent mode it points you to
-`dino brief` / `dino report` instead.
-
-```bash
-# Analyze current directory
-dino check
-
-# Analyze specific files
-dino check src/views.py src/models.py
-
-# Analyze with options
-dino check --diff           # Only changed files
-dino check -v               # Verbose output
-dino check --debug          # Debug logging to dino.log
-dino check --no-cache       # Skip cache
-dino check --format json    # JSON output
-dino check --format jsonl   # JSON Lines output
-```
 
 ### `dino init`
 
@@ -150,7 +128,7 @@ dino cache clear
 
 ### `dino logs list`
 
-View LLM call history.
+View analysis run history.
 
 ```bash
 dino logs list
@@ -158,18 +136,10 @@ dino logs list
 
 ### `dino logs show`
 
-Show details of a specific LLM call.
+Show details of a specific analysis run.
 
 ```bash
 dino logs show 123
-```
-
-### `dino logs cost`
-
-View cost summary.
-
-```bash
-dino logs cost
 ```
 
 ## Command Summary
@@ -179,20 +149,15 @@ dino logs cost
 | `dino brief [paths]` | Generate a review brief for the host agent |
 | `dino brief --diff` | Brief covering only changed files |
 | `dino brief --embed-code` | Include file contents in the brief |
+| `dino brief --debug` | Enable debug logging to dino.log |
 | `dino report FILE` | Validate, score, and cache agent findings |
-| `dino check [paths]` | Analyze code with LLM API (api mode) |
-| `dino check --diff` | Analyze only changed files |
-| `dino check -v` | Verbose output with progress |
-| `dino check --debug` | Enable debug logging to dino.log |
-| `dino check --no-cache` | Skip cache, re-analyze all files |
 | `dino packs list` | List available packs |
 | `dino packs info NAME` | Show pack details |
 | `dino explain RULE_ID` | Explain a rule |
 | `dino cache stats` | Show cache statistics |
 | `dino cache clear` | Clear the cache |
-| `dino logs list` | View LLM call history |
-| `dino logs show ID` | Show details of a specific LLM call |
-| `dino logs cost` | View cost summary |
+| `dino logs list` | View analysis run history |
+| `dino logs show ID` | Show details of a specific run |
 | `dino init` | Create dino.yaml |
 | `dino skill` | Create agent skills |
 | `dino skill --agent NAME` | Create skill for specific agent |

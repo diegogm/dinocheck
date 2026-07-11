@@ -1,6 +1,5 @@
 """Abstract base classes for Dinocheck components."""
 
-import asyncio
 import fnmatch
 import re
 from abc import ABC, abstractmethod
@@ -8,16 +7,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
-
-from dinocheck.core.types import (
-    AnalysisResult,
-    CacheStats,
-    CompletionResult,
-    FileContext,
-    Issue,
-    Rule,
-)
+from dinocheck.core.types import AnalysisResult, CacheStats, FileContext, Issue, Rule
 
 
 class Pack(ABC):
@@ -71,53 +61,6 @@ class Pack(ABC):
         return applicable
 
 
-class LLMProvider(ABC):
-    """Abstract LLM provider interface with structured outputs."""
-
-    @property
-    def max_concurrent(self) -> int:
-        """Maximum concurrent requests (for ThreadPoolExecutor)."""
-        return 4
-
-    @abstractmethod
-    def complete_structured_sync(
-        self,
-        prompt: str,
-        response_schema: type[BaseModel],
-        system: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
-    ) -> CompletionResult:
-        """Complete a prompt with structured output (synchronous, thread-safe)."""
-        ...
-
-    async def complete_structured(
-        self,
-        prompt: str,
-        response_schema: type[BaseModel],
-        system: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
-    ) -> CompletionResult:
-        """Complete a prompt with structured output (async).
-
-        Default implementation runs sync version in a thread.
-        """
-        return await asyncio.to_thread(
-            self.complete_structured_sync,
-            prompt,
-            response_schema,
-            system,
-            max_tokens,
-            temperature,
-        )
-
-    @abstractmethod
-    def estimate_tokens(self, text: str) -> int:
-        """Estimate token count for text."""
-        ...
-
-
 class Formatter(ABC):
     """Output formatter interface."""
 
@@ -137,8 +80,7 @@ class Cache(ABC):
     """Cache interface for analysis results.
 
     Results are keyed by file content, rule set, AND the analyzer that
-    produced them (a model identifier or 'agent'), so results from
-    different analyzers never collide.
+    produced them, so results from different analyzers never collide.
     """
 
     @abstractmethod

@@ -131,73 +131,54 @@ class TestSQLiteCache:
         assert stats.size_bytes > 0
 
 
-class TestLLMLogging:
-    """Tests for LLM call logging."""
+class TestRunLogging:
+    """Tests for analysis run logging."""
 
-    def test_log_llm_call(self, cache):
-        """Should log LLM call and return cost."""
-        cost_usd = cache.log_llm_call(
-            model="gpt-4o-mini",
+    def test_log_run(self, cache):
+        """Should log a run and return its ID."""
+        run_id = cache.log_run(
+            analyzer="agent",
             pack="django",
             files=["views.py"],
-            prompt_tokens=100,
-            completion_tokens=50,
             duration_ms=1500,
             issues_found=3,
         )
 
-        # log_llm_call returns cost_usd (float)
-        assert isinstance(cost_usd, float)
-        assert cost_usd >= 0.0
+        assert isinstance(run_id, str)
+        assert run_id
 
-    def test_get_llm_logs(self, cache):
-        """Should retrieve LLM logs."""
-        cache.log_llm_call(
-            model="gpt-4o-mini",
+    def test_get_runs(self, cache):
+        """Should retrieve run logs."""
+        cache.log_run(
+            analyzer="agent",
             pack="django",
             files=["views.py"],
-            prompt_tokens=100,
-            completion_tokens=50,
             duration_ms=1500,
             issues_found=3,
         )
 
-        logs = cache.get_llm_logs(limit=10)
+        runs = cache.get_runs(limit=10)
 
-        assert len(logs) == 1
-        assert logs[0].model == "gpt-4o-mini"
-        assert logs[0].pack == "django"
-        assert logs[0].total_tokens == 150
+        assert len(runs) == 1
+        assert runs[0].analyzer == "agent"
+        assert runs[0].pack == "django"
+        assert runs[0].files == ["views.py"]
+        assert runs[0].issues_found == 3
 
-    def test_get_cost_summary(self, cache):
-        """Should calculate cost summary."""
-        cache.log_llm_call(
-            model="gpt-4o-mini",
-            pack="django",
-            files=["views.py"],
-            prompt_tokens=1000,
-            completion_tokens=500,
-            duration_ms=1500,
-            issues_found=3,
-            cost_usd=0.01,
-        )
-        cache.log_llm_call(
-            model="gpt-4o-mini",
-            pack="django",
-            files=["models.py"],
-            prompt_tokens=800,
-            completion_tokens=400,
-            duration_ms=1200,
-            issues_found=2,
-            cost_usd=0.008,
+    def test_get_run_partial_match(self, cache):
+        """Should find a run by ID prefix."""
+        run_id = cache.log_run(
+            analyzer="agent",
+            pack="python",
+            files=["a.py"],
+            duration_ms=10,
+            issues_found=0,
         )
 
-        summary = cache.get_cost_summary(days=30)
+        run = cache.get_run(run_id[:8])
 
-        assert summary.total_calls == 2
-        assert summary.total_tokens == 2700
-        assert summary.total_cost == pytest.approx(0.018, rel=0.01)
-        assert summary.total_issues == 5
+        assert run is not None
+        assert run.id == run_id
 
 
 class TestContentHasher:
@@ -330,18 +311,20 @@ class TestMigrations:
         # Open with new code — migrations should run
         cache = SQLiteCache(db_path, ttl_hours=1)
 
-        # Verify data preserved
-        logs = cache.get_llm_logs(limit=10)
-        assert len(logs) == 1
-        assert logs[0].model == "gpt-4o-mini"
-        assert logs[0].total_tokens == 150
+        # Verify data preserved: legacy llm_logs rows become run logs
+        runs = cache.get_runs(limit=10)
+        assert len(runs) == 1
+        assert runs[0].analyzer == "gpt-4o-mini"
+        assert runs[0].issues_found == 3
 
-        # Verify columns are gone
+        # Verify the legacy table is replaced by runs
         conn = sqlite3.connect(db_path)
-        cursor = conn.execute("PRAGMA table_info(llm_logs)")
-        col_names = {row[1] for row in cursor.fetchall()}
-        assert "prompt_text" not in col_names
-        assert "response_text" not in col_names
+        tables = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        }
+        assert "llm_logs" not in tables
+        assert "runs" in tables
 
         # Verify version updated
         assert Migrator.get_version(conn) == SQLiteCache.CURRENT_VERSION

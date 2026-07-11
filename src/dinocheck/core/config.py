@@ -1,8 +1,6 @@
 """Configuration loading and management for Dinocheck."""
 
-import os
 from pathlib import Path
-from typing import Literal
 
 import yaml
 from dotenv import load_dotenv
@@ -12,50 +10,24 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Default cache location
 DEFAULT_CACHE_DB = ".dinocheck/cache.db"
 
-# Analyzer identity used for cache keys and logs in agent mode
+# Analyzer identity used for cache keys and run logs
 AGENT_ANALYZER = "agent"
 
 
 class DinocheckConfig(BaseModel):
-    """Main Dinocheck configuration - simplified."""
+    """Main Dinocheck configuration.
 
-    # "agent": the host coding agent analyzes via `dino brief` / `dino report`
-    # (zero config, no API key). "api": `dino check` calls an LLM API directly.
-    mode: Literal["agent", "api"] = "agent"
+    Dinocheck is agent-native: the host coding agent performs the analysis
+    via `dino brief` / `dino report`, so no LLM provider, model, or API key
+    is ever configured.
+    """
+
     packs: list[str] | None = None  # None = all packs enabled
     exclude_packs: list[str] = Field(default_factory=list)
-    model: str = "openai/gpt-5.2-codex"
-    base_url: str | None = None  # Custom API endpoint (OpenAI-compatible)
     language: str = "en"
-    max_llm_calls: int = 10
     disabled_rules: list[str] = Field(default_factory=list)
     exclude_paths: list[str] = Field(default_factory=list)
     include_paths: list[str] | None = None  # None = current directory
-
-    @property
-    def provider(self) -> str:
-        """Extract provider from model string (normalized to lowercase)."""
-        if "/" in self.model:
-            return self.model.split("/")[0].lower()
-        return "openai"
-
-    @property
-    def model_name(self) -> str:
-        """Extract model name from model string."""
-        if "/" in self.model:
-            return self.model.split("/", 1)[1]
-        return self.model
-
-    @property
-    def api_key_env(self) -> str:
-        """Infer API key environment variable from provider."""
-        provider_keys = {
-            "openai": "OPENAI_API_KEY",
-            "anthropic": "ANTHROPIC_API_KEY",
-            "azure": "AZURE_API_KEY",
-            "ollama": "",  # Ollama doesn't need API key
-        }
-        return provider_keys.get(self.provider, "OPENAI_API_KEY")
 
 
 class EnvSettings(BaseSettings):
@@ -68,8 +40,6 @@ class EnvSettings(BaseSettings):
         extra="ignore",
     )
 
-    mode: Literal["agent", "api"] | None = None
-    model: str | None = None
     language: str | None = None
 
 
@@ -102,7 +72,7 @@ class ConfigManager:
         """Load configuration from dino.yaml and .env files.
 
         Priority (highest to lowest):
-        1. Environment variables (DINO_MODEL, DINO_LANGUAGE)
+        1. Environment variables (DINO_LANGUAGE)
         2. .env file (in same directory as dino.yaml)
         3. dino.yaml
         4. Defaults
@@ -129,14 +99,10 @@ class ConfigManager:
                 if raw:
                     config_dict = raw
 
-        # Create config
+        # Create config (unknown keys, e.g. legacy settings, are ignored)
         self._config = DinocheckConfig.model_validate(config_dict)
 
         # Override with environment settings
-        if env_settings.mode:
-            self._config.mode = env_settings.mode
-        if env_settings.model:
-            self._config.model = env_settings.model
         if env_settings.language:
             self._config.language = env_settings.language
 
@@ -150,30 +116,13 @@ class ConfigManager:
         assert self._config is not None
         return self._config
 
-    def get_api_key(self) -> str | None:
-        """Get API key from environment based on config."""
-        if not self.config.api_key_env:
-            return "not-needed"  # For local providers like Ollama
-        return os.environ.get(self.config.api_key_env)
-
     def validate(self) -> list[str]:
         """Validate configuration and return list of errors."""
         errors = []
-
-        # Check API key only in API mode (agent mode needs none - that's the point).
-        # Local providers like Ollama are also exempt.
-        if self.config.mode == "api" and self.config.provider not in ("ollama",):
-            api_key = self.get_api_key()
-            if not api_key:
-                errors.append(f"API key not found: {self.config.api_key_env}")
 
         # Check packs - None means all packs, which is valid
         # Only error if explicitly set to empty list
         if self.config.packs is not None and len(self.config.packs) == 0:
             errors.append("No packs configured (use packs: null for all packs)")
-
-        # Check budget
-        if self.config.max_llm_calls < 0:
-            errors.append("max_llm_calls must be >= 0")
 
         return errors

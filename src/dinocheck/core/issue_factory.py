@@ -13,9 +13,9 @@ SEVERITY_ORDER = ["blocker", "critical", "major", "minor", "info"]
 class IssueFactory:
     """Builds, filters, deduplicates, and limits Issue objects.
 
-    Shared by both execution paths: the API-mode Engine and `dino report`
-    (agent mode). Invalid entries are never dropped silently - they are
-    returned as warnings so callers can surface them.
+    Used by `dino report` to turn the host agent's findings into issues.
+    Invalid entries are never dropped silently - they are returned as
+    warnings so callers can surface them.
     """
 
     def create_issues(

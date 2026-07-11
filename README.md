@@ -5,7 +5,7 @@
 <h1 align="center">Dinocheck</h1>
 
 <p align="center">
-  <strong>Your vibe coding companion - LLM-powered code critic</strong>
+  <strong>Your vibe coding companion - agent-native AI code critic</strong>
 </p>
 
 <p align="center">
@@ -19,9 +19,9 @@
 
 ---
 
-Dinocheck is an AI-powered code critic designed to **enhance your vibe coding sessions**. It's not a traditional linter - those focus on syntax and style. Dinocheck uses AI to understand your code **semantically** and provide intelligent feedback on the things that matter: logic bugs, security issues, and architectural problems.
+Dinocheck is an AI-powered code critic designed to **enhance your vibe coding sessions**. It's not a traditional linter - those focus on syntax and style. Dinocheck understands your code **semantically** and provides intelligent feedback on the things that matter: logic bugs, security issues, and architectural problems.
 
-**Zero config by default**: when you code with an AI agent (Claude Code, Codex, Gemini CLI), the agent itself performs the review through the dinocheck skill - no API keys, no model setup. Dinocheck selects the files and rules, the agent analyzes, and dinocheck validates, scores, and caches the results.
+**Agent-native, zero config**: your AI coding agent (Claude Code, Codex, Gemini CLI) performs the review through the dinocheck skill - no API keys, no model setup, no external LLM calls. Dinocheck selects the files and rules, the agent analyzes, and dinocheck validates, scores, and caches the results.
 
 ```bash
 $ dino report .dinocheck/results.json
@@ -57,7 +57,7 @@ Issues (2):
        • Add ownership validation: `if account.user != request.user: return 403`
        • Consider using DRF's permission classes for consistent access control.
 
-Checked 12 files (10 cached) in 1842ms for $0.003
+Checked 12 file(s) in 1842ms
 ```
 
 ## Why Dinocheck?
@@ -84,12 +84,12 @@ This fits the vibe coding workflow: you write code with AI assistance, and Dinoc
 | Feature | Description |
 |---------|-------------|
 | **Agent-Native** | Your AI coding agent performs the review - zero config, no API keys |
-| **LLM-First Analysis** | Semantic code review driven by AI, not pattern matching |
+| **Semantic Analysis** | AI-driven code review, not pattern matching |
 | **Rule Packs** | Python, Django, React, TypeScript, CSS, Docker, Compose, Shell, Vue, LaTeX |
-| **Smart Caching** | SQLite cache avoids re-analyzing unchanged files (per analyzer) |
-| **API Mode for CI** | Optional headless mode via OpenAI, Anthropic, Ollama, and 100+ providers (LiteLLM) |
+| **Smart Caching** | SQLite cache avoids re-analyzing unchanged files |
+| **Strict Output Contract** | Findings are validated, deduplicated, scored, and formatted consistently |
 | **Multi-Language** | Get feedback in English, Spanish, French, etc. |
-| **Cost Tracking** | Monitor LLM usage and costs with `dino logs` |
+| **Run History** | Review past analysis runs with `dino logs` |
 
 ## Quick Start
 
@@ -101,16 +101,18 @@ pip install dinocheck
 uv add dinocheck
 ```
 
-### Agent mode (default - zero config)
+### Setup
 
 If you code with Claude Code, Codex, or Gemini CLI, install the skill and
-you're done. No API keys.
+you're done:
 
 ```bash
 dino init    # creates dino.yaml and offers to create the agent skill
 # or just:
 dino skill   # creates the skill for detected agents
 ```
+
+### Usage
 
 From then on, asking your agent to "review the code" (or the agent deciding
 to check its own work) runs this loop:
@@ -121,49 +123,35 @@ dino brief --diff -o .dinocheck/brief.md   # 1. dinocheck picks files + rules
 dino report .dinocheck/results.json        # 3. dinocheck validates, scores, caches
 ```
 
-### API mode (CI / headless)
-
-Where no agent is present, dinocheck can call an LLM API directly. Set
-`mode: api` and a model in `dino.yaml`, export the API key, and use
-`dino check`:
-
-```yaml
-mode: api
-model: openai/gpt-5.2-codex  # or anthropic/claude-3-5-sonnet, ollama/llama3
-language: en
-```
+You can also drive it by hand: run `dino brief`, hand the brief to any AI
+assistant, and submit its JSON findings with `dino report`.
 
 ```bash
-export OPENAI_API_KEY=sk-...
-
-dino check              # analyze current directory
-dino check --diff       # only changed files
-dino check -v           # verbose progress
-dino check --format json
-dino logs cost          # view LLM costs
+dino brief src/                  # brief for a specific directory
+dino brief --format json         # machine-readable brief
+dino brief --embed-code          # include file contents in the brief
+dino report results.json         # validate, score, cache, and print
+dino report results.json -f json # JSON output for tooling
+dino logs list                   # review past analysis runs
 ```
 
 ## CLI Reference
 
 | Command | Description |
 |---------|-------------|
-| `dino brief [paths]` | Generate a review brief for the host agent (agent mode) |
+| `dino brief [paths]` | Generate a review brief for the host agent (step 1) |
 | `dino brief --diff` | Brief covering only changed files |
-| `dino report FILE` | Validate, score, and cache the agent's findings |
-| `dino check [paths]` | Analyze code calling an LLM API (api mode) |
-| `dino check --diff` | Analyze only changed files |
-| `dino check -v` | Verbose output with progress |
-| `dino check --debug` | Enable debug logging to dino.log |
-| `dino check --no-cache` | Skip cache, re-analyze all files |
+| `dino brief --embed-code` | Include file contents in the brief |
+| `dino report FILE` | Validate, score, and cache the agent's findings (step 2) |
 | `dino packs list` | List available packs |
 | `dino packs info NAME` | Show pack details |
 | `dino explain RULE_ID` | Explain a rule |
 | `dino cache stats` | Show cache statistics |
 | `dino cache clear` | Clear the cache |
-| `dino logs list` | View LLM call history |
-| `dino logs show ID` | Show details of a specific LLM call |
-| `dino logs cost` | View cost summary |
+| `dino logs list` | View analysis run history |
+| `dino logs show ID` | Show details of a specific run |
 | `dino init` | Create dino.yaml |
+| `dino skill` | Create agent skills |
 | `dino version` | Show version information |
 
 ## Rule Packs
@@ -191,7 +179,11 @@ Use `dino packs info <pack>` to see all rules in a pack.
 | `json` | Full JSON for tooling integration |
 | `jsonl` | JSON Lines for streaming |
 
-## GitHub Actions Integration
+## CI Integration
+
+Dinocheck needs an AI coding agent to perform the analysis, so in CI you run
+it through an agent CLI. For example, with [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+in headless mode:
 
 ```yaml
 name: Dinocheck
@@ -205,26 +197,16 @@ jobs:
       - uses: astral-sh/setup-uv@v5
 
       - run: uv add dinocheck
-      - run: uv run dino check --diff
+      - run: uv run dino skill --agent claude
+      - run: |
+          claude -p "Run the dinocheck skill on the files changed in this PR \
+            and summarize the findings. Fail only on blocker or critical issues."
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          DINO_MODE: api
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-CI has no host agent, so `dino check` needs API mode (`DINO_MODE: api` or
-`mode: api` in `dino.yaml`) and an API key.
-
-## Supported LLM Providers
-
-| Provider | Model Examples |
-|----------|----------------|
-| **OpenAI** | `gpt-4o`, `gpt-4o-mini`, `o1-preview` |
-| **Anthropic** | `claude-3-5-sonnet`, `claude-3-opus` |
-| **Ollama** | `ollama/llama3`, `ollama/codellama` |
-| **Azure** | `azure/gpt-4o` |
-| **Google** | `gemini/gemini-pro` |
-
-See [LiteLLM docs](https://docs.litellm.ai/docs/providers) for 100+ supported providers.
+Any agent CLI that can execute shell commands and follow the skill's
+brief/report workflow works the same way.
 
 ## Documentation
 

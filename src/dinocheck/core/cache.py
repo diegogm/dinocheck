@@ -1,4 +1,4 @@
-"""SQLite-based cache for analysis results and LLM call logging."""
+"""SQLite-based cache for analysis results and run logging."""
 
 import json
 import sqlite3
@@ -10,13 +10,13 @@ from typing import Any
 
 from dinocheck.core.interfaces import Cache
 from dinocheck.core.migrations import MIGRATIONS, Migrator
-from dinocheck.core.types import CacheStats, CostSummary, Issue, IssueLevel, LLMCallLog, Location
+from dinocheck.core.types import AnalysisLog, CacheStats, Issue, IssueLevel, Location
 
 __all__ = ["SQLiteCache"]
 
 
 class SQLiteCache(Cache):
-    """SQLite-based persistent cache for analysis results and LLM logs."""
+    """SQLite-based persistent cache for analysis results and run logs."""
 
     SCHEMA = """
     -- Analysis cache table
@@ -31,26 +31,20 @@ class SQLiteCache(Cache):
     );
     CREATE INDEX IF NOT EXISTS idx_cache_created ON cache(created_at);
 
-    -- LLM call logs table
-    CREATE TABLE IF NOT EXISTS llm_logs (
+    -- Analysis run logs table
+    CREATE TABLE IF NOT EXISTS runs (
         id TEXT PRIMARY KEY,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        model TEXT NOT NULL,
+        analyzer TEXT NOT NULL,
         pack TEXT NOT NULL,
         files_json TEXT NOT NULL,
-        prompt_tokens INTEGER NOT NULL,
-        completion_tokens INTEGER NOT NULL,
-        total_tokens INTEGER NOT NULL,
-        cost_usd REAL NOT NULL,
         duration_ms INTEGER NOT NULL,
-        issues_found INTEGER NOT NULL,
-        cached INTEGER DEFAULT 0
+        issues_found INTEGER NOT NULL
     );
-    CREATE INDEX IF NOT EXISTS idx_llm_logs_timestamp ON llm_logs(timestamp);
-    CREATE INDEX IF NOT EXISTS idx_llm_logs_model ON llm_logs(model);
+    CREATE INDEX IF NOT EXISTS idx_runs_timestamp ON runs(timestamp);
     """
 
-    CURRENT_VERSION = 2
+    CURRENT_VERSION = 3
 
     def __init__(self, db_path: Path, ttl_hours: int = 168):
         self.db_path = db_path
@@ -141,136 +135,80 @@ class SQLiteCache(Cache):
             newest_entry=newest,
         )
 
-    # ==================== LLM Logging Methods ====================
+    # ==================== Run Logging Methods ====================
 
-    def log_llm_call(
+    def log_run(
         self,
-        model: str,
+        analyzer: str,
         pack: str,
         files: list[str],
-        prompt_tokens: int,
-        completion_tokens: int,
         duration_ms: int,
         issues_found: int,
-        cost_usd: float | None = None,
-        cached: bool = False,
-    ) -> float:
-        """Log an LLM call and return the cost in USD."""
-        log_id = str(uuid.uuid4())
-
-        # Calculate cost if not provided
-        if cost_usd is None:
-            cost_usd = self._estimate_cost(model, prompt_tokens, completion_tokens)
+    ) -> str:
+        """Log an analysis run and return its ID."""
+        run_id = str(uuid.uuid4())
 
         with self._connect() as conn:
             conn.execute(
-                """INSERT INTO llm_logs
-                   (id, model, pack, files_json, prompt_tokens, completion_tokens,
-                    total_tokens, cost_usd, duration_ms, issues_found, cached)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT INTO runs
+                   (id, analyzer, pack, files_json, duration_ms, issues_found)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
                 (
-                    log_id,
-                    model,
+                    run_id,
+                    analyzer,
                     pack,
                     json.dumps(files),
-                    prompt_tokens,
-                    completion_tokens,
-                    prompt_tokens + completion_tokens,
-                    cost_usd,
                     duration_ms,
                     issues_found,
-                    1 if cached else 0,
                 ),
             )
 
-        return cost_usd
+        return run_id
 
-    def get_llm_logs(self, limit: int = 20) -> list[LLMCallLog]:
-        """Get recent LLM call logs."""
+    def get_runs(self, limit: int = 20) -> list[AnalysisLog]:
+        """Get recent analysis run logs."""
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT id, timestamp, model, pack, files_json,
-                          prompt_tokens, completion_tokens, total_tokens,
-                          cost_usd, duration_ms, issues_found, cached
-                   FROM llm_logs
+                """SELECT id, timestamp, analyzer, pack, files_json,
+                          duration_ms, issues_found
+                   FROM runs
                    ORDER BY timestamp DESC
                    LIMIT ?""",
                 (limit,),
             ).fetchall()
 
-        return [
-            LLMCallLog(
-                id=row["id"],
-                timestamp=row["timestamp"],
-                model=row["model"],
-                pack=row["pack"],
-                files=json.loads(row["files_json"]),
-                prompt_tokens=row["prompt_tokens"],
-                completion_tokens=row["completion_tokens"],
-                total_tokens=row["total_tokens"],
-                cost_usd=row["cost_usd"],
-                duration_ms=row["duration_ms"],
-                issues_found=row["issues_found"],
-                cached=bool(row["cached"]),
-            )
-            for row in rows
-        ]
+        return [self._row_to_log(row) for row in rows]
 
-    def get_llm_log(self, log_id: str) -> LLMCallLog | None:
-        """Get a specific LLM call log by ID (partial match)."""
+    def get_run(self, run_id: str) -> AnalysisLog | None:
+        """Get a specific analysis run log by ID (partial match)."""
         with self._connect() as conn:
             row = conn.execute(
-                """SELECT id, timestamp, model, pack, files_json,
-                          prompt_tokens, completion_tokens, total_tokens,
-                          cost_usd, duration_ms, issues_found, cached
-                   FROM llm_logs
+                """SELECT id, timestamp, analyzer, pack, files_json,
+                          duration_ms, issues_found
+                   FROM runs
                    WHERE id LIKE ?
                    LIMIT 1""",
-                (f"{log_id}%",),
+                (f"{run_id}%",),
             ).fetchone()
 
         if row:
-            return LLMCallLog(
-                id=row["id"],
-                timestamp=row["timestamp"],
-                model=row["model"],
-                pack=row["pack"],
-                files=json.loads(row["files_json"]),
-                prompt_tokens=row["prompt_tokens"],
-                completion_tokens=row["completion_tokens"],
-                total_tokens=row["total_tokens"],
-                cost_usd=row["cost_usd"],
-                duration_ms=row["duration_ms"],
-                issues_found=row["issues_found"],
-                cached=bool(row["cached"]),
-            )
+            return self._row_to_log(row)
         return None
 
-    def get_cost_summary(self, days: int = 30) -> CostSummary:
-        """Get cost summary for the last N days."""
-        with self._connect() as conn:
-            row = conn.execute(
-                """SELECT
-                       COUNT(*) as total_calls,
-                       COALESCE(SUM(total_tokens), 0) as total_tokens,
-                       COALESCE(SUM(cost_usd), 0) as total_cost,
-                       COALESCE(SUM(issues_found), 0) as total_issues
-                   FROM llm_logs
-                   WHERE timestamp > datetime('now', ?)""",
-                (f"-{days} days",),
-            ).fetchone()
-
-        total_calls = row["total_calls"] or 0
-        total_cost = row["total_cost"] or 0.0
-        return CostSummary(
-            total_calls=total_calls,
-            total_tokens=row["total_tokens"] or 0,
-            total_cost=total_cost,
-            total_issues=row["total_issues"] or 0,
-            avg_cost_per_call=total_cost / max(1, total_calls),
-        )
-
     # ==================== Helper Methods ====================
+
+    @staticmethod
+    def _row_to_log(row: sqlite3.Row) -> AnalysisLog:
+        """Convert a runs row to an AnalysisLog."""
+        return AnalysisLog(
+            id=row["id"],
+            timestamp=row["timestamp"],
+            analyzer=row["analyzer"],
+            pack=row["pack"],
+            files=json.loads(row["files_json"]),
+            duration_ms=row["duration_ms"],
+            issues_found=row["issues_found"],
+        )
 
     def _serialize_issues(self, issues: list[Issue]) -> str:
         """Serialize issues to JSON."""
@@ -322,18 +260,3 @@ class SQLiteCache(Cache):
             confidence=d.get("confidence", 1.0),
             tags=d.get("tags", []),
         )
-
-    def _estimate_cost(self, model: str, prompt_tokens: int, completion_tokens: int) -> float:
-        """Estimate cost based on model and token counts using litellm."""
-        try:
-            from litellm import cost_per_token
-
-            prompt_cost, completion_cost = cost_per_token(
-                model=model,
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-            )
-            return prompt_cost + completion_cost
-        except Exception:
-            # Fallback: return 0 if model pricing not found
-            return 0.0

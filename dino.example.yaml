@@ -1,14 +1,11 @@
 # Dinocheck Configuration
-# Your vibe coding companion - LLM-powered code critic
+# Your vibe coding companion - agent-native AI code critic
 #
 # Copy this file to dino.yaml and customize for your project
 # Documentation: https://github.com/diegogm/dinocheck
-
-# Analysis mode:
-#   agent (default): your AI coding agent performs the review via
-#                    'dino brief' + 'dino report'. Zero config, no API keys.
-#   api:             'dino check' calls an LLM API directly (CI / headless).
-mode: agent
+#
+# Dinocheck is agent-native: your AI coding agent performs the review via
+# 'dino brief' + 'dino report'. No API keys, no model configuration.
 
 # Enable language/framework packs (all packs enabled when omitted)
 packs:
@@ -17,18 +14,6 @@ packs:
 
 # Response language (en, es, fr, de, pt, etc.)
 language: en
-
-# --- API mode settings (only used when mode: api) ---
-
-# LLM model to use (provider/model format)
-# Examples:
-#   - openai/gpt-5.2-codex, openai/gpt-4o, openai/gpt-4o-mini
-#   - anthropic/claude-3-5-sonnet-20241022
-#   - ollama/llama3, ollama/mistral
-# model: openai/gpt-5.2-codex
-
-# Max LLM calls per run
-# max_llm_calls: 10
 
 # Analyze only specific directories (default: current directory)
 # include_paths:

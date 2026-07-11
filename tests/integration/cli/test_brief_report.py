@@ -180,14 +180,3 @@ class TestReportCommand:
 
         assert result.exit_code == 2
         assert "not found" in result.stderr
-
-
-class TestCheckAgentModeGating:
-    """Tests for dino check behavior in agent mode."""
-
-    def test_check_in_agent_mode_points_to_brief(self, project):
-        result = runner.invoke(app, ["check", "app/views.py"])
-
-        assert result.exit_code == 2
-        assert "dino brief" in result.stderr
-        assert "dino report" in result.stderr

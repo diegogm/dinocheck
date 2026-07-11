@@ -1,8 +1,5 @@
 """Integration tests for CLI commands."""
 
-import json
-
-import pytest
 from typer.testing import CliRunner
 
 from dinocheck.cli.main import app
@@ -65,60 +62,6 @@ class TestCacheCommand:
         result = runner.invoke(app, ["cache", "clear"])
 
         assert result.exit_code == 0
-
-
-class TestCheckCommand:
-    """Tests for dino check command."""
-
-    @pytest.fixture
-    def python_file(self, tmp_path):
-        """Create a temporary Python file."""
-        file_path = tmp_path / "test_file.py"
-        file_path.write_text('''
-def example_function():
-    """Example function with no issues."""
-    return 42
-''')
-        return file_path
-
-    @pytest.fixture
-    def django_views_file(self, tmp_path):
-        """Create a Django views file with potential issues."""
-        file_path = tmp_path / "views.py"
-        file_path.write_text("""
-from django.shortcuts import render
-from .models import Book
-
-def book_list(request):
-    # Potential N+1 query
-    books = Book.objects.all()
-    return render(request, "books.html", {
-        "books": [{"title": b.title, "author": b.author.name} for b in books]
-    })
-""")
-        return file_path
-
-    def test_check_json_format(self, python_file, tmp_path, monkeypatch):
-        """Should output JSON format."""
-        monkeypatch.chdir(tmp_path)
-
-        result = runner.invoke(
-            app,
-            [
-                "check",
-                str(python_file),
-                "--format",
-                "json",
-            ],
-        )
-
-        # Verify exit code is expected
-        assert result.exit_code in (0, 1, 2), f"Unexpected exit code: {result.exit_code}"
-
-        # Should be valid JSON if analysis completed (exit 0 or 1)
-        if result.exit_code in (0, 1):
-            output = json.loads(result.stdout)  # Raises JSONDecodeError if invalid
-            assert "issues" in output or "error" in result.stdout.lower()
 
 
 class TestInitCommand:
@@ -227,14 +170,6 @@ class TestLogsCommand:
         monkeypatch.chdir(tmp_path)
 
         result = runner.invoke(app, ["logs", "list"])
-
-        assert result.exit_code == 0
-
-    def test_logs_cost_empty(self, tmp_path, monkeypatch):
-        """Should handle empty cost summary."""
-        monkeypatch.chdir(tmp_path)
-
-        result = runner.invoke(app, ["logs", "cost"])
 
         assert result.exit_code == 0
 

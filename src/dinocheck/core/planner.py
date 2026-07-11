@@ -1,8 +1,8 @@
 """Deterministic analysis planning: discovery, rule triggering, cache lookup.
 
 The planner runs everything that happens *before* semantic analysis. Its
-output (AnalysisPlan) is consumed by two executors: the API-mode Engine,
-and the host coding agent via `dino brief` / `dino report`.
+output (AnalysisPlan) is what the host coding agent executes via
+`dino brief` / `dino report`.
 """
 
 from collections.abc import Callable
@@ -23,7 +23,7 @@ ProgressCallback = Callable[[str, str], None]
 
 
 class AnalysisPlanner:
-    """Plans an analysis run without calling any LLM.
+    """Plans an analysis run.
 
     Responsibilities:
     1. Resolve paths (include_paths from config when using the default path)

@@ -8,10 +8,10 @@
 
 Dinocheck is an AI-powered code critic designed to **enhance your vibe coding sessions**. It's not a traditional linter - those focus on syntax and style. Dinocheck uses AI to understand your code **semantically** and provide intelligent feedback on the things that matter: logic bugs, security issues, and architectural problems.
 
-**Zero config by default**: when you code with an AI agent (Claude Code, Codex, Gemini CLI), the agent itself performs the review through the dinocheck skill - no API keys, no model setup. See [Coding Agents](integrations.md).
+**Agent-native, zero config**: your AI coding agent (Claude Code, Codex, Gemini CLI) performs the review through the dinocheck skill - no API keys, no model setup, no external LLM calls. See [Coding Agents](integrations.md).
 
 ```bash
-$ dino check src/views.py
+$ dino report .dinocheck/results.json
 
 ------------------------------------------------------------
 ✓ Analysis Complete - Score: 72/100
@@ -44,7 +44,7 @@ Issues (2):
        • Add ownership validation: `if account.user != request.user: return 403`
        • Consider using DRF's permission classes for consistent access control.
 
-Checked 12 files (10 cached) in 1842ms for $0.003
+Checked 12 file(s) in 1842ms
 ```
 
 ## Why Dinocheck?
@@ -60,7 +60,7 @@ Traditional linters catch syntax errors and style issues. Dinocheck catches **lo
 
 Dinocheck is a **linter, not a fixer**. It's designed to be your coding companion:
 
-- Reviews your code with LLM intelligence
+- Reviews your code with AI intelligence
 - Points out issues and explains **why** they matter
 - Lets **you** decide how to fix them
 
@@ -71,9 +71,9 @@ This fits the vibe coding workflow: you write code with AI assistance, and Dinoc
 | Feature | Description |
 |---------|-------------|
 | **Agent-Native** | Your AI coding agent performs the review - zero config, no API keys |
-| **LLM-First Analysis** | Semantic code review driven by AI, not pattern matching |
+| **Semantic Analysis** | AI-driven code review, not pattern matching |
 | **Rule Packs** | Python, Django, React, TypeScript, CSS, Docker, Compose, Shell, Vue, LaTeX |
-| **Smart Caching** | SQLite cache avoids re-analyzing unchanged files (per analyzer) |
-| **API Mode for CI** | Optional headless mode via OpenAI, Anthropic, Ollama, and 100+ providers (LiteLLM) |
+| **Smart Caching** | SQLite cache avoids re-analyzing unchanged files |
+| **Strict Output Contract** | Findings are validated, deduplicated, scored, and formatted consistently |
 | **Multi-Language** | Get feedback in English, Spanish, French, etc. |
-| **Cost Tracking** | Monitor LLM usage and costs with `dino logs` |
+| **Run History** | Review past analysis runs with `dino logs` |

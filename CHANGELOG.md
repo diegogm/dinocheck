@@ -4,38 +4,40 @@ All notable changes to Dinocheck will be documented in this file.
 
 ## [Unreleased]
 
+Dinocheck is now **agent-native only**. The host coding agent (Claude Code,
+Codex, Gemini CLI) performs the analysis; dinocheck never calls an LLM API.
+This decision is final - there is no API mode and none is planned.
+
 ### Added
-- **Agent-native mode (new default)**: the host coding agent (Claude Code,
-  Codex, Gemini CLI) performs the analysis itself - zero config, no API keys
+- **Agent-native analysis**: the host coding agent performs the review
+  itself - zero config, no API keys
   - `dino brief`: emits a review brief (files, triggered rules with full
     checklists/examples, output contract) for the agent; `--diff`,
-    `--format json`, `--embed-code`
+    `--format json`, `--embed-code`, `--debug`
   - `dino report`: validates the agent's findings against the output contract
     (precise, retryable errors), converts, dedupes, scores, caches, and formats
-- `mode: agent|api` config option (`DINO_MODE` env var); API key validation
-  only applies to api mode
 - Agent skill templates shipped as package data (`dinocheck/skills/templates/`)
-  and used by `dino skill` / `dino init`; skills now document the
+  and used by `dino skill` / `dino init`; skills document the
   brief/analyze/report workflow
-- Cache entries are keyed per analyzer (model or agent) so results never mix;
-  schema migration 002 rebuilds the cache table
-
-### Changed
-- Engine split: `AnalysisPlanner` (discovery, rule triggering, cache lookup)
-  and `IssueFactory` (issue conversion, filters, dedupe, limits) extracted
-  from the engine and shared by both modes
-- `dino check` now requires `mode: api`; in agent mode it points to the
-  brief/report workflow
-- One failed LLM call no longer aborts the whole `dino check` run; errors are
-  collected and reported in `meta.errors`
-- LLM cost/token accounting uses the provider-reported usage when available
-- Prompt code fences use the file's language (previously hardcoded to python)
-- Files dropped by the `max_llm_calls` budget or by content truncation are
-  now reported instead of silently skipped
-- Invalid issues returned by the LLM/agent (e.g. bad severity level) are
-  surfaced as warnings instead of silently dropped
+- Cache entries are keyed per analyzer so results never mix; schema
+  migration 002 rebuilds the cache table
+- Analysis run history: `dino logs list` / `dino logs show` record each
+  submitted report (schema migration 003)
+- `AnalysisPlanner` (discovery, rule triggering, cache lookup) and
+  `IssueFactory` (findings conversion, filters, dedupe, limits) as the
+  deterministic core
+- Invalid findings (e.g. bad severity level) are surfaced as warnings
+  instead of silently dropped
 
 ### Removed
+- **API mode, entirely**: the `Engine`, the `providers/` package (LiteLLM),
+  the `dino check` command, and the `mode`, `model`, `base_url`, and
+  `max_llm_calls` config options. Legacy keys in existing `dino.yaml`
+  files are ignored.
+- Cost and token tracking (`dino logs cost`, per-call token counts): with no
+  API calls there is nothing to meter. Existing log rows are preserved as
+  run history.
+- Dependencies: `litellm`, `httpx`, `aiofiles`, `pytest-asyncio`
 - Unused `Analyzer` abstract base class
 
 ## [0.1.0] - 2026-01-04

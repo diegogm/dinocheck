@@ -8,18 +8,13 @@ pip install dinocheck
 uv add dinocheck
 ```
 
-## Choose your mode
+## How it works
 
-Dinocheck has two analysis modes:
+Dinocheck is agent-native: your AI coding agent (Claude Code, Codex, Gemini
+CLI) performs the review itself. Zero config - no API keys, no model setup,
+no external LLM calls.
 
-- **Agent mode (default)**: your AI coding agent (Claude Code, Codex, Gemini
-  CLI) performs the review itself. Zero config - no API keys, no model setup.
-- **API mode**: `dino check` calls an LLM API directly. For CI and headless
-  environments.
-
-## Agent mode (default)
-
-### Setup
+## Setup
 
 ```bash
 dino init    # creates dino.yaml and offers to create the agent skill
@@ -42,52 +37,6 @@ dino report .dinocheck/results.json
 
 You can also run `dino brief` yourself and paste the brief into any assistant.
 
-## API mode (CI / headless)
-
-### Configure
-
-```yaml
-# dino.yaml
-mode: api
-model: openai/gpt-5.2-codex  # or anthropic/claude-3-5-sonnet, ollama/llama3
-language: en
-```
-
-```bash
-# OpenAI
-export OPENAI_API_KEY=sk-...
-
-# Anthropic
-export ANTHROPIC_API_KEY=sk-ant-...
-
-# Or use a local model with Ollama (no API key needed)
-```
-
-### Basic Usage
-
-```bash
-# Analyze current directory
-dino check
-
-# Analyze specific files
-dino check src/views.py src/models.py
-
-# Only analyze changed files (git diff)
-dino check --diff
-
-# Verbose output (show progress)
-dino check -v
-
-# Debug mode (detailed logs in dino.log)
-dino check --debug
-
-# Output as JSON
-dino check --format json
-
-# View LLM costs
-dino logs cost
-```
-
 ## Output Formats
 
 | Format | Use Case |
@@ -96,7 +45,10 @@ dino logs cost
 | `json` | Full JSON for tooling integration |
 | `jsonl` | JSON Lines for streaming |
 
-## GitHub Actions Integration
+## CI Integration
+
+Dinocheck needs an AI coding agent to perform the analysis, so in CI you run
+it through an agent CLI (e.g. Claude Code in headless mode):
 
 ```yaml
 name: Dinocheck
@@ -110,10 +62,10 @@ jobs:
       - uses: astral-sh/setup-uv@v5
 
       - run: uv add dinocheck
-      - run: uv run dino check --diff
+      - run: uv run dino skill --agent claude
+      - run: |
+          claude -p "Run the dinocheck skill on the files changed in this PR \
+            and summarize the findings. Fail only on blocker or critical issues."
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          DINO_MODE: api
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
-
-CI has no host agent, so `dino check` needs API mode and an API key.

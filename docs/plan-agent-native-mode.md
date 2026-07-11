@@ -1,6 +1,9 @@
 # Plan: Agent-Native Mode (zero-config, host-model analysis)
 
-**Status:** Implemented (all phases)
+**Status:** Implemented (all phases). **Superseded in part:** API mode was
+subsequently removed entirely (irreversible product decision) - dinocheck is
+agent-native only. Sections mentioning `mode: api`, the Engine, or LiteLLM
+describe a transitional state that no longer exists.
 **Goal:** Remove the hard dependency on an external LLM API. When dinocheck runs
 inside an AI coding agent (Claude Code, Codex, Gemini CLI), the *host model
 itself* performs the analysis. Dinocheck's job becomes: select files, select
