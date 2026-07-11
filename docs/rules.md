@@ -8,7 +8,7 @@ Dinocheck includes rule packs for different languages and frameworks. All packs 
 |------|-------------|
 | **python** | Security, correctness, testing, and reliability rules for Python |
 | **django** | ORM, transactions, DRF, migrations, and Celery task rules |
-| **react** | Hooks, performance, security, patterns, and accessibility for JSX |
+| **react** | Hooks, performance, security, patterns, and accessibility for JSX/TSX |
 | **typescript** | Type safety, async patterns, and security for TS/JS |
 | **css** | Performance, accessibility, maintainability, and compatibility for CSS |
 | **docker** | Dockerfile security, build optimization, and runtime config |
@@ -56,7 +56,7 @@ Rules for Django applications, ORM, and Django REST Framework.
 
 ## React Pack
 
-Rules for React components in JSX files.
+Rules for React components in `.jsx` and `.tsx` files.
 
 **Categories:**
 
