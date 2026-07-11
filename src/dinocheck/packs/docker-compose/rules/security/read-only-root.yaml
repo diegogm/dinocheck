@@ -3,17 +3,27 @@ name: Writable root filesystem
 level: minor
 category: security
 description: |
-  A writable root filesystem allows attackers to modify binaries, install
-  malware, or create persistence mechanisms. Making the root filesystem
-  read-only limits the impact of container compromise.
+  Detects services that keep the default writable root filesystem. If the
+  container is compromised, a writable rootfs lets the attacker drop tools,
+  patch binaries, and persist across the container's lifetime. Setting
+  read_only: true confines writes to explicitly declared volumes and tmpfs
+  mounts, sharply limiting what an intruder can change.
 checklist:
-  - Service does not have read_only: true.
-  - No consideration for filesystem security.
-  - Application requires write access to specific paths only.
+  - "Do production-facing services lack read_only: true?"
+  - "Which paths does the application actually write (tmp dirs, cache, pid files, uploads), and are they covered by tmpfs: or named volumes?"
+  - Would the service still run with a read-only root (has this been tested), or does the image write to arbitrary locations at startup?
+  - Is write access granted narrowly (specific mounts) rather than by leaving the whole filesystem writable?
 fix: |
-  Set read_only: true and use tmpfs mounts for temporary data. Mount
-  specific volumes for paths that need write access. This follows the
-  principle of least privilege.
+  Enable a read-only root and mount only the paths that need writes:
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+    volumes:
+      - app-data:/app/data
+  Roll it out per service and test startup: error messages quickly reveal
+  any missing writable path. Combine with cap_drop and a non-root user for
+  defense in depth.
 
 tags:
   - docker-compose
@@ -27,15 +37,14 @@ triggers:
     - "**/compose*.yml"
     - "**/compose*.yaml"
   code_patterns:
-    - "services:"
-    - "image:"
+    - "\\bservices:"
 
 examples:
   bad: |
     services:
       app:
         image: myapp
-        # Writable filesystem by default
+        # Root filesystem writable by default: attackers can drop tools and persist
   good: |
     services:
       app:
@@ -46,3 +55,5 @@ examples:
           - /var/run
         volumes:
           - app-data:/app/data
+    volumes:
+      app-data:

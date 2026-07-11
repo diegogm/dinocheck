@@ -3,31 +3,34 @@ name: Conditional Hook Call
 level: critical
 category: correctness
 description: |
-  Detects hooks called inside conditionals, loops, or nested functions.
-  React relies on the order of hook calls being identical on every render.
-  Calling hooks conditionally breaks this invariant and causes unpredictable
-  behavior, crashes, or corrupted state.
+  Detects hooks called inside conditionals, loops, nested functions, or after
+  early returns. React identifies each hook by its call order, which must be
+  identical on every render. Calling hooks conditionally shifts that order and
+  corrupts state, producing crashes or values assigned to the wrong hook.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
+    - "**/*.tsx"
   code_patterns:
-    - "if\\s*\\(.*use[A-Z]"
-    - "\\?.*use[A-Z]"
-    - "for\\s*\\(.*use[A-Z]"
-    - "while\\s*\\(.*use[A-Z]"
+    - 'if\s*\([^)]*\)\s*\{[\s\S]{0,150}?\buse(State|Effect|LayoutEffect|Memo|Callback|Ref|Context|Reducer)\('
+    - '(for|while)\s*\([^)]*\)\s*\{[\s\S]{0,150}?\buse[A-Z]\w*\('
+    - '\?\s*use[A-Z]\w*\('
+    - '&&\s*use[A-Z]\w*\('
 
 checklist:
-  - Is any hook (useState, useEffect, useMemo, etc.) called inside an if/else block?
-  - Is any hook called inside a loop (for, while, forEach)?
-  - Is any hook called inside a nested function or callback?
-  - Is there an early return before a hook call?
-  - Could the hook call order change between renders?
+  - Is any hook (useState, useEffect, useMemo, custom useXxx) called inside an if/else block or ternary?
+  - Is any hook called inside a loop (for, while, .forEach, .map)?
+  - Is any hook called inside a nested function, callback, or event handler?
+  - Is there an early return (e.g. `if (!data) return null`) before a later hook call?
+  - Would the sequence of hook calls differ between two renders of this component?
 
 fix: |
-  Move all hook calls to the top level of the component or custom hook.
-  If you need conditional logic, call the hook unconditionally and use
-  the condition inside the hook's callback or after the hook call.
+  Move every hook call to the top level of the component or custom hook,
+  before any conditional logic or early return. Put the condition inside the
+  hook instead (e.g. guard inside the useEffect callback, or pass the
+  condition to the dependency logic). For per-item state in loops, extract a
+  child component that calls the hook once.
 
 tags:
   - hooks

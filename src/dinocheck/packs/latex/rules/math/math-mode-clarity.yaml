@@ -3,17 +3,25 @@ name: Unclear or inconsistent math mode usage
 level: major
 category: math
 description: |
-  Detects math expressions that may be written in plain text mode or use
-  inconsistent delimiters, reducing readability and risking compilation issues.
+  Detects mathematical content written as plain text (variables, formulas,
+  sub/superscripts outside math mode) and inconsistent math delimiters.
+  Prose formulas like "L = 1/n sum_i ..." render with wrong fonts and
+  spacing or fail to compile (a bare _ outside math mode is an error), and
+  mixing $...$, \(...\) and \[...\] across a document makes the source
+  harder to maintain.
 
 checklist:
-  - Are mathematical variables/operators written outside math mode?
-  - Are inline/display delimiters mixed inconsistently (`$...$`, `\(...\)`, `\[...\]`)?
-  - Are text commands used correctly inside equations (e.g., \text{})?
+  - Are variables, operators, or formulas written in plain prose instead of being wrapped in math mode?
+  - Do sub/superscripts (x_i, x^2) or pseudo-notation (sum_i, 1/n) appear outside math delimiters?
+  - Are inline delimiters mixed inconsistently ($...$ in some places, \(...\) in others) without reason?
+  - Is display math faked with $$...$$ or inline math where \[...\] or equation/align environments belong?
+  - Are words inside equations wrapped in \text{...}/\mathrm{...} rather than typeset as implied variable products?
 fix: |
-  Wrap formulas in appropriate math environments and use consistent delimiters
-  across the document. Keep prose in text mode and use \text{} for words inside
-  equations.
+  Wrap all mathematical content in math mode: $L = \frac{1}{n}\sum_i (y_i -
+  \hat{y}_i)^2$ inline, and \[...\] or equation/align environments for
+  display math (avoid plain-TeX $$...$$). Pick one inline delimiter style
+  for the whole document. Use \text{...} for words inside formulas, and
+  proper commands (\frac, \sum, \cdot) instead of ASCII approximations.
 
 tags:
   - latex
@@ -24,10 +32,11 @@ triggers:
   file_patterns:
     - "**/*.tex"
   code_patterns:
-    - "="
+    - '[A-Za-z0-9)\}]\s*=\s*[A-Za-z0-9(\\{]'
     - '\\frac'
     - '\\sum'
     - '\\int'
+    - '\$\$'
 
 examples:
   bad: |

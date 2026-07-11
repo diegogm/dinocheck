@@ -3,16 +3,23 @@ name: Async operations in constructor
 level: major
 category: async
 description: |
-  Constructors cannot be async in JavaScript/TypeScript. Performing async
-  operations in constructors leads to partially initialized objects, race
-  conditions, and errors that are difficult to handle properly.
+  Detects async work started inside a constructor. Constructors cannot be
+  async and cannot await, so fire-and-forget calls (.then, fetch) leave the
+  object partially initialized: consumers receive an instance whose fields
+  may not exist yet, and initialization errors escape as unhandled rejections
+  with no way for the caller to catch them.
 checklist:
-  - Constructor contains await (which is a syntax error) or .then().
-  - Constructor starts async operations without waiting for completion.
-  - Object properties set asynchronously after construction.
+  - Does the constructor start async operations (fetch, .then(), a called async method) without any way to await them?
+  - Are object properties assigned inside async callbacks after construction returns?
+  - Can callers use the instance before the async initialization finishes?
+  - Where do errors from the async initialization go — can the caller handle them?
+  - Would a static async factory (or an explicit init() the caller must await) make readiness explicit?
 fix: |
-  Use a static factory method pattern. Create an async static method that
-  performs async initialization and returns a fully initialized instance.
+  Move async initialization out of the constructor. Use a static async
+  factory: make the constructor private and synchronous, and expose
+  `static async create(): Promise<T>` that awaits the async work and passes
+  the results to the constructor. Callers then `await T.create()` and always
+  receive a fully initialized instance.
 
 tags:
   - typescript
@@ -24,10 +31,10 @@ triggers:
     - "**/*.ts"
     - "**/*.tsx"
     - "**/*.mts"
+    - "**/*.cts"
   code_patterns:
-    - "constructor"
-    - "\\.then\\("
-    - "fetch\\("
+    - 'constructor\s*\([^)]*\)\s*\{[\s\S]{0,300}?(\bawait\b|\.then\(|fetch\(|axios\.)'
+    - 'async\s+constructor'
 
 examples:
   bad: |

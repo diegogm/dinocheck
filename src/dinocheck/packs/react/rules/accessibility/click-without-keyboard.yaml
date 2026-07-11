@@ -3,30 +3,31 @@ name: Click Handler Without Keyboard Support
 level: major
 category: accessibility
 description: |
-  Detects elements with onClick handlers that lack corresponding keyboard
-  event handlers. Users who navigate with keyboards or assistive devices
-  cannot interact with elements that only respond to mouse clicks. This
-  violates WCAG 2.1 Level A (Guideline 2.1 - Keyboard Accessible).
+  Detects non-interactive elements (div, span, li, etc.) that have an onClick
+  handler but no keyboard support. Users who navigate with a keyboard or
+  assistive technology cannot activate elements that only respond to mouse
+  clicks. This violates WCAG 2.1 Level A (Guideline 2.1 - Keyboard Accessible).
 
 triggers:
   file_patterns:
     - "**/*.jsx"
+    - "**/*.tsx"
   code_patterns:
-    - "onClick=\\{"
-    - "<div.*onClick"
-    - "<span.*onClick"
+    - '<(div|span|li|td|tr|p|section|article|img|svg)\b[^>]*onClick'
+    - 'role="button"'
 
 checklist:
-  - Does a non-interactive element (div, span, li) have an onClick handler?
-  - Is there a corresponding onKeyDown or onKeyUp handler?
-  - Does the element have role="button" or another appropriate ARIA role?
-  - Does the element have tabIndex to make it focusable?
-  - Could a native interactive element (button, a) be used instead?
+  - Does a non-interactive element (div, span, li, td) have an onClick handler?
+  - Is there a corresponding onKeyDown or onKeyUp handler that triggers the same action on Enter and Space?
+  - Does the element have role="button" (or another appropriate ARIA role) and tabIndex={0} so it is focusable?
+  - Could a native interactive element (button, a, input) be used instead?
+  - If the onClick only stops propagation or handles bubbling from inner interactive elements, is keyboard support actually needed?
 
 fix: |
-  Use semantic HTML elements like <button> or <a> instead of div/span with
-  click handlers. If a non-interactive element must be used, add role="button",
-  tabIndex={0}, and an onKeyDown handler that triggers on Enter and Space keys.
+  Prefer semantic HTML: replace the div/span with <button> (styled as needed)
+  or <a href> for navigation. If a non-interactive element must be used, add
+  role="button", tabIndex={0}, and an onKeyDown handler that calls the same
+  action when e.key is 'Enter' or ' '.
 
 tags:
   - accessibility

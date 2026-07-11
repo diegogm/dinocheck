@@ -1,5 +1,5 @@
-"""LLM prompt templates for Dinocheck."""
+"""Prompt templates for Dinocheck."""
 
-from dinocheck.llm.prompts.critic import CriticPromptBuilder
+from dinocheck.llm.prompts.brief import BriefBuilder
 
-__all__ = ["CriticPromptBuilder"]
+__all__ = ["BriefBuilder"]

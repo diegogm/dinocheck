@@ -3,18 +3,22 @@ name: Silent error swallowing
 level: major
 category: reliability
 description: |
-  Empty catch blocks or catch blocks that only log errors silently swallow
-  failures. The application continues in an undefined state, making bugs
-  hard to detect and potentially causing data corruption.
+  Detects catch blocks that hide failures: empty catches, catches that only
+  console.log, or handlers that neither recover nor rethrow. The program then
+  continues in an unknown state — data may be half-saved, the user sees
+  success after a failure, and production bugs leave no usable trace.
 checklist:
-  - Empty catch blocks (catch {}).
-  - Catch blocks that only console.log without rethrowing or handling.
-  - Generic catch-all that doesn't distinguish error types.
-  - Errors caught but not propagated to callers.
+  - Is there an empty catch block (catch {} or catch (e) {})?
+  - Does the catch only console.log the error without recovering, notifying the user, or rethrowing?
+  - After the catch, does the code continue as if the operation succeeded?
+  - Does the handler distinguish expected errors (e.g. 404, AbortError) from unexpected ones, or swallow everything?
+  - Is the original error preserved (cause, logging with context) when wrapped or rethrown?
 fix: |
-  Either handle the error appropriately (retry, fallback, user notification),
-  rethrow it, or wrap and rethrow with additional context. Log errors with
-  proper error tracking services, not just console.log.
+  Decide per call site: recover (retry, fallback value, user-facing message),
+  or propagate — rethrow, or wrap with context using
+  `throw new AppError('...', { cause: e })`. Report unexpected errors to the
+  error-tracking service, not just console.log. If ignoring an error is truly
+  correct (e.g. AbortError), match that specific error and comment why.
 
 tags:
   - typescript
@@ -26,11 +30,12 @@ triggers:
     - "**/*.ts"
     - "**/*.tsx"
     - "**/*.mts"
+    - "**/*.cts"
     - "**/*.js"
     - "**/*.jsx"
   code_patterns:
-    - "catch"
-    - "\\.catch\\("
+    - '\bcatch\b'
+    - '\.catch\('
 
 examples:
   bad: |

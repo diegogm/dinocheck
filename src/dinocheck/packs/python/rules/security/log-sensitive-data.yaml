@@ -1,33 +1,33 @@
 id: python/log-sensitive-data
 name: Sensitive Data in Logs
-level: blocker
+level: critical
 category: security
 description: |
-  Detects patterns where sensitive data like passwords, tokens,
-  PII, or financial information might end up in logs. Logs are
-  often stored insecurely and accessed by many people.
+  Detects passwords, tokens, API keys, PII, and payment data written to logs via
+  logging calls or print(). Logs are broadly readable (developers, aggregators,
+  third-party services) and retained for long periods, so a logged credential is
+  a leaked credential and logged PII is a compliance incident.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
     - "log(ger)?\\.(debug|info|warning|error|critical|exception)"
-    - "print\\("
-    - "logging\\."
+    - "logging\\.(debug|info|warning|error|critical|exception)"
+    - "print\\(.*(password|token|secret|key|card|ssn)"
 
 checklist:
-  - Are passwords, tokens, or API keys being logged?
-  - Is PII (email, phone, SSN, address) in log messages?
-  - Are credit card numbers or financial data logged?
-  - Could f-strings or format strings expose sensitive objects?
-  - Are request bodies with sensitive data being logged?
-  - Are exception messages exposing internal details?
+  - Does any log/print statement interpolate a password, token, API key, session ID, or signature value?
+  - Are whole objects or payloads logged (request.data, user.__dict__, headers, kwargs) that contain credentials or PII inside?
+  - Is PII (email, phone, SSN, address, card number) logged where a stable opaque ID would serve for debugging?
+  - Do exception logs embed the sensitive arguments that were being processed when the error occurred?
+  - At debug level, would enabling it in production dump secrets (verbose request/response logging)?
 
 fix: |
-  Mask or redact sensitive data before logging. Use structured
-  logging with explicit field selection. Never log full request
-  bodies or user credentials. Implement a logging filter for
-  sensitive patterns.
+  Log opaque identifiers instead of values: user IDs not emails, token prefixes
+  (token[:4] + "...") not tokens, last-4 not full card numbers. Never log whole
+  request bodies or headers; select fields explicitly. Add a logging filter that
+  redacts known sensitive keys as a safety net.
 
 tags:
   - security
@@ -38,9 +38,9 @@ tags:
 examples:
   bad: |
     logger.info(f"User login: {username} with password {password}")
-    logger.debug(f"API request: {request.data}")  # Contains secrets
+    logger.debug(f"API request: {request.data}")  # Body contains secrets
     logger.error(f"Payment failed for card {card_number}")
   good: |
-    logger.info(f"User login: {username}")
-    logger.debug(f"API request to {request.path}")
-    logger.error(f"Payment failed for card ending in {card_number[-4:]}")
+    logger.info("User login: %s", username)
+    logger.debug("API request to %s", request.path)
+    logger.error("Payment failed for card ending in %s", card_number[-4:])

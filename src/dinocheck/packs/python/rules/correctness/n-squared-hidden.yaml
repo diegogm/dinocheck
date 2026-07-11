@@ -1,42 +1,39 @@
 id: python/n-squared-hidden
 name: Hidden O(n²) Complexity
 level: major
-category: correctness
+category: performance
 description: |
-  Detects hidden O(n²) complexity patterns that look innocent but scale poorly.
-
-  Common patterns:
-  - `if item in list` inside a loop (should be a set)
-  - `list.index()` or `list.count()` inside a loop
-  - Nested loops over the same collection
-  - Repeated list concatenation with +=
+  Detects accidentally quadratic code: linear-time operations (membership test
+  against a list, list.index()/list.count(), removal by value) executed inside a
+  loop over the same data, or nested loops that a set/dict would eliminate. The
+  code looks innocent and is fast in tests, then degrades sharply as data grows.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "for .+ in .+:"
-    - "while "
     - "\\.index\\("
     - "\\.count\\("
-    - " in \\w+\\s*:"
+    - "for .+ in .+:\\n(.+\\n){0,8}?\\s+(if .+ in |for .+ in )"
+    - "\\.remove\\("
 
 checklist:
-  - Is there an `in` check against a list inside a loop? Should be a set
-  - Is list.index() or list.count() called inside a loop?
-  - Are there nested loops over collections that could be avoided?
-  - Is string concatenation done repeatedly in a loop? Should use join()
-  - Could a dict/set lookup replace linear search?
+  - Is `x in some_list` (a linear scan) evaluated inside a loop where a set would give O(1) lookups?
+  - Is list.index(), list.count(), or list.remove() called inside a loop over the same or a related collection?
+  - Do nested loops pair up items that a dict keyed by the join field would match in one pass?
+  - Is a string or list built by repeated + / += inside a loop instead of a list plus ''.join()?
+  - Roughly how large can the collection get - is quadratic behavior actually reachable in production?
 
 fix: |
-  Convert lists to sets for membership testing: seen = set(items)
-  Use dict for lookups instead of repeated list searches.
-  Use ''.join() instead of repeated string concatenation.
+  Build a set or dict once before the loop and test membership against it.
+  Replace pair-matching nested loops with a dict keyed by the matching field.
+  Accumulate strings in a list and ''.join() at the end. Only optimize where
+  the input can realistically grow.
 
 tags:
-  - correctness
   - performance
   - complexity
+  - correctness
 
 examples:
   bad: |
@@ -45,7 +42,7 @@ examples:
         for item in items:
             if items.count(item) > 1 and item not in duplicates:
                 duplicates.append(item)
-        return duplicates  # O(n²) - count() and `in list` are both O(n)
+        return duplicates  # O(n²): count() and `in list` are both O(n)
   good: |
     def find_duplicates(items):
         seen = set()
@@ -54,4 +51,4 @@ examples:
             if item in seen:
                 duplicates.add(item)
             seen.add(item)
-        return list(duplicates)  # O(n) - set operations are O(1)
+        return list(duplicates)  # O(n): set operations are O(1)

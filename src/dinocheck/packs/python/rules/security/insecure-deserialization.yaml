@@ -3,35 +3,36 @@ name: Insecure Deserialization
 level: blocker
 category: security
 description: |
-  Detects deserialization of untrusted data using unsafe methods
-  like pickle, yaml.load, or eval. This can lead to remote code
-  execution if an attacker controls the serialized data.
+  Detects deserialization of potentially untrusted data with formats that can
+  execute code on load: pickle, marshal, shelve, dill, jsonpickle, and
+  yaml.load without SafeLoader. If an attacker can influence the serialized
+  bytes (uploads, cookies, cache entries, message queues), deserializing them
+  is remote code execution. (Direct eval/exec is covered by python/unsafe-eval.)
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "pickle\\.load"
-    - "pickle\\.loads"
-    - "yaml\\.load"
-    - "yaml\\.unsafe_load"
-    - "eval\\("
-    - "exec\\("
-    - "marshal\\.load"
+    - "pickle\\.loads?\\("
+    - "yaml\\.load\\("
+    - "yaml\\.(unsafe_load|full_load)"
+    - "marshal\\.loads?\\("
     - "shelve\\.open"
+    - "dill\\.loads?\\("
+    - "jsonpickle\\.decode"
 
 checklist:
-  - Is pickle used with data from untrusted sources?
-  - Is yaml.load() used without Loader=SafeLoader?
-  - Is eval/exec used on user-provided strings?
-  - Could cached/stored data be tampered with?
-  - Are there safer alternatives (JSON, safe YAML)?
+  - Can the deserialized bytes originate outside the process - user uploads, HTTP bodies, cookies, shared caches, queues, or files another party can write?
+  - Is yaml.load() called without Loader=yaml.SafeLoader (yaml.safe_load is the safe form)?
+  - Could data serialized by a trusted producer be tampered with in transit or at rest (unsigned cache/session blobs)?
+  - Could the format be JSON or another data-only format instead - is arbitrary object graph support actually needed?
+  - If pickle between trusted services is unavoidable, is the payload authenticated (HMAC-signed) before loading?
 
 fix: |
-  Never deserialize untrusted data with pickle. Use
-  yaml.safe_load() instead of yaml.load(). Avoid eval/exec
-  entirely. Use JSON for data exchange. Sign serialized data
-  if it must be stored client-side.
+  Use JSON (or another data-only format) for anything crossing a trust boundary.
+  Replace yaml.load() with yaml.safe_load(). If pickle is truly required between
+  trusted components, sign payloads with hmac and verify with
+  hmac.compare_digest() before unpickling.
 
 tags:
   - security
@@ -44,9 +45,9 @@ examples:
 
     def load_session(session_data):
         return pickle.loads(base64.b64decode(session_data))
-        # Attacker can execute arbitrary code!
+        # Attacker-controlled cookie -> arbitrary code execution
 
-    config = yaml.load(user_config_file)  # Unsafe!
+    config = yaml.load(user_config_file)  # Unsafe loader!
   good: |
     import json
 

@@ -3,35 +3,37 @@ name: Mock Hiding Real Bug
 level: major
 category: testing
 description: |
-  Detects mocks that are too broad or unrealistic, potentially
-  hiding bugs in the code under test. Mocks should simulate
-  real behavior, not just return happy-path values.
+  Detects mocks so broad or unrealistic that the test would pass even if the
+  real code were broken: return values whose shape doesn't match the real API,
+  MagicMock objects absorbing any attribute access, or mocking the very function
+  under test. Such tests certify the mock, not the code.
 
 triggers:
   file_patterns:
     - "**/test_*.py"
     - "**/*_test.py"
     - "**/tests.py"
+    - "**/tests/**/*.py"
   code_patterns:
     - "@patch"
     - "@mock"
+    - "MagicMock\\("
     - "Mock\\("
-    - "MagicMock"
     - "return_value"
     - "side_effect"
 
 checklist:
-  - Does the mock return realistic data?
-  - Are mock return types consistent with real implementation?
-  - Could the mock hide None/error handling issues?
-  - Is too much being mocked, bypassing code under test?
-  - Does the mock verify it was called correctly?
-  - Would the test still pass if the real code broke?
+  - Does the mock's return value match the real dependency's type and shape (dict keys, object attributes, status codes), or is it a bare True/MagicMock?
+  - Is the function under test itself (or most of its logic) mocked, so the test bypasses what it claims to verify?
+  - Would the test still pass if the real code mishandled the dependency's error/None/empty responses (no side_effect for failure modes)?
+  - Are the mock's inputs verified (assert_called_once_with) so wrong arguments to the dependency would be caught?
+  - Does the mocked path have any integration or contract test backing it, especially for payments and other critical flows?
 
 fix: |
-  Use realistic mock data. Verify mock calls with assert_called_with.
-  Don't mock the code under test. Consider integration tests for
-  critical paths. Use factories for test data.
+  Shape mock return values exactly like the real dependency's responses (copy a
+  real payload into a fixture). Add side_effect cases for errors the real
+  dependency raises. Verify call arguments with assert_called_once_with. Never
+  patch the unit under test; keep at least one integration test on critical paths.
 
 tags:
   - testing
@@ -42,21 +44,19 @@ examples:
   bad: |
     @patch('myapp.services.external_api')
     def test_process_order(self, mock_api):
-        mock_api.return_value = True  # Too simplistic!
+        mock_api.return_value = True  # Real API returns a dict!
         result = process_order(order)
         assert result.success
-        # Bug: process_order doesn't handle API response structure
+        # Bug hidden: process_order never parses the response structure
   good: |
     @patch('myapp.services.external_api')
     def test_process_order(self, mock_api):
         mock_api.return_value = {
             'status': 'completed',
             'transaction_id': 'txn_123',
-            'amount': 99.99
+            'amount': 99.99,
         }
         result = process_order(order)
         assert result.success
         assert result.transaction_id == 'txn_123'
-        mock_api.assert_called_once_with(
-            order_id=order.id, amount=order.total
-        )
+        mock_api.assert_called_once_with(order_id=order.id, amount=order.total)

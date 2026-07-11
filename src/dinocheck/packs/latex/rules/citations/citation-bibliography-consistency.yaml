@@ -3,17 +3,25 @@ name: Citation and bibliography consistency
 level: major
 category: citations
 description: |
-  Detects suspicious citation usage where in-text citation keys may not match
-  bibliography entries, or bibliography setup appears incomplete.
+  Detects citation keys that likely have no matching bibliography entry, and
+  documents that cite works without any bibliography setup. Unresolved keys
+  compile to bold "[?]" markers in the PDF, which readers and reviewers
+  immediately notice, and inconsistent key styles are a common source of
+  silent mismatches after renaming entries.
 
 checklist:
-  - Are \cite{} keys likely missing from .bib entries?
-  - Is bibliography tooling configured (BibTeX/Biber) for cited works?
-  - Are there uncited references or citations with inconsistent key styles?
+  - Do any \cite/\citep/\citet keys look absent from the referenced .bib files or thebibliography entries?
+  - Is a bibliography mechanism configured at all (\bibliography{...}, \addbibresource{...} plus \printbibliography, or a thebibliography environment) when citations exist?
+  - Are key styles mixed (smith2021transformer vs smith2021-transformer vs Smith21), suggesting typos or renamed entries?
+  - Are natbib commands (\citep, \citet) or biblatex commands used without loading the corresponding package?
+  - Are works cited via hardcoded text (e.g. "(Smith et al., 2021)") instead of citation commands?
 fix: |
-  Verify all citation keys resolve correctly. Standardize key naming, remove
-  stale citations, and ensure bibliography commands/packages are configured
-  consistently for the chosen workflow.
+  Make every citation key resolve: cross-check keys against the .bib file,
+  fix typos, and standardize one key naming scheme. Ensure the bibliography
+  pipeline is complete for the chosen workflow - BibTeX
+  (\bibliographystyle + \bibliography) or biblatex/Biber
+  (\usepackage[backend=biber]{biblatex}, \addbibresource, \printbibliography).
+  Replace hand-written citations with \cite-family commands.
 
 tags:
   - latex
@@ -24,15 +32,17 @@ triggers:
   file_patterns:
     - "**/*.tex"
   code_patterns:
-    - '\\cite\\{'
-    - '\\bibliography\\{'
-    - '\\addbibresource\\{'
+    - '\\cite[a-z]*\{'
+    - '\\bibliography\{'
+    - '\\addbibresource\{'
     - '\\printbibliography'
+    - '\\begin\{thebibliography\}'
 
 examples:
   bad: |
     Prior work \cite{smith2021-transformer} reports strong results.
-    % No matching entry exists in bibliography
+    % No \bibliography / \addbibresource anywhere: renders as [?]
   good: |
     Prior work \cite{smith2021transformer} reports strong results.
-    \addbibresource{references.bib}
+    % In the preamble: \addbibresource{references.bib}
+    % At the end:     \printbibliography

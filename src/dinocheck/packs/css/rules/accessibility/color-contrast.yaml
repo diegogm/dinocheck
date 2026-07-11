@@ -3,10 +3,11 @@ name: Potential Color Contrast Issues
 level: major
 category: accessibility
 description: |
-  Low color contrast between text and background makes content
-  difficult to read for users with visual impairments. WCAG 2.1
-  requires 4.5:1 contrast for normal text and 3:1 for large text.
-  Light grays on white or dark grays on black are common issues.
+  Detects text colors likely to fail WCAG contrast requirements, such as
+  light grays on light backgrounds. Low contrast makes text unreadable for
+  users with low vision or color deficiencies and for anyone in bright
+  light. WCAG 2.1 AA requires 4.5:1 for normal text and 3:1 for large text
+  (18px+, or 14px+ bold) and UI components.
 triggers:
   file_patterns:
     - "**/*.css"
@@ -14,21 +15,22 @@ triggers:
     - "**/*.sass"
     - "**/*.less"
   code_patterns:
-    - "color:\\s*#[a-fA-F0-9]"
-    - "color:\\s*rgb"
-    - "color:\\s*hsl"
-    - "color:\\s*gray"
-    - "color:\\s*grey"
+    - 'color:\s*#[a-fA-F0-9]'
+    - 'color:\s*rgba?\('
+    - 'color:\s*hsla?\('
+    - 'color:\s*(light)?gr[ae]y'
 checklist:
-  - Are text colors defined without corresponding background colors?
-  - Are light gray colors (#999, #aaa, #ccc) used for text?
-  - Is there sufficient contrast between text and background?
-  - Are placeholder texts and disabled states readable?
+  - Are light grays (#999, #aaa, #bbb, #ccc) or low-opacity colors used for text on light backgrounds?
+  - Does each text color have a known background to evaluate against, or is it set without one?
+  - Do muted, placeholder, and disabled text styles still reach 4.5:1 (or 3:1 for large text)?
+  - Do focus indicators and UI component borders reach 3:1 against adjacent colors?
+  - If theming is used, do all theme variants (dark mode) keep sufficient contrast?
 fix: |
-  Verify contrast ratios using tools like WebAIM Contrast Checker.
-  For body text, ensure at least 4.5:1 contrast ratio.
-  For large text (18px+ or 14px+ bold), ensure at least 3:1.
-  Consider using CSS custom properties for consistent color themes.
+  Check suspect pairs with a contrast tool (WebAIM Contrast Checker,
+  browser DevTools). Darken text or lighten backgrounds until normal text
+  reaches 4.5:1 and large text 3:1 — e.g. #767676 is the lightest gray that
+  passes 4.5:1 on white. Centralize colors as custom properties so fixes
+  apply everywhere, and re-verify each theme.
 tags:
   - accessibility
   - wcag

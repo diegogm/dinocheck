@@ -3,9 +3,11 @@ name: Naming vs Intention Mismatch
 level: major
 category: correctness
 description: |
-  Detects functions and methods where the name suggests one behavior
-  but the implementation does something different. This causes confusion
-  and bugs when developers trust the name without reading the code.
+  Detects functions whose name promises one behavior while the body does another:
+  getters that mutate state, is_/has_ predicates returning non-booleans, or
+  create_ functions that may return existing objects. Callers trust these naming
+  conventions without reading the implementation, so the mismatch produces bugs
+  far from the function itself.
 
 triggers:
   file_patterns:
@@ -17,16 +19,17 @@ triggers:
     - "def (create_|delete_|remove_|add_)"
 
 checklist:
-  - Does a get_* function modify state or have side effects?
-  - Does an is_*/has_* function return non-boolean?
-  - Does a create_* function return an existing object instead?
-  - Does the function name match what it actually does?
-  - Are there hidden side effects not suggested by the name?
+  - Does a get_/fetch_/find_/load_ function write, save, or otherwise mutate state as a side effect?
+  - Does an is_/has_/can_/should_ function return something other than a bool (objects, strings, None-or-value)?
+  - Does a create_ function sometimes return an existing object, or a delete_ function only soft-flag it, without the name saying so?
+  - Are there side effects (network calls, cache writes, logging out users) that no reader would expect from the name?
+  - Would a caller relying only on the name and signature use this function incorrectly?
 
 fix: |
-  Rename the function to accurately describe its behavior, or refactor
-  to match the expected behavior. Functions starting with get_ should
-  be pure; is_/has_ should return bool; create_ should always create.
+  Either rename the function to describe what it really does (get_user ->
+  get_or_create_user, delete_account -> deactivate_account) or split the side
+  effect into a separate, explicitly named function. Keep get_* pure, make
+  is_/has_* return bool, and reserve create_* for unconditional creation.
 
 tags:
   - correctness

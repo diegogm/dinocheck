@@ -93,11 +93,9 @@ class TextFormatter(Formatter):
             console.print("\n✓ No issues found!", style="bold green")
 
         # Meta footer (write directly to avoid Rich word wrapping)
-        cost_usd = result.meta.get("cost_usd", 0.0)
         files = result.meta.get("files_analyzed", 0)
-        cached = result.meta.get("cache_hits", 0)
         duration = result.meta.get("duration_ms", 0)
 
         output = buffer.getvalue()
-        meta = f"\nChecked {files} files ({cached} cached) in {duration}ms for ${cost_usd:.3f}\n"
+        meta = f"\nChecked {files} file(s) in {duration}ms\n"
         return output + meta

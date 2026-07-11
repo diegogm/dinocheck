@@ -3,9 +3,11 @@ name: Migration Data Loss Risk
 level: blocker
 category: migrations
 description: |
-  Detects migrations that could cause data loss or corruption.
-  This includes removing fields, changing field types, or
-  operations that can't be safely reversed.
+  Detects migrations that can destroy or corrupt production data: RemoveField
+  and DeleteModel drop columns/tables and their contents immediately, AlterField
+  type changes can truncate or fail on existing rows, and RunSQL/RunPython
+  without reverse operations make the migration irreversible. Once applied in
+  production, the data is gone unless a backup exists.
 
 triggers:
   file_patterns:
@@ -19,17 +21,17 @@ triggers:
     - "RunPython"
 
 checklist:
-  - Does RemoveField delete data that should be preserved?
-  - Does AlterField change type in a way that loses precision?
-  - Is there a data migration before destructive schema changes?
-  - Can RunSQL/RunPython be reversed safely?
-  - Is there a backup strategy for irreversible operations?
-  - Are nullable fields made non-nullable without defaults?
+  - Does RemoveField/DeleteModel drop data that is still referenced by code, reports, or compliance requirements - and was it migrated elsewhere first?
+  - Can the AlterField type/size change truncate values or fail on existing rows (CharField shrink, float->int, text->varchar)?
+  - Is code still deployed (old app servers during rolling deploy) that writes the field being removed?
+  - Do RunPython/RunSQL operations have working reverse functions, or is irreversibility explicit (RunPython.noop documented)?
+  - Is the destructive step separated from the data-preserving step so it can be applied later, after verification and backup?
 
 fix: |
-  Add data migrations before removing fields. Use two-phase
-  migrations for type changes. Add reverse operations for
-  RunPython. Document irreversible operations clearly.
+  Sequence destructive changes: (1) stop writing the field in code, (2) copy
+  data with a RunPython migration if needed, (3) remove the field in a later
+  release once verified. Provide reverse functions for RunPython/RunSQL. Take a
+  backup or snapshot before applying destructive migrations in production.
 
 tags:
   - migrations
@@ -41,13 +43,14 @@ examples:
     operations = [
         migrations.RemoveField(
             model_name='user',
-            name='legacy_id',  # Data lost forever!
+            name='legacy_id',  # Data dropped immediately and forever!
         ),
     ]
   good: |
-    # First: migrate data
-    # migrations/0002_copy_legacy_id.py
+    # Release N: copy the data first, reversibly
     operations = [
-        migrations.RunPython(copy_legacy_to_new_field),
+        migrations.RunPython(copy_legacy_id_to_external_ref,
+                             reverse_code=copy_external_ref_to_legacy_id),
     ]
-    # Later: remove field after verification
+    # Release N+1 (after verification): remove the old field
+    # operations = [migrations.RemoveField('user', 'legacy_id')]

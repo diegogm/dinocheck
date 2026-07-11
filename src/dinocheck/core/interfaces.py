@@ -1,31 +1,13 @@
 """Abstract base classes for Dinocheck components."""
 
-import asyncio
 import fnmatch
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
-
 from dinocheck.core.types import AnalysisResult, CacheStats, FileContext, Issue, Rule
-
-
-class Analyzer(ABC):
-    """Base class for deterministic analyzers (ruff, mypy, etc.)."""
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Analyzer name."""
-        ...
-
-    @abstractmethod
-    def analyze(self, paths: list[Path], config: dict[str, Any]) -> Iterator[Issue]:
-        """Run analysis on paths and yield issues."""
-        ...
 
 
 class Pack(ABC):
@@ -54,6 +36,32 @@ class Pack(ABC):
         """Pack-level trigger configuration."""
         return {}
 
+    @staticmethod
+    def matches_file_pattern(path: Path, pattern: str) -> bool:
+        """Match a path against a rule file pattern.
+
+        fnmatch treats `**/` as requiring at least one directory, so
+        `**/Dockerfile` would never match a root-level `Dockerfile`.
+        Rule patterns mean "at any depth", so `**/x` also matches bare `x`.
+        """
+        path_str = path.as_posix()
+        if fnmatch.fnmatch(path_str, pattern):
+            return True
+        return pattern.startswith("**/") and fnmatch.fnmatch(path_str, pattern[3:])
+
+    def is_candidate_file(self, path: Path) -> bool:
+        """Check whether any rule could apply to this path (patterns only).
+
+        Used during discovery to decide which files are worth reading;
+        content patterns are evaluated later in get_rules_for_file.
+        """
+        for rule in self.rules:
+            if not rule.triggers.file_patterns:
+                return True
+            if any(self.matches_file_pattern(path, p) for p in rule.triggers.file_patterns):
+                return True
+        return False
+
     def get_rules_for_file(self, path: Path, content: str) -> list[Rule]:
         """Get applicable rules for a specific file."""
         applicable = []
@@ -61,7 +69,8 @@ class Pack(ABC):
             # Check file patterns
             if rule.triggers.file_patterns:
                 matched = any(
-                    fnmatch.fnmatch(str(path), pattern) for pattern in rule.triggers.file_patterns
+                    self.matches_file_pattern(path, pattern)
+                    for pattern in rule.triggers.file_patterns
                 )
                 if not matched:
                     continue
@@ -77,53 +86,6 @@ class Pack(ABC):
             applicable.append(rule)
 
         return applicable
-
-
-class LLMProvider(ABC):
-    """Abstract LLM provider interface with structured outputs."""
-
-    @property
-    def max_concurrent(self) -> int:
-        """Maximum concurrent requests (for ThreadPoolExecutor)."""
-        return 4
-
-    @abstractmethod
-    def complete_structured_sync(
-        self,
-        prompt: str,
-        response_schema: type[BaseModel],
-        system: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
-    ) -> BaseModel:
-        """Complete a prompt with structured output (synchronous, thread-safe)."""
-        ...
-
-    async def complete_structured(
-        self,
-        prompt: str,
-        response_schema: type[BaseModel],
-        system: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
-    ) -> BaseModel:
-        """Complete a prompt with structured output (async).
-
-        Default implementation runs sync version in a thread.
-        """
-        return await asyncio.to_thread(
-            self.complete_structured_sync,
-            prompt,
-            response_schema,
-            system,
-            max_tokens,
-            temperature,
-        )
-
-    @abstractmethod
-    def estimate_tokens(self, text: str) -> int:
-        """Estimate token count for text."""
-        ...
 
 
 class Formatter(ABC):
@@ -142,15 +104,19 @@ class Formatter(ABC):
 
 
 class Cache(ABC):
-    """Cache interface for analysis results."""
+    """Cache interface for analysis results.
+
+    Results are keyed by file content, rule set, AND the analyzer that
+    produced them, so results from different analyzers never collide.
+    """
 
     @abstractmethod
-    def get(self, file_hash: str, rules_hash: str) -> list[Issue] | None:
+    def get(self, file_hash: str, rules_hash: str, analyzer: str) -> list[Issue] | None:
         """Get cached issues for a file."""
         ...
 
     @abstractmethod
-    def put(self, file_hash: str, rules_hash: str, issues: list[Issue]) -> None:
+    def put(self, file_hash: str, rules_hash: str, analyzer: str, issues: list[Issue]) -> None:
         """Cache issues for a file."""
         ...
 
@@ -169,8 +135,18 @@ class WorkspaceScanner(ABC):
     """Scans workspace for files to analyze."""
 
     @abstractmethod
-    def discover(self, paths: list[Path], diff_only: bool = True) -> Iterator[FileContext]:
-        """Discover files to analyze."""
+    def discover(
+        self,
+        paths: list[Path],
+        diff_only: bool = True,
+        is_candidate: Callable[[Path], bool] | None = None,
+    ) -> Iterator[FileContext]:
+        """Discover files to analyze.
+
+        is_candidate pre-filters walked/changed files by path (e.g. against
+        the enabled rule packs' file patterns) before reading their content.
+        Explicitly given file paths bypass the filter - the user asked for them.
+        """
         ...
 
     @abstractmethod

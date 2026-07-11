@@ -3,33 +3,34 @@ name: Direct State Mutation
 level: critical
 category: correctness
 description: |
-  Detects direct mutation of React state instead of using the setter
-  function. React state must be treated as immutable — mutating it directly
-  does not trigger a re-render and leads to stale UI, lost updates, and
-  bugs that are difficult to reproduce.
+  Detects direct mutation of React state (push/splice/sort on state arrays,
+  property assignment on state objects) instead of producing a new value for
+  the setter. React compares references to decide when to re-render, so a
+  mutated state keeps the same reference: the UI silently goes stale, updates
+  get lost, and memoized children never refresh.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
+    - "**/*.tsx"
   code_patterns:
-    - "\\.push\\("
-    - "\\.splice\\("
-    - "\\.sort\\("
-    - "\\.reverse\\("
-    - "\\w+\\.\\w+\\s*="
-    - "useState"
+    - 'useState[\s\S]{0,600}?\.(push|splice|pop|shift|unshift|sort|reverse|fill)\('
+    - '\w+\.(sort|reverse)\('
+    - '(state|props)\.\w+\s*=[^=]'
 
 checklist:
-  - Is a state array being mutated with push(), splice(), pop(), or shift()?
-  - Is a state array being sorted in place with sort() or reverse()?
-  - Is a state object's property being assigned directly?
-  - Is the state being cloned/spread before modification?
-  - Is the setter function from useState being used to update state?
+  - Is a state array mutated in place with push(), splice(), pop(), shift(), or unshift()?
+  - Is a state array (or a prop array) sorted/reversed in place with sort() or reverse() instead of on a copy?
+  - Is a property assigned directly on a state object (state.x = ... or obj.field = ... where obj is state)?
+  - Is the same (mutated) reference then passed back to the setter, so React skips the re-render?
+  - Is a new array/object created (spread, map, filter, toSorted) before calling the setter?
 
 fix: |
-  Always create a new copy of the state before modifying it. Use spread
-  syntax, Array.map(), Array.filter(), or structuredClone() to create
-  new references, then pass the new value to the setter function.
+  Never mutate state in place. Build a new value and pass it to the setter:
+  setItems(prev => [...prev, newItem]) instead of push;
+  setItems(prev => [...prev].sort(cmp)) (or prev.toSorted(cmp)) instead of
+  sort; setUser(prev => ({ ...prev, name })) instead of assigning a property.
+  For deeply nested state, consider Immer (useImmer) or restructuring state.
 
 tags:
   - correctness

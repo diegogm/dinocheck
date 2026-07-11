@@ -3,16 +3,28 @@ name: Piping curl to shell
 level: critical
 category: security
 description: |
-  Piping curl output directly to bash/sh executes remote code without
-  inspection. The server could return malicious code, or a partial download
-  due to network issues could execute incomplete (and harmful) commands.
+  Detects downloads piped straight into a shell interpreter (curl ... | bash).
+  This executes remote code with zero inspection: a compromised or spoofed
+  server (or a server that detects piping and serves different content) runs
+  arbitrary commands on the machine, and a connection dropped mid-transfer
+  can execute a truncated script (e.g. "rm -rf /usr/local/foo" cut to
+  "rm -rf /usr").
 checklist:
-  - curl output piped directly to bash or sh.
-  - wget output piped to shell interpreter.
-  - No verification of downloaded script before execution.
+  - Is curl or wget output piped directly to bash, sh, or zsh (possibly via sudo)?
+  - Is the download executed without any checksum or signature verification?
+  - Does the pipeline run with elevated privileges (sudo bash, running as root in a Dockerfile)?
+  - Is the URL plain http:// or unpinned (moving "latest" installer), making tampering easier?
+  - Could the dependency be installed from a package manager or a pinned, vendored script instead?
 fix: |
-  Download scripts first, inspect them, verify checksums if available,
-  then execute. At minimum, use curl -fsSL to fail on HTTP errors.
+  Download to a file, verify, then execute:
+    curl -fsSL https://example.com/install.sh -o install.sh
+    echo "<expected-sha256>  install.sh" | sha256sum -c -
+    less install.sh   # review before running
+    bash install.sh
+  Prefer signed packages or pinned release artifacts over installer URLs.
+  If piping is truly unavoidable, at minimum pin an exact versioned HTTPS
+  URL and use curl -fsSL so HTTP errors fail instead of executing an error
+  page.
 
 tags:
   - shell
@@ -23,16 +35,15 @@ triggers:
   file_patterns:
     - "**/*.sh"
     - "**/*.bash"
+    - "**/.*rc"
   code_patterns:
-    - "curl.*\\| *bash"
-    - "curl.*\\| *sh"
-    - "wget.*\\| *bash"
+    - "(curl|wget)[^\\n|]*\\|\\s*(sudo\\s+)?(ba|z)?sh\\b"
 
 examples:
   bad: |
     curl https://example.com/install.sh | bash
-    wget -qO- https://example.com/setup.sh | sh
+    wget -qO- https://example.com/setup.sh | sudo sh
   good: |
     curl -fsSL https://example.com/install.sh -o install.sh
-    sha256sum -c install.sh.sha256
+    echo "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08  install.sh" | sha256sum -c -
     bash install.sh

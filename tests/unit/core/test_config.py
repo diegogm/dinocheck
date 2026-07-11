@@ -13,28 +13,8 @@ class TestDinocheckConfig:
         config = DinocheckConfig()
         assert config.packs is None  # None means all packs enabled
         assert config.language == "en"
-        assert config.max_llm_calls >= 1
-
-    def test_custom_model(self):
-        """Should accept custom model."""
-        config = DinocheckConfig(model="anthropic/claude-3-5-sonnet")
-        assert config.model == "anthropic/claude-3-5-sonnet"
-        assert config.provider == "anthropic"
-        assert config.model_name == "claude-3-5-sonnet"
-
-    def test_provider_extraction(self):
-        """Should extract provider from model string."""
-        config = DinocheckConfig(model="openai/gpt-4o")
-        assert config.provider == "openai"
-        assert config.model_name == "gpt-4o"
-
-    def test_api_key_env_inference(self):
-        """Should infer API key env from provider."""
-        openai = DinocheckConfig(model="openai/gpt-4o")
-        assert openai.api_key_env == "OPENAI_API_KEY"
-
-        anthropic = DinocheckConfig(model="anthropic/claude-3")
-        assert anthropic.api_key_env == "ANTHROPIC_API_KEY"
+        assert config.exclude_packs == []
+        assert config.disabled_rules == []
 
     def test_multiple_packs(self):
         """Should accept multiple packs."""
@@ -70,13 +50,13 @@ class TestPathFiltering:
 exclude_paths:
   - migrations
   - tests/fixtures
-  - "*.generated.py"
 """)
 
         manager = ConfigManager(config_file)
         config = manager.load()
 
-        assert config.exclude_paths == ["migrations", "tests/fixtures", "*.generated.py"]
+        assert "migrations" in config.exclude_paths
+        assert "tests/fixtures" in config.exclude_paths
 
     def test_include_paths_from_yaml(self, tmp_path, monkeypatch):
         """Should load include_paths from YAML."""
@@ -92,7 +72,8 @@ include_paths:
         manager = ConfigManager(config_file)
         config = manager.load()
 
-        assert config.include_paths == ["src/", "lib/"]
+        assert "src/" in config.include_paths
+        assert "lib/" in config.include_paths
 
 
 class TestConfigManager:
@@ -107,7 +88,6 @@ class TestConfigManager:
 packs:
   - python
   - django
-model: openai/gpt-4o
 language: es
 """)
 
@@ -116,8 +96,26 @@ language: es
 
         assert "python" in config.packs
         assert "django" in config.packs
-        assert config.model == "openai/gpt-4o"
         assert config.language == "es"
+
+    def test_load_ignores_legacy_api_settings(self, tmp_path, monkeypatch):
+        """A dino.yaml with removed api-mode keys must still load."""
+        monkeypatch.chdir(tmp_path)
+
+        config_file = tmp_path / "dino.yaml"
+        config_file.write_text("""
+packs:
+  - python
+mode: api
+model: openai/gpt-4o
+max_llm_calls: 10
+""")
+
+        manager = ConfigManager(config_file)
+        config = manager.load()
+
+        assert config.packs == ["python"]
+        assert not hasattr(config, "model")
 
     def test_load_nonexistent_file(self, tmp_path, monkeypatch):
         """Should return defaults for missing file."""
@@ -138,27 +136,26 @@ language: es
         config_file.write_text("""
 packs:
   - python
-model: openai/gpt-4o-mini
+language: en
 """)
 
         # Set environment override
-        monkeypatch.setenv("DINO_MODEL", "anthropic/claude-3-5-sonnet")
         monkeypatch.setenv("DINO_LANGUAGE", "fr")
 
         manager = ConfigManager(config_file)
         config = manager.load()
 
         # Environment should override YAML
-        assert config.model == "anthropic/claude-3-5-sonnet"
         assert config.language == "fr"
 
     def test_load_with_dotenv(self, tmp_path, monkeypatch):
         """Should load from .env file."""
+        monkeypatch.delenv("DINO_LANGUAGE", raising=False)
+
         # Create .env file
         env_file = tmp_path / ".env"
         env_file.write_text("""
-OPENAI_API_KEY=sk-test-key
-DINO_MODEL=openai/gpt-4o
+DINO_LANGUAGE=es
 """)
 
         # Change to tmp_path so .env is found
@@ -173,18 +170,17 @@ packs:
         manager = ConfigManager(config_file)
         config = manager.load()
 
-        assert config.model == "openai/gpt-4o"
+        assert config.language == "es"
 
-    def test_validate_missing_api_key(self, tmp_path, monkeypatch):
-        """Should report error for missing API key."""
+    def test_validate_default_config_is_clean(self, tmp_path, monkeypatch):
+        """The default (empty) configuration must validate with no errors."""
         monkeypatch.chdir(tmp_path)
-        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
         manager = ConfigManager()
         manager.load()
         errors = manager.validate()
 
-        assert any("API key" in e for e in errors)
+        assert errors == []
 
     def test_validate_no_packs(self):
         """Should report error for no packs."""
@@ -193,12 +189,3 @@ packs:
         errors = manager.validate()
 
         assert any("packs" in e.lower() for e in errors)
-
-    def test_get_api_key(self, monkeypatch):
-        """Should get API key from environment."""
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-123")
-
-        manager = ConfigManager()
-        manager._config = DinocheckConfig(model="openai/gpt-4o")
-
-        assert manager.get_api_key() == "sk-test-123"

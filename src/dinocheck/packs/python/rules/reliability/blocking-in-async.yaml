@@ -3,33 +3,30 @@ name: Blocking Call in Async Context
 level: major
 category: reliability
 description: |
-  Detects blocking/synchronous calls inside async functions that will block
-  the event loop and defeat the purpose of async code.
-
-  Common offenders: time.sleep(), requests.get(), open() for large files,
-  synchronous database calls.
+  Detects synchronous blocking calls inside `async def` functions: time.sleep(),
+  requests/urllib HTTP calls, blocking file I/O, subprocess.run(), or sync DB
+  drivers. One blocking call freezes the entire event loop, stalling every other
+  coroutine in the process - the service degrades globally, not just this handler.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
     - "async def"
-    - "await"
+    - "await "
 
 checklist:
-  - Is there a time.sleep() call inside an async function? Should be asyncio.sleep()
-  - Are there requests.get/post calls? Should use aiohttp or httpx
-  - Are there synchronous file I/O operations on large files?
-  - Are there synchronous database queries? Should use async drivers
-  - Is subprocess.run() used? Should use asyncio.create_subprocess_exec()
-  - Could this blocking call be wrapped with asyncio.to_thread()?
+  - Is time.sleep() used inside an async function instead of await asyncio.sleep()?
+  - Are HTTP requests made with requests/urllib instead of an async client (httpx.AsyncClient, aiohttp)?
+  - Is blocking file I/O (open/read/write of large files) or subprocess.run() executed directly in a coroutine?
+  - Are synchronous database drivers or ORMs called without an async driver or a thread offload?
+  - For unavoidable sync calls, are they wrapped in asyncio.to_thread() / run_in_executor()?
 
 fix: |
-  Replace blocking calls with async equivalents:
-  - time.sleep() -> asyncio.sleep()
-  - requests -> aiohttp or httpx
-  - open() -> aiofiles
-  - Or wrap with asyncio.to_thread() for unavoidable sync calls.
+  Replace blocking calls with async equivalents: time.sleep -> asyncio.sleep,
+  requests -> httpx.AsyncClient/aiohttp, subprocess.run ->
+  asyncio.create_subprocess_exec, file I/O -> aiofiles. Wrap unavoidable
+  synchronous calls in asyncio.to_thread() so the event loop keeps running.
 
 tags:
   - reliability
@@ -39,12 +36,12 @@ tags:
 examples:
   bad: |
     async def fetch_data():
-        time.sleep(1)  # Blocks entire event loop!
+        time.sleep(1)  # Blocks the entire event loop!
         response = requests.get(url)  # Also blocks!
         return response.json()
   good: |
     async def fetch_data():
         await asyncio.sleep(1)
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                return await response.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+        return response.json()

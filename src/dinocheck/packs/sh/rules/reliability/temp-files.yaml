@@ -3,16 +3,26 @@ name: Insecure temporary file handling
 level: major
 category: security
 description: |
-  Using predictable temp file names in /tmp creates race conditions and
-  symlink attacks. Attackers can predict filenames and create symlinks
-  to sensitive files, causing the script to overwrite them.
+  Detects temporary files created with predictable names in shared
+  directories like /tmp. An attacker on the same host can pre-create the
+  path or plant a symlink to a sensitive file, making the script overwrite
+  arbitrary files with the script's privileges (symlink/TOCTOU attack).
+  Predictable names also collide when two instances run concurrently.
 checklist:
-  - Hardcoded paths like /tmp/myfile.txt.
-  - Predictable temp file patterns based on script name or PID alone.
-  - Temp files not cleaned up on script exit.
+  - Are temp files created with hardcoded names (e.g. /tmp/myscript.out) instead of mktemp?
+  - Are "unique" names derived only from $$ (PID) or the script name, which are guessable?
+  - Is data written to a shared temp path before checking the file/link does not already exist?
+  - Is there a trap ... EXIT that removes temp files/directories even when the script fails?
+  - When several temp files are needed, is a single mktemp -d directory used instead of many ad hoc paths?
 fix: |
-  Use mktemp to create secure temporary files. Set up a trap to clean up
-  on exit. Consider using a temp directory for multiple temp files.
+  Create temp files and directories with mktemp and clean them up with a
+  trap:
+    TMP_FILE=$(mktemp)
+    trap 'rm -f "$TMP_FILE"' EXIT
+  or, for multiple files:
+    TMP_DIR=$(mktemp -d)
+    trap 'rm -rf "$TMP_DIR"' EXIT
+  mktemp creates the file atomically with mode 0600, eliminating the race.
 
 tags:
   - shell
@@ -23,10 +33,12 @@ triggers:
   file_patterns:
     - "**/*.sh"
     - "**/*.bash"
+    - "**/.*rc"
   code_patterns:
-    - "/tmp/"
-    - "\\$TMPDIR"
-    - "tempfile"
+    - "/tmp/\\w"
+    - "\\$\\{?TMPDIR"
+    - "\\btempfile\\b"
+    - "/tmp/[\\w.-]*\\$\\$"
 
 examples:
   bad: |

@@ -3,17 +3,24 @@ name: Unnecessary host port exposure
 level: major
 category: networking
 description: |
-  Binding container ports to the host exposes services to the network.
-  Services that only need to communicate with other containers should use
-  Docker networks instead of host ports. Exposed ports increase attack surface.
+  Detects internal services (databases, caches, message brokers, admin
+  panels) whose ports are published to the host via ports:. Published ports
+  bind to 0.0.0.0 by default, making the service reachable from the network
+  and, on many setups, bypassing host firewall rules. Services that only
+  talk to other containers should communicate over Docker networks instead.
 checklist:
-  - Internal services (databases, caches) bound to host ports.
-  - Port 0.0.0.0 bindings (accessible from all interfaces).
-  - Services exposed that should only be internal.
+  - "Are backing services (postgres, mysql, redis, rabbitmq, elasticsearch, etc.) published under ports: instead of kept internal?"
+  - Do any port mappings bind to all interfaces (no host IP prefix, or an explicit 0.0.0.0)?
+  - Could dev-only mappings (e.g. exposing the DB for a local client) leak into a production compose file?
+  - For each published port, is external access actually required, or would the service work using only the shared network?
+  - Where host access is needed only locally, is the binding restricted to 127.0.0.1?
 fix: |
-  Use Docker networks for inter-container communication. Only expose ports
-  that need external access. Bind to 127.0.0.1 for local-only access.
-  Use expose: instead of ports: for internal services.
+  Remove ports: from services that only need container-to-container traffic
+  and attach them to a shared network; other services reach them by service
+  name (e.g. db:5432). Use expose: purely as documentation if desired. When
+  host access is genuinely needed only from the local machine, bind
+  explicitly: "127.0.0.1:5432:5432". Keep dev-only mappings in a
+  compose.override.yml that is not used in production.
 
 tags:
   - docker-compose
@@ -27,30 +34,34 @@ triggers:
     - "**/compose*.yml"
     - "**/compose*.yaml"
   code_patterns:
-    - "ports:"
-    - "\"\\d+:\\d+\""
+    - "\\bports:"
+    - "0\\.0\\.0\\.0:\\d+"
 
 examples:
   bad: |
     services:
       db:
-        image: postgres
+        image: postgres:16.1
         ports:
-          - "5432:5432"  # DB exposed to host!
+          - "5432:5432"   # DB reachable from the network
       redis:
-        image: redis
+        image: redis:7.2
         ports:
-          - "6379:6379"  # Cache exposed!
+          - "0.0.0.0:6379:6379"   # cache exposed on all interfaces
   good: |
     services:
       db:
-        image: postgres
-        expose:
-          - "5432"  # Only accessible within Docker network
+        image: postgres:16.1
+        networks:
+          - backend   # only reachable by other containers
+      redis:
+        image: redis:7.2
         networks:
           - backend
-      redis:
-        image: redis
+      web:
+        image: myapp
+        ports:
+          - "127.0.0.1:8000:8000"   # local-only host binding
         networks:
           - backend
     networks:

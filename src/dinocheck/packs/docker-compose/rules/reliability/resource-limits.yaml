@@ -3,17 +3,28 @@ name: Missing resource limits
 level: minor
 category: reliability
 description: |
-  Without resource limits, a single container can consume all host resources
-  (CPU, memory), causing other services to fail. Memory leaks or CPU-intensive
-  tasks can bring down the entire host.
+  Detects services deployed without memory or CPU limits. An unbounded
+  container with a memory leak or a CPU-hungry task can starve every other
+  service on the host and trigger the kernel OOM killer against arbitrary
+  processes. Limits turn "one bad service takes down the host" into "one
+  bad service gets throttled or restarted".
 checklist:
-  - Service has no memory limit (mem_limit or deploy.resources.limits).
-  - Service has no CPU limit.
-  - No reservation set for critical services.
+  - Do services intended for production lack a memory limit (deploy.resources.limits.memory or mem_limit)?
+  - Do CPU-intensive services lack a CPU limit (deploy.resources.limits.cpus or cpus)?
+  - Are reservations set for critical services so they keep minimum resources under contention?
+  - Are the limits plausible for the workload (JVM/node heap fits inside the memory limit), so the limit itself does not cause OOM kills?
 fix: |
-  Set memory and CPU limits appropriate for each service. Use reservations
-  to guarantee minimum resources for critical services. Monitor actual usage
-  to set appropriate limits.
+  Set limits per service, based on observed usage (docker stats):
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          memory: 256M
+  With plain docker compose (no Swarm), deploy.resources.limits is honored
+  by recent Compose versions; mem_limit/cpus work as legacy alternatives.
+  Purely local development files may reasonably skip limits.
 
 tags:
   - docker-compose
@@ -27,15 +38,14 @@ triggers:
     - "**/compose*.yml"
     - "**/compose*.yaml"
   code_patterns:
-    - "services:"
-    - "image:"
+    - "\\bservices:"
 
 examples:
   bad: |
     services:
       app:
         image: myapp
-        # No resource limits - can consume all host resources
+        # No limits: a leak here can OOM the whole host
   good: |
     services:
       app:

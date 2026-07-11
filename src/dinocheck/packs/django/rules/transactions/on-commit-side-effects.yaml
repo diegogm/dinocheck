@@ -10,8 +10,8 @@ triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "transaction\\.atomic.*send_"
-    - "atomic.*\\.delay\\("
+    - "transaction\\.atomic[\\s\\S]*(send_|\\.delay\\(|\\.apply_async\\()"
+    - "@atomic[\\s\\S]*(send_|\\.delay\\()"
 
 checklist:
   - Email/notification sent inside atomic block
@@ -24,3 +24,17 @@ fix: |
 tags:
   - transactions
   - side-effects
+
+examples:
+  bad: |
+    with transaction.atomic():
+        order.save()
+        OrderLine.objects.bulk_create(lines)
+        send_confirmation_email(order)  # sent even if the transaction rolls back
+        notify_warehouse.delay(order.pk)  # task may run before commit is visible
+  good: |
+    with transaction.atomic():
+        order.save()
+        OrderLine.objects.bulk_create(lines)
+        transaction.on_commit(lambda: send_confirmation_email(order))
+        transaction.on_commit(lambda: notify_warehouse.delay(order.pk))

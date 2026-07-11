@@ -1,30 +1,35 @@
 id: react/unsafe-href
 name: Unsafe href from User Input
-level: major
+level: critical
 category: security
 description: |
-  Detects anchor tags where the href attribute is set using user-controlled
-  input without validation. Attackers can inject javascript: URLs or other
-  dangerous schemes to execute arbitrary code when the link is clicked.
+  Detects anchor tags whose href comes from user-controlled data without
+  protocol validation. A stored profile link or API-provided URL of the form
+  "javascript:..." executes attacker code on click (XSS); "data:" URLs enable
+  phishing payloads. React only logs a warning for javascript: URLs — it still
+  renders them.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
+    - "**/*.tsx"
   code_patterns:
-    - "href=\\{"
-    - "<a\\s"
+    - 'href=\{'
+    - '(href|url|link):\s*\w+\.'
 
 checklist:
-  - Is the href value derived from user input, URL parameters, or an API?
-  - Is the href validated to only allow safe protocols (http, https, mailto)?
-  - "Could a javascript: or data: URL be injected through the href?"
-  - Is there a URL allowlist or sanitization function applied?
-  - Are links with dynamic hrefs opened with rel="noopener noreferrer"?
+  - Is the href value derived from user input, URL/query parameters, or an API response?
+  - Is the URL validated to allow only safe protocols (http:, https:, mailto:, tel:, or relative paths)?
+  - "Could a javascript:, data:, or vbscript: URL reach the href unchecked?"
+  - Is validation done by parsing (new URL) rather than a bypassable prefix/substring check?
+  - Do links with target="_blank" also include rel="noopener noreferrer"?
 
 fix: |
-  Validate that the href starts with a safe protocol (http://, https://,
-  mailto:, or /) before rendering. Use a URL validation function to reject
-  javascript:, data:, and vbscript: schemes.
+  Validate before rendering: parse with new URL(url, window.location.origin)
+  and allow only an explicit protocol allowlist (http:, https:, mailto:);
+  fall back to '#' or omit the link otherwise. Do this in one shared helper
+  (e.g. isSafeUrl) instead of ad-hoc checks, and add
+  rel="noopener noreferrer" to _blank links.
 
 tags:
   - security
@@ -40,7 +45,7 @@ examples:
   good: |
     function isSafeUrl(url) {
       try {
-        const parsed = new URL(url);
+        const parsed = new URL(url, window.location.origin);
         return ['http:', 'https:', 'mailto:'].includes(parsed.protocol);
       } catch {
         return false;

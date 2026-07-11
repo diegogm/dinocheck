@@ -3,32 +3,34 @@ name: Mutable Default Argument
 level: major
 category: correctness
 description: |
-  Detects mutable default arguments in function definitions (lists, dicts, sets).
-
-  This is a classic Python gotcha: default arguments are evaluated once at
-  function definition time, not at call time. A mutable default is shared
-  across all calls, causing unexpected behavior.
+  Detects mutable default arguments (list, dict, set) in function definitions.
+  Defaults are evaluated once at definition time, so a mutable default is shared
+  across every call: mutations from one call leak into the next, producing
+  state that accumulates unpredictably and bugs that only appear on repeat calls.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "def .+\\[\\]"
-    - "def .+\\{\\}"
-    - "def .+\\[\\s*\\]"
-    - "def .+\\{\\s*\\}"
+    - "def .+=\\s*\\[\\s*\\]"
+    - "def .+=\\s*\\{\\s*\\}"
+    - "def .+=\\s*(list|dict|set)\\(\\)"
 
 checklist:
-  - Does any function parameter have a default value of [] or {}?
-  - Is the default a mutable object (list, dict, set)?
-  - Could the function mutate this default argument?
-  - Should the default be None with a check inside the function?
+  - Does any parameter default to [], {}, set(), list(), or dict()?
+  - Is the parameter mutated (append, update, add, item assignment) inside the function or by callees?
+  - Does the function store or return the default, letting callers mutate the shared object later?
+  - Would replacing the default with None plus an in-function initialization change observable behavior?
 
 fix: |
-  Use None as default and create the mutable object inside the function:
+  Use None as the default sentinel and create the object inside the function:
+
   def foo(items=None):
       if items is None:
           items = []
+
+  If sharing was intentional (memoization), make it explicit with a module-level
+  cache or functools.lru_cache instead of a default argument.
 
 tags:
   - correctness

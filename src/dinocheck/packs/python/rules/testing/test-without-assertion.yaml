@@ -3,33 +3,32 @@ name: Test Without Assertion
 level: major
 category: testing
 description: |
-  Detects test functions that don't assert anything, giving false confidence
-  that code works correctly.
-
-  A test that only calls code without verifying results will pass even if
-  the code is completely broken. Every test should verify expected behavior.
+  Detects test functions that call code but never assert anything about the
+  result. Such tests only fail if the code raises, so they green-light wrong
+  return values, wrong side effects, and silent no-ops - inflating coverage
+  numbers while verifying nothing.
 
 triggers:
   file_patterns:
     - "**/test_*.py"
     - "**/*_test.py"
-    - "**/tests/*.py"
+    - "**/tests.py"
+    - "**/tests/**/*.py"
   code_patterns:
     - "def test_"
     - "async def test_"
 
 checklist:
-  - Does the test function contain any assert statements?
-  - Does it use pytest.raises() or self.assertRaises()?
-  - Does it use mock assertions like .assert_called_with()?
-  - Is this an integration test that relies on exceptions for failure?
-  - Could this test pass even if the code under test is broken?
+  - Does each test_ function contain at least one assert, self.assert*, pytest.raises, or mock .assert_called* verification?
+  - If the test's value is "doesn't raise", is that intent explicit (a comment, or asserting the returned object's basic properties)?
+  - Are assertions unreachable (inside an if/for that may not execute, or after an early return)?
+  - Would this test still pass if the function returned None, wrong values, or wrote nothing? What outcome should it pin down?
 
 fix: |
-  Add assertions to verify expected behavior:
-  - assert result == expected
-  - assert error in str(exception)
-  - mock.assert_called_once_with(...)
+  Assert the observable outcome: returned values (assert result == expected),
+  raised errors (with pytest.raises(...)), state changes (DB row exists, file
+  written), or dependency calls (mock.assert_called_once_with(...)). If a test
+  genuinely only checks "does not crash", say so in its name and a comment.
 
 tags:
   - testing

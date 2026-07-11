@@ -1,6 +1,28 @@
 # Coding Agents
 
-Dinocheck integrates with popular AI coding assistants as a "skill" - allowing the agent to automatically run code reviews when appropriate.
+Dinocheck is **agent-native**: it integrates with AI coding assistants as a
+"skill", and in the default agent mode the assistant itself performs the
+analysis. No API keys, no model configuration - dinocheck selects the files
+and rules, the agent reviews them, and dinocheck validates, scores, and
+caches the results.
+
+## How it works
+
+```
+dino brief --diff          ->  the agent analyzes      ->  dino report results.json
+(files + rules + contract)     (using its own model)       (validate, score, cache, print)
+```
+
+1. **`dino brief`** runs the deterministic half: discovers files, matches the
+   rules that trigger for each (with full checklists, fix guidance, and
+   examples), resolves the cache, and emits a review brief.
+2. **The agent** reads the brief, opens each file with its own tools, and
+   evaluates only the listed rules.
+3. **`dino report`** validates the agent's JSON against the output contract
+   (with precise errors the agent can act on), rejects findings that cite
+   rules not in the brief or point outside the file, converts the rest to
+   issues, deduplicates, scores, caches, and prints the formatted output.
+   `--fail-on LEVEL` turns it into a CI gate.
 
 ## Supported Agents
 
@@ -55,7 +77,7 @@ The Claude Code skill includes:
 
 - **Automatic triggering**: Claude uses dinocheck after writing code or when asked to review
 - **Tool restrictions**: Only allows `dino` commands via `allowed-tools: Bash(dino:*)`
-- **Workflow guidance**: Instructs Claude on how to interpret and act on findings
+- **Agent-native workflow**: Claude generates the brief, performs the analysis itself, and submits the results with `dino report`
 
 ### Usage with Claude Code
 
@@ -106,42 +128,27 @@ gemini "review the authentication module"
 
 ## Skill Contents
 
-All agent skills share similar content:
+All agent skills share the same workflow (templates ship with the package
+under `dinocheck/skills/templates/`):
 
 ```markdown
 ---
 name: dinocheck
 description: >
-  Run LLM-powered code review with dinocheck. Use when you finish writing code,
-  before committing, or when the user asks to review, check, or analyze code quality.
+  Run dinocheck code review: generate a review brief, analyze the code yourself
+  following the brief's rules, then submit the results.
 ---
 
-# Dinocheck - LLM Code Review
-
-## When to use
-
-- After writing or modifying code
-- Before committing changes
-- When asked to review code quality
-- When looking for potential bugs or improvements
-
-## Commands
-
-# Check current directory
-dino check
-
-# Check only changed files
-dino check --diff
-
-# Verbose output
-dino check -v
+# Dinocheck - Agent-Native Code Review
 
 ## Workflow
 
-1. Run `dino check` on the relevant code
-2. Review the issues found
-3. Address critical and major issues first
-4. Use `dino explain <rule-id>` for more details
+1. dino brief --diff -o .dinocheck/brief.md
+2. Read the brief; evaluate ONLY the listed rules per file (>= 80% confidence)
+3. Write findings to .dinocheck/results.json (per the brief's output contract)
+4. dino report .dinocheck/results.json
+5. Fix validation errors and re-run dino report if needed
+6. Present the output; do not fix code unless asked
 ```
 
 ## Best Practices
@@ -151,10 +158,10 @@ dino check -v
 When the agent is reviewing changes:
 
 ```bash
-dino check --diff
+dino brief --diff
 ```
 
-This only analyzes files with uncommitted changes, making it faster and more focused.
+This only briefs files with uncommitted changes, making it faster and more focused.
 
 ### 2. Combine with other tools
 
@@ -165,8 +172,8 @@ Dinocheck complements traditional linters:
 ruff check .
 mypy .
 
-# Then run semantic analysis
-dino check --diff
+# Then run semantic analysis (agent workflow)
+dino brief --diff
 ```
 
 ### 3. Review before commit
@@ -174,7 +181,7 @@ dino check --diff
 Configure your agent to run dinocheck before creating commits:
 
 ```
-"Before committing, run dino check --diff and address any critical issues"
+"Before committing, run the dinocheck skill and address any critical issues"
 ```
 
 ## Troubleshooting

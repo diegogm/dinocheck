@@ -3,12 +3,11 @@ name: Input Validation at Boundaries
 level: major
 category: security
 description: |
-  Reviews validation of external input at system boundaries.
-  User input, API payloads, file contents, and environment variables
-  should be validated before use. A linter cannot know what is "input".
-
-  NOTE: If Pydantic, marshmallow, or similar schema validation is used
-  after loading data, this is generally sufficient - do NOT flag as issue.
+  Detects external input (HTTP parameters, request bodies, CLI args, uploaded
+  files) used directly without validation at the system boundary. Unvalidated
+  input reaching queries, filesystem paths, or business logic enables injection,
+  crashes, and abuse. Schema validation (Pydantic, marshmallow, DRF serializers)
+  at the boundary counts as validated - do NOT flag input that flows through it.
 
 triggers:
   file_patterns:
@@ -17,19 +16,23 @@ triggers:
     - "**/handlers/**/*.py"
   code_patterns:
     - "request\\.(data|json|form|args|files)"
+    - "request\\.(GET|POST)"
     - "sys\\.argv"
-    - "input\\("
+    - "\\binput\\("
 
 checklist:
-  - Is the input used DIRECTLY without any validation framework?
-  - Is Pydantic, marshmallow, or similar schema used? (NOT an issue if yes)
-  - Is the input used in SQL, shell, or HTML without sanitization?
-  - Could an attacker-controlled value cause security issues here?
+  - Is the raw input used directly (in queries, paths, type conversions, business logic) without any validation or schema?
+  - If Pydantic, marshmallow, or a DRF serializer validates the payload first, treat it as validated and do not report.
+  - Are type and range enforced before conversion (int() on a param can raise ValueError; negative IDs, huge limits)?
+  - Can the value reach a sensitive sink - SQL, shell, file path, HTML - without sanitization for that context?
+  - Are size limits enforced on request bodies, uploaded files, and list parameters to prevent resource abuse?
 
 fix: |
-  Validate all external input at the boundary. Use schemas (Pydantic,
-  marshmallow) for structured validation. Sanitize before use in
-  sensitive contexts. Set reasonable size limits.
+  Validate at the boundary, immediately after receiving input: use Pydantic
+  models, DRF serializers, or explicit checks (type, range, length, allowlist)
+  and reject invalid input with a 4xx. Pass only the validated, typed result
+  into the rest of the code. Sanitize per sink (parameterized SQL, shlex, path
+  normalization) as a second layer.
 
 tags:
   - security
@@ -38,13 +41,17 @@ tags:
 
 examples:
   bad: |
-    user_id = request.args.get("user_id")
-    user = User.objects.get(id=user_id)  # No validation!
+    def get_user_view(request):
+        user_id = request.args.get("user_id")
+        user = User.objects.get(id=user_id)  # No validation!
+        return user
   good: |
-    user_id = request.args.get("user_id")
-    if not user_id or not user_id.isdigit():
-        raise BadRequest("Invalid user_id")
-    user = User.objects.get(id=int(user_id))
-  also_good: |
-    # Using Pydantic is sufficient validation
-    config = DinocritConfig.model_validate(yaml.safe_load(f))
+    def get_user_view(request):
+        user_id = request.args.get("user_id", "")
+        if not user_id.isdigit():
+            raise BadRequest("Invalid user_id")
+        user = User.objects.get(id=int(user_id))
+        return user
+
+    # Equally valid: schema validation at the boundary
+    payload = CreateUserSchema.model_validate(request.json)

@@ -3,29 +3,31 @@ name: Missing Image Alt Text
 level: major
 category: accessibility
 description: |
-  Detects img elements and Image components without alt text in JSX.
-  Alt text is essential for screen readers, SEO, and when images fail
-  to load. Missing alt attributes make content inaccessible to users
-  with visual impairments and violate WCAG 2.1 Level A guidelines.
+  Detects img elements and Image components rendered without an alt attribute.
+  Alt text is what screen readers announce and what browsers show when an image
+  fails to load; omitting it makes visual content invisible to users with
+  visual impairments and violates WCAG 2.1 Level A (Guideline 1.1.1).
 
 triggers:
   file_patterns:
     - "**/*.jsx"
+    - "**/*.tsx"
   code_patterns:
-    - "<img"
-    - "<Image"
+    - '<img\b'
+    - '<Image\b'
 
 checklist:
-  - Does every <img> element have an alt attribute?
-  - Is the alt text descriptive and meaningful (not just "image" or "photo")?
-  - For decorative images, is alt="" used (empty string, not missing)?
-  - Do custom Image components pass alt text through to the underlying img?
-  - Are background images with important content given text alternatives?
+  - Does every <img> and <Image> element have an alt attribute?
+  - Is the alt text descriptive of the image's purpose (not filler like "image", "photo", or the filename)?
+  - For purely decorative images, is alt="" used explicitly (empty string, not a missing attribute)?
+  - Do wrapper/custom Image components accept and forward alt to the underlying img?
+  - Is dynamic alt text (e.g. alt={user.name}) guaranteed to be non-empty for meaningful images?
 
 fix: |
-  Add a descriptive alt attribute to every img element. For decorative
-  images that don't convey information, use an empty alt="" attribute.
-  Never omit the alt attribute entirely.
+  Add a descriptive alt attribute to every img/Image element, describing the
+  content or function of the image in context. For decorative images that
+  convey no information, use alt="" so screen readers skip them. Never omit
+  the attribute entirely.
 
 tags:
   - accessibility

@@ -103,8 +103,7 @@ class TestTextFormatter:
         formatter = TextFormatter()
         output = strip_ansi(formatter.format(sample_result))
 
-        assert "Checked 5 files" in output
-        assert "2 cached" in output
+        assert "Checked 5 file(s)" in output
 
 
 class TestJSONFormatter:

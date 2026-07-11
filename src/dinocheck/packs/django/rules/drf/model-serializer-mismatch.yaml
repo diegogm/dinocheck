@@ -3,31 +3,34 @@ name: Model-Serializer Field Mismatch
 level: major
 category: correctness
 description: |
-  Detects inconsistencies between Django models and their DRF
-  serializers, such as missing required fields, type mismatches,
-  or validation gaps.
+  Detects DRF serializers that drift out of sync with their model: required
+  model fields missing from the serializer (so writes fail with IntegrityError
+  instead of a clean 400), model constraints not mirrored as serializer
+  validation, or read_only/write_only flags that don't match how fields may be
+  set.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
     - "ModelSerializer"
-    - "Serializer"
-    - "fields\\s*="
+    - "serializers\\.Serializer"
     - "SerializerMethodField"
+    - "read_only_fields"
 
 checklist:
-  - Are all required model fields included in serializer?
-  - Do serializer field types match model field types?
-  - Are model validators replicated in serializer?
-  - Are read_only fields correctly identified?
-  - Could write operations fail due to missing fields?
-  - Are nested serializers consistent with related models?
+  - Are all model fields that are non-nullable and without a default included in the serializer (or supplied in the view), so create() cannot hit an IntegrityError?
+  - Are model-level constraints (unique, unique_together, choices, max_length on custom fields) surfaced as serializer validation returning 400 rather than 500?
+  - Are server-managed fields (id, created_at, computed values) marked read_only so clients cannot set them?
+  - Do explicitly declared serializer fields match the model field's type and nullability?
+  - For nested serializers, do their fields and required-ness match the related model, and is create/update overridden to handle them?
 
 fix: |
-  Ensure serializer fields match model requirements. Use
-  explicit field lists instead of '__all__'. Add serializer
-  validation for model constraints. Test create/update operations.
+  Keep an explicit fields list and update it with every model change. Mirror
+  model constraints with serializer validators (UniqueValidator,
+  UniqueTogetherValidator) so users get 400s, not 500s. Mark server-managed
+  fields in read_only_fields. Add a create + update test per serializer to
+  catch drift.
 
 tags:
   - correctness
@@ -39,14 +42,15 @@ examples:
     class User(models.Model):
         email = models.EmailField(unique=True)
         name = models.CharField(max_length=100)
-        role = models.CharField(choices=ROLES)  # Required!
+        role = models.CharField(max_length=20, choices=ROLES)  # Required!
 
     class UserSerializer(serializers.ModelSerializer):
         class Meta:
             model = User
-            fields = ['email', 'name']  # Missing 'role'!
+            fields = ['email', 'name']  # Missing 'role': create() -> IntegrityError
   good: |
     class UserSerializer(serializers.ModelSerializer):
         class Meta:
             model = User
-            fields = ['email', 'name', 'role']
+            fields = ['id', 'email', 'name', 'role']
+            read_only_fields = ['id']

@@ -3,8 +3,11 @@ name: Large Table Index Without CONCURRENTLY
 level: critical
 category: migrations
 description: |
-  Creating index on large table locks writes.
-  Use CREATE INDEX CONCURRENTLY for production safety.
+  Detects index creation (AddIndex, db_index=True, unique constraints) that will
+  run as a plain CREATE INDEX inside the migration. On PostgreSQL this takes a
+  lock that blocks writes to the table for the whole build - minutes of write
+  downtime on a large production table. CREATE INDEX CONCURRENTLY avoids the
+  write lock but cannot run inside a transaction.
 
 triggers:
   file_patterns:
@@ -12,16 +15,48 @@ triggers:
   code_patterns:
     - "AddIndex"
     - "db_index=True"
+    - "unique=True"
+    - "AddConstraint"
 
 checklist:
-  - Index creation on large table
-  - Missing CONCURRENTLY option
+  - Does the migration create an index (AddIndex, db_index=True, unique=True, or a UniqueConstraint) on a table that is large or heavily written in production?
+  - Is the database PostgreSQL, where AddIndexConcurrently is available and plain CREATE INDEX blocks writes?
+  - If AddIndexConcurrently or RunSQL with CONCURRENTLY is used, does the migration set atomic = False (required, or it fails)?
+  - Is the table clearly small/new (created in this same migration or a lookup table), in which case a normal index is fine - do not report?
 
 fix: |
-  Use atomic=False and AddIndexConcurrently for large tables,
-  or create index manually with CONCURRENTLY.
+  For existing large tables on PostgreSQL, set `atomic = False` on the Migration
+  and use django.contrib.postgres.operations.AddIndexConcurrently (or RunSQL
+  "CREATE UNIQUE INDEX CONCURRENTLY ..." plus a matching constraint). Deploy
+  index changes in their own migration so a failure doesn't block other schema
+  changes.
 
 tags:
   - migrations
   - database
   - performance
+
+examples:
+  bad: |
+    class Migration(migrations.Migration):
+        dependencies = [('shop', '0041_order_created_at')]
+
+        operations = [
+            migrations.AddIndex(
+                model_name='order',
+                index=models.Index(fields=['created_at'], name='order_created_idx'),
+            ),  # Plain CREATE INDEX: blocks writes on a big table
+        ]
+  good: |
+    from django.contrib.postgres.operations import AddIndexConcurrently
+
+    class Migration(migrations.Migration):
+        atomic = False  # required for CONCURRENTLY
+        dependencies = [('shop', '0041_order_created_at')]
+
+        operations = [
+            AddIndexConcurrently(
+                model_name='order',
+                index=models.Index(fields=['created_at'], name='order_created_idx'),
+            ),
+        ]

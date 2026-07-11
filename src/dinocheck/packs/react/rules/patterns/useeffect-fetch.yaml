@@ -3,33 +3,33 @@ name: Data Fetching Without Cleanup
 level: minor
 category: reliability
 description: |
-  Detects data fetching in useEffect without proper cleanup or cancellation.
-  If the component unmounts before the fetch completes, the callback may
-  try to update state on an unmounted component, causing a memory leak
-  warning. Race conditions can also occur when dependencies change rapidly.
+  Detects data fetching inside useEffect without cancellation or an ignore
+  flag in the cleanup. When dependencies change quickly or the component
+  unmounts, responses can arrive out of order and a slower, older request can
+  overwrite newer data (a race condition), or state is set on an unmounted
+  component.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
+    - "**/*.tsx"
   code_patterns:
-    - "useEffect.*fetch"
-    - "useEffect.*axios"
-    - "useEffect.*\\.get\\("
-    - "useEffect.*\\.post\\("
+    - 'useEffect\([\s\S]{0,300}?(fetch\(|axios\b|\.get\(|\.post\()'
 
 checklist:
   - Is fetch() or an HTTP client called inside useEffect?
-  - Does the useEffect return a cleanup function?
-  - Is there an AbortController to cancel pending requests on unmount?
-  - Is there a boolean flag to prevent state updates after unmount?
-  - Could race conditions occur if dependencies change rapidly?
-  - Would a data-fetching library (React Query, SWR) be more appropriate?
+  - Does the effect return a cleanup function at all?
+  - Does the cleanup abort the request (AbortController) or set an ignore flag checked before setState?
+  - If the effect re-runs with new dependencies (e.g. a changing id or query), can an older response overwrite a newer one?
+  - Would a data-fetching library (React Query, SWR) or a framework loader fit better than a hand-rolled effect?
 
 fix: |
-  Add an AbortController to cancel the fetch request in the useEffect
-  cleanup function. Pass the controller's signal to fetch(). Alternatively,
-  use a data-fetching library like React Query or SWR that handles
-  cancellation, caching, and race conditions automatically.
+  Create an AbortController inside the effect, pass controller.signal to
+  fetch, and call controller.abort() in the cleanup; swallow only AbortError.
+  If the client cannot be aborted, use a `let ignore = false` flag set to
+  true in the cleanup and check it before every setState. For anything
+  non-trivial, prefer React Query or SWR, which handle races, caching, and
+  retries.
 
 tags:
   - reliability
@@ -43,7 +43,7 @@ examples:
       useEffect(() => {
         fetch(`/api/users/${userId}`)
           .then(r => r.json())
-          .then(setUser);  // May update unmounted component
+          .then(setUser);  // Stale response can win the race
       }, [userId]);
       return <div>{user?.name}</div>;
     }

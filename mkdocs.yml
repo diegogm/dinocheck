@@ -1,5 +1,5 @@
 site_name: Dinocheck
-site_description: LLM-powered code critic for vibe coding
+site_description: Agent-native AI code critic for vibe coding
 site_url: https://diegogm.github.io/dinocheck/
 repo_url: https://github.com/diegogm/dinocheck
 repo_name: diegogm/dinocheck

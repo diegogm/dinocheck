@@ -3,11 +3,12 @@ name: Inaccessible Hidden Content
 level: major
 category: accessibility
 description: |
-  Using display:none or visibility:hidden removes content from
-  the accessibility tree, making it invisible to screen readers.
-  Sometimes content should be visually hidden but still accessible.
-  Techniques like negative positioning or clip-path should be used
-  for screen-reader-only content.
+  Detects hiding techniques that remove content from the accessibility tree
+  when the intent was visual-only hiding. display:none and visibility:hidden
+  hide content from screen readers too, so labels, skip links, and
+  instructions hidden this way simply disappear for assistive-technology
+  users. Visually-hidden-but-accessible content needs the sr-only clip
+  technique instead.
 triggers:
   file_patterns:
     - "**/*.css"
@@ -15,31 +16,23 @@ triggers:
     - "**/*.sass"
     - "**/*.less"
   code_patterns:
-    - "display:\\s*none"
-    - "visibility:\\s*hidden"
-    - "font-size:\\s*0"
-    - "height:\\s*0.*overflow"
+    - 'display:\s*none'
+    - 'visibility:\s*hidden'
+    - 'font-size:\s*0'
+    - 'text-indent:\s*-\d{3,}'
 checklist:
-  - Is important content being hidden from screen readers?
-  - Should this content be accessible but visually hidden?
-  - Is display:none appropriate for this use case?
-  - Could .sr-only (screen-reader-only) class be used instead?
+  - Is content meant for screen readers (labels, skip links, live regions) hidden with display:none or visibility:hidden?
+  - Should this content be visually hidden but still announced (use the sr-only clip pattern)?
+  - Is display:none correct here because the content is truly hidden for everyone (e.g. a closed dialog)?
+  - Are skip links revealed on :focus rather than permanently hidden?
+  - Is font-size:0 or large negative text-indent being used to hide text (unreliable for screen readers)?
 fix: |
-  For content that should be visually hidden but accessible:
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  Use display:none only for truly hidden content.
+  Decide who the content is for. Hidden for everyone: keep display:none.
+  Screen readers only: use an .sr-only class —
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0.
+  Skip links: combine .sr-only with a :focus rule that restores position
+  and size so keyboard users see them.
 tags:
   - accessibility
   - screen-reader
@@ -56,9 +49,13 @@ examples:
       position: absolute;
       width: 1px;
       height: 1px;
+      margin: -1px;
+      overflow: hidden;
       clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
     }
-    .skip-link:not(:focus) {
-      position: absolute;
-      left: -9999px;
+    .skip-link:focus {
+      position: static;
+      width: auto;
+      height: auto;
     }

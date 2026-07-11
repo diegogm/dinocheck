@@ -3,18 +3,22 @@ name: Dangerous eval or Function constructor
 level: critical
 category: security
 description: |
-  eval() and new Function() execute arbitrary code, creating severe security
-  vulnerabilities if the input contains user data. They also disable
-  optimizations and make code harder to analyze and debug.
+  Detects eval(), new Function(), and string arguments to setTimeout /
+  setInterval. These execute arbitrary strings as code, so any user-influenced
+  input becomes remote code execution in the user's session. They also defeat
+  CSP, minification, and static analysis.
 checklist:
-  - Direct eval() calls with dynamic content.
-  - new Function() with user-controlled strings.
-  - setTimeout/setInterval with string arguments.
-  - Dynamically constructed code for JSON parsing.
+  - Is eval() called with anything other than a hardcoded constant?
+  - Is new Function() built from dynamic or user-controlled strings?
+  - Are setTimeout/setInterval passed a string instead of a function?
+  - Is code execution being used where a data structure would do (parsing JSON, dispatching by name)?
+  - Could any part of the evaluated string be influenced by user input, config, or API responses?
 fix: |
-  Use JSON.parse() for JSON data. For dynamic behavior, use object maps
-  or switch statements. For templating, use proper template engines.
-  There is almost never a legitimate need for eval.
+  Replace eval-based patterns with data: JSON.parse() for serialized data, an
+  object map or switch for dispatch-by-name (actions[name]?.(args)), and a
+  real template engine for templating. Pass functions, not strings, to
+  setTimeout/setInterval. If dynamic code loading is genuinely required, use
+  dynamic import() of vetted modules.
 
 tags:
   - typescript
@@ -26,13 +30,14 @@ triggers:
     - "**/*.ts"
     - "**/*.tsx"
     - "**/*.mts"
+    - "**/*.cts"
     - "**/*.js"
     - "**/*.jsx"
   code_patterns:
-    - "eval\\("
-    - "new Function\\("
-    - "setTimeout\\(['\"]"
-    - "setInterval\\(['\"]"
+    - '\beval\('
+    - 'new Function\('
+    - 'setTimeout\([''"]'
+    - 'setInterval\([''"]'
 
 examples:
   bad: |

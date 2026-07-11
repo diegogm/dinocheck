@@ -1,4 +1,4 @@
-"""Pydantic schemas for LLM structured outputs."""
+"""Pydantic schemas for LLM structured outputs and agent reports."""
 
 from pydantic import BaseModel, Field
 
@@ -27,3 +27,16 @@ class CriticResponse(BaseModel):
     """Structured output for LLM critic analysis."""
 
     issues: list[CriticIssue] = Field(default_factory=list)
+
+
+class FileReport(BaseModel):
+    """Analysis results for a single file, as produced by the host agent."""
+
+    path: str = Field(description="File path exactly as listed in the review brief")
+    issues: list[CriticIssue] = Field(default_factory=list)
+
+
+class AgentReport(BaseModel):
+    """Top-level analysis report submitted via `dino report`."""
+
+    files: list[FileReport] = Field(default_factory=list)

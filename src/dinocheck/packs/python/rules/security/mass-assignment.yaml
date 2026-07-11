@@ -1,42 +1,36 @@
 id: python/mass-assignment
 name: Mass Assignment Vulnerability
-level: blocker
+level: critical
 category: security
 description: |
-  Detects patterns where HTTP user input is spread into object creation.
-
-  CRITICAL - DO NOT REPORT if:
-  - Data comes from os.environ, config files, or constructor parameters - NOT user input
-  - Code is internal infrastructure (CLI tools, background jobs, not web endpoints)
-  - **kwargs in __init__ is standard Python pattern, NOT mass assignment
-
-  ONLY REPORT if: request.data, request.POST, request.GET, or HTTP body
-  is spread (**) directly into Django/ORM model.create() or .update().
+  Detects HTTP request data spread directly into model creation or updates
+  (Model.objects.create(**request.data)), letting clients set any field they
+  name - including is_admin, role, owner, or balance. Only report when the
+  spread values come from an HTTP request: **kwargs plumbing, config dicts, and
+  os.environ data are internal and NOT mass assignment.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
     - "\\*\\*request\\.(data|json|POST|GET)"
-    - "\\*\\*data"
-    - "\\*\\*kwargs"
     - "\\.create\\(\\*\\*"
     - "\\.update\\(\\*\\*"
-    - "setattr.*request"
+    - "setattr\\(.*request\\."
+    - "objects\\.update_or_create\\(\\*\\*"
 
 checklist:
-  - Is user input spread directly into model creation?
-  - Could an attacker set is_admin, is_staff, or similar?
-  - Are there sensitive fields that shouldn't be user-settable?
-  - Is there a whitelist of allowed fields?
-  - Could nested data modify related objects?
-  - Does the data come from environment variables, config files, or internal sources? If yes, it is SAFE
-  - Is this internal/trusted code (not a web endpoint)? Internal config assignment is SAFE
+  - Is request.data / request.POST / a parsed HTTP body spread (**) into .create(), .update(), update_or_create(), or a model constructor?
+  - Could a client include privileged fields in the payload - is_admin, is_staff, role, owner, user_id, price, balance?
+  - Is there an allowlist between the request and the model (explicit field extraction, or a serializer/schema with declared fields)?
+  - Does a setattr loop over request-supplied keys write arbitrary attributes onto a model or user object?
+  - Does the spread data actually come from an HTTP request? Internal dicts, config, environ, and **kwargs pass-through are safe - do not report.
 
 fix: |
-  Use explicit field assignment or whitelists. Use serializers
-  with explicit fields. Never pass request data directly to
-  model methods. Validate and extract only expected fields.
+  Extract fields explicitly (email=data["email"], name=data["name"]) or validate
+  through a serializer/schema whose fields are an explicit allowlist, then pass
+  only validated fields to the model. Set privileged fields (owner, role) from
+  server-side context, never from the payload.
 
 tags:
   - security

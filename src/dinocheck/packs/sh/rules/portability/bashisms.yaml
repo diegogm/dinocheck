@@ -3,17 +3,24 @@ name: Bash-specific syntax in POSIX shell
 level: minor
 category: portability
 description: |
-  Scripts with #!/bin/sh shebang should be POSIX-compliant. Bash-specific
-  features like [[ ]], arrays, or process substitution will fail on systems
-  where /bin/sh is dash, ash, or another POSIX shell.
+  Detects Bash-only syntax in scripts declared as POSIX shell (#!/bin/sh).
+  On Debian/Ubuntu and Alpine, /bin/sh is dash or ash, so constructs like
+  [[ ]], arrays, or ${var^^} fail at runtime with confusing errors - often
+  only in the target environment (a container, CI runner) rather than on the
+  developer machine where /bin/sh happens to be bash.
 checklist:
-  - Script uses #!/bin/sh but contains [[ ]] tests.
-  - Arrays syntax used in a #!/bin/sh script.
-  - Process substitution <() or >() in POSIX shell.
-  - Bash-specific variable expansions like ${var,,}.
+  - Does the script declare #!/bin/sh but use [[ ]] instead of [ ]?
+  - Are arrays used (declare -a, arr=(...), "${arr[@]}") under a sh shebang?
+  - Is process substitution <(...) or >(...) used in a POSIX script?
+  - Are Bash-only expansions present, e.g. ${var^^}, ${var,,}, ${var//x/y}, $'...'?
+  - Are other bashisms used, e.g. local -n, source instead of ., ==, function keyword, $RANDOM, &> redirection?
 fix: |
-  Either change shebang to #!/bin/bash (or #!/usr/bin/env bash), or replace
-  bash-specific features with POSIX equivalents.
+  Pick one side and be consistent. Either change the shebang to
+  #!/usr/bin/env bash (or #!/bin/bash) if Bash is guaranteed to exist on all
+  targets, or replace each bashism with its POSIX equivalent:
+  [ "$a" = "$b" ] instead of [[ ]], tr for case conversion, positional
+  parameters or "$@" instead of arrays. Verify with: dash -n script.sh or
+  shellcheck --shell=sh.
 
 tags:
   - shell
@@ -26,7 +33,9 @@ triggers:
   code_patterns:
     - "#!/bin/sh"
     - "\\[\\["
-    - "declare -a"
+    - "\\bdeclare\\s+-[aA]"
+    - "\\$\\{\\w+(\\^\\^|,,)\\}"
+    - "<\\("
 
 examples:
   bad: |
@@ -35,11 +44,6 @@ examples:
         echo "${var^^}"
     fi
   good: |
-    #!/bin/bash
-    if [[ "$var" == "test" ]]; then
-        echo "${var^^}"
-    fi
-    # Or POSIX-compliant:
     #!/bin/sh
     if [ "$var" = "test" ]; then
         echo "$var" | tr '[:lower:]' '[:upper:]'

@@ -3,17 +3,24 @@ name: Unsafe non-null assertion
 level: major
 category: types
 description: |
-  The non-null assertion operator (!) tells TypeScript to trust that a value
-  is not null/undefined without checking. If wrong, this causes runtime errors.
-  It's often used to silence the compiler without fixing the underlying issue.
+  Detects the non-null assertion operator (!) used to silence nullability
+  errors without an actual guarantee. The operator performs no runtime check:
+  if the value is null or undefined, the code throws (or propagates undefined)
+  exactly where the compiler tried to warn. Common on .find(), .get(), DOM
+  lookups, and optional properties.
 checklist:
-  - Non-null assertion on values that could genuinely be null.
-  - Chained assertions like obj!.prop!.value.
-  - Assertion used instead of proper null checking or optional chaining.
+  - Is ! applied to a value that can genuinely be null/undefined at runtime (find, get, querySelector, optional props)?
+  - Are assertions chained (obj!.prop!.value), compounding unchecked assumptions?
+  - Is the assertion just silencing the compiler where a null check, ?., or ?? belongs?
+  - When the value is unexpectedly absent, would an explicit error message beat a raw TypeError?
+  - Is there an invariant that truly guarantees presence, and is it documented at the assertion site?
 fix: |
-  Use optional chaining (?.), nullish coalescing (??), or explicit null checks.
-  Only use ! when you have absolute certainty the value exists (e.g., after
-  a type guard or in controlled initialization).
+  Handle absence explicitly: use optional chaining (?.) with nullish
+  coalescing (??) for soft fallbacks, or an early guard that throws a
+  descriptive error (`if (!user) throw new Error(...)`) so the compiler
+  narrows the type. Reserve ! for cases with a provable invariant (e.g.
+  checked immediately above, definite assignment) and keep it adjacent to
+  the proof.
 
 tags:
   - typescript
@@ -25,10 +32,12 @@ triggers:
     - "**/*.ts"
     - "**/*.tsx"
     - "**/*.mts"
+    - "**/*.cts"
   code_patterns:
-    - "!\\."
-    - "!\\["
-    - "!;"
+    - '!\.'
+    - '!\['
+    - '!;'
+    - '\)!(?!=)'
 
 examples:
   bad: |

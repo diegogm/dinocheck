@@ -3,29 +3,30 @@ name: Copy-Paste Bug Detection
 level: critical
 category: correctness
 description: |
-  Detects code that appears to be copy-pasted where a variable,
-  field, or value was not updated correctly. These bugs are common
-  and hard to spot in code review.
+  Detects duplicated code blocks where one occurrence was not fully adapted: a
+  variable, attribute, field name, or constant left over from the original copy.
+  These bugs are syntactically valid and pass review easily because the lines
+  look intentionally similar, yet they silently corrupt data or skip logic.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "\\b(\\w+)\\s*=.*\\1.*\\1"
-    - "if .+ == .+:\\s*\\n.*elif .+ == .+:"
-    - "def \\w+.*:\\s*\\n.*def \\w+.*:"
+    - "\\w+\\.\\w+\\s*=.*\\n\\s*\\w+\\.\\w+\\s*="
+    - "elif .+ == .+:"
+    - "(\\w+)\\[[\"']\\w+[\"']\\]\\s*=.*\\n\\s*\\1\\[[\"']\\w+[\"']\\]\\s*="
 
 checklist:
-  - Are there repeated code blocks with subtle differences?
-  - Is the same variable used where a different one was expected?
-  - Are there sequential conditionals that look copy-pasted?
-  - Does a repeated pattern have an inconsistent element?
-  - Were all occurrences updated when copying code?
+  - In blocks of near-identical consecutive lines, is exactly the right variable/attribute changed on each line?
+  - In if/elif chains comparing similar values, does each branch use the value it tests (not a copy of a sibling branch)?
+  - When a computed value aggregates several parts (total = a + b + ...), is every part that was computed actually included?
+  - Do left-hand and right-hand sides pair up correctly (e.g. x.min = compute_min(), not compute_max())?
+  - If a function was duplicated and renamed, was its body fully updated to match the new name?
 
 fix: |
-  Review repeated code patterns carefully. Extract common logic
-  into a helper function if appropriate. Use parameterization
-  instead of copy-paste when possible.
+  Compare each duplicated line against its siblings and fix the element that was
+  not adapted. If the same shape repeats 3+ times, replace the copies with a loop,
+  a dict mapping, or a parameterized helper so the inconsistency cannot recur.
 
 tags:
   - correctness

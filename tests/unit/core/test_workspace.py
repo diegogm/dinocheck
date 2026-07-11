@@ -23,30 +23,32 @@ class TestWorkspaceScanner:
         assert len(files) == 1
         assert files[0].path == file_path
 
-    def test_discover_directory(self, scanner, tmp_path):
-        """Should discover Python files in directory."""
+    def test_discover_directory_any_language(self, scanner, tmp_path):
+        """Discovery is not Python-only: any readable file is a candidate."""
         (tmp_path / "file1.py").write_text("x = 1")
-        (tmp_path / "file2.py").write_text("y = 2")
-        (tmp_path / "readme.md").write_text("# Readme")
-
-        files = list(scanner.discover([tmp_path], diff_only=False))
-
-        # Should find Python files, not markdown
-        assert not any(f.path.suffix == ".md" for f in files)
-        py_files = [f for f in files if f.path.suffix == ".py"]
-        assert len(py_files) >= 2
-
-    def test_discover_excludes_non_python(self, scanner, tmp_path):
-        """Should exclude non-Python files by default."""
-        (tmp_path / "script.py").write_text("x = 1")
-        (tmp_path / "data.json").write_text("{}")
+        (tmp_path / "app.tsx").write_text("export const App = () => null")
         (tmp_path / "style.css").write_text("body {}")
 
         files = list(scanner.discover([tmp_path], diff_only=False))
 
-        # All discovered files should be Python
-        for f in files:
-            assert f.path.suffix == ".py"
+        suffixes = {f.path.suffix for f in files}
+        assert {".py", ".tsx", ".css"} <= suffixes
+
+    def test_discover_respects_candidate_filter(self, scanner, tmp_path):
+        """The is_candidate callback (rule pack patterns) scopes discovery."""
+        (tmp_path / "script.py").write_text("x = 1")
+        (tmp_path / "data.json").write_text("{}")
+        (tmp_path / "style.css").write_text("body {}")
+
+        files = list(
+            scanner.discover(
+                [tmp_path],
+                diff_only=False,
+                is_candidate=lambda p: p.suffix == ".py",
+            )
+        )
+
+        assert [f.path.suffix for f in files] == [".py"]
 
     def test_discover_nested_directories(self, scanner, tmp_path):
         """Should discover files in nested directories."""

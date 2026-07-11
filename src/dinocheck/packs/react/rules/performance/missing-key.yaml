@@ -1,32 +1,34 @@
 id: react/missing-key
 name: Missing Key Prop in List
-level: critical
+level: major
 category: correctness
 description: |
-  Detects missing or improper key props when rendering lists of elements.
-  React uses keys to identify which items have changed, been added, or
-  been removed. Without stable, unique keys, React cannot efficiently
-  update the DOM and may produce incorrect UI or lose component state.
+  Detects lists rendered from .map()/.flatMap() whose elements lack a key
+  prop. React uses keys to match elements across renders; without them it
+  falls back to positional matching, which loses component state and produces
+  wrong DOM updates when the list changes, besides logging warnings on every
+  render.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
+    - "**/*.tsx"
   code_patterns:
-    - "\\.map\\("
-    - "\\.flatMap\\("
-    - "\\.reduce\\("
+    - '\.map\([\s\S]{0,120}?<[A-Za-z]'
+    - '\.flatMap\([\s\S]{0,120}?<[A-Za-z]'
 
 checklist:
-  - Does the .map() callback return a JSX element?
-  - Does each returned element have a key prop?
-  - Is the key unique among siblings?
-  - Is the key stable across re-renders (not a random value)?
-  - Is the key meaningful (not just the array index for dynamic lists)?
+  - Does the .map()/.flatMap() callback return a JSX element or fragment?
+  - Does the outermost returned element have a key prop (on the component itself, not on an inner element)?
+  - When returning a Fragment, is <React.Fragment key={...}> used (shorthand <> cannot take a key)?
+  - Is the key unique among siblings and stable across re-renders (not Math.random() or a value generated during render)?
+  - Is it a real identity from the data rather than the array index?
 
 fix: |
-  Add a unique, stable key prop to each element returned from .map().
-  Use a unique identifier from the data (e.g., item.id) rather than
-  the array index.
+  Add key={item.id} (or another unique, stable identifier from the data) to
+  the outermost element returned by the map callback. For fragments, use the
+  explicit <React.Fragment key={...}> form. Never generate keys randomly
+  during render.
 
 tags:
   - correctness

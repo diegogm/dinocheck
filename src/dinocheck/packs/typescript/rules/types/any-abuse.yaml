@@ -3,18 +3,23 @@ name: Excessive use of any type
 level: major
 category: types
 description: |
-  Using 'any' defeats TypeScript's type checking. It disables all type safety
-  for that value, allowing bugs to slip through that the compiler would
-  otherwise catch. It also breaks IDE autocomplete and refactoring tools.
+  Detects 'any' used in annotations, casts, and generics. 'any' switches off
+  type checking for the value and everything derived from it, so typos and
+  wrong shapes that the compiler would catch become runtime errors. It also
+  spreads: one 'any' silently infects every expression it touches and breaks
+  autocomplete and safe refactoring.
 checklist:
-  - Explicit any type annotations.
-  - Variables implicitly typed as any due to missing types.
-  - Function parameters or return types using any.
-  - any used to bypass legitimate type errors instead of fixing them.
+  - Are parameters, return types, or variables annotated as any where a concrete type or generic is knowable?
+  - Is 'as any' used to silence a real type error instead of fixing the underlying type?
+  - Is external/untyped data (JSON, API responses) typed as any instead of unknown plus validation?
+  - Would 'unknown' (which forces narrowing before use) express the intent more safely?
+  - Are missing third-party types the cause, and could a .d.ts declaration or @types package fix it?
 fix: |
-  Use specific types, generics, or 'unknown' (which requires type checking
-  before use). For third-party libraries without types, create proper type
-  definitions or use declaration files.
+  Replace any with the most specific type available: a concrete
+  interface/type, a generic parameter, or 'unknown' for data whose shape is
+  established later via type guards or a schema validator (e.g. Zod). For
+  untyped libraries, add a declaration file rather than casting call sites.
+  Enable "noImplicitAny" so new gaps surface at compile time.
 
 tags:
   - typescript
@@ -26,10 +31,12 @@ triggers:
     - "**/*.ts"
     - "**/*.tsx"
     - "**/*.mts"
+    - "**/*.cts"
   code_patterns:
-    - ": any"
-    - "as any"
-    - "<any>"
+    - ':\s*any\b'
+    - '\bas any\b'
+    - '<any[>,\s]'
+    - '\bany\[\]'
 
 examples:
   bad: |

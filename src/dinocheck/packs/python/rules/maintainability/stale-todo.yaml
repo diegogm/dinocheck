@@ -1,35 +1,31 @@
 id: python/stale-todo
 name: Stale TODO/FIXME Detection
-level: major
+level: minor
 category: maintainability
 description: |
-  Detects TODO, FIXME, HACK, and XXX comments that appear to be
-  critical, forgotten, or stale. Unlike simple pattern matching,
-  this evaluates the urgency and context of the comment.
+  Evaluates TODO, FIXME, HACK, XXX, and BUG comments for severity and staleness.
+  Most are harmless notes, but some mark disabled security checks, known crashes,
+  or shortcuts that were meant to be temporary. The goal is to surface the
+  dangerous ones before they ship, not to ban TODO comments.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "# TODO"
-    - "# FIXME"
-    - "# HACK"
-    - "# XXX"
-    - "# BUG"
-    - "# SECURITY"
+    - "(?i)#\\s*(TODO|FIXME|HACK|XXX|BUG|SECURITY)\\b"
 
 checklist:
-  - Does the TODO describe a critical issue that should be fixed?
-  - Is this a security-related FIXME that was forgotten?
-  - Does the HACK introduce technical debt that affects reliability?
-  - Is there a ticket/issue reference that should be checked?
-  - Has this TODO been here for a long time without resolution?
-  - Does the comment indicate a known bug in production?
+  - Does the comment mark disabled or bypassed security/auth behavior (escalate to a security finding, not a note)?
+  - Does it describe a known crash, data corruption, or incorrect result that is currently reachable?
+  - Does the adjacent code actually contain the temporary shortcut the comment warns about, and would shipping it be harmful?
+  - Is the item actionable right now (no ticket reference, no owner) versus tracked and safely deferred?
+  - Is the comment stale - does it reference code or conditions that no longer exist?
 
 fix: |
-  Address critical TODOs before shipping. Create tickets for
-  non-critical items. Remove stale TODOs that are no longer
-  relevant. Add context and ticket numbers to remaining TODOs.
+  Fix security-related and known-bug items before shipping. For legitimate
+  deferrals, add a ticket reference and context: "# TODO(PROJ-123): ...".
+  Delete TODOs that no longer apply. Never leave auth bypasses or debug
+  shortcuts guarded only by a comment.
 
 tags:
   - maintainability

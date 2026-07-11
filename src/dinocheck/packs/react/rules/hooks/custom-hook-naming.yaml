@@ -3,29 +3,31 @@ name: Custom Hook Naming Convention
 level: minor
 category: maintainability
 description: |
-  Detects custom hooks that do not follow the "use" prefix convention.
-  React requires custom hooks to start with "use" so that the linter
-  and framework can enforce the Rules of Hooks. Functions that call
-  hooks but aren't named with "use" will not be checked for hook rule
-  violations.
+  Detects functions that call React hooks internally but are not named with
+  the "use" prefix. The prefix is how React tooling (eslint-plugin-react-hooks,
+  React DevTools, the compiler) recognizes a function as a hook, so a
+  mis-named hook silently escapes Rules-of-Hooks checking and misleads readers
+  into calling it like a regular utility function.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
+    - "**/*.tsx"
   code_patterns:
-    - "function \\w+.*\\{[\\s\\S]*use[A-Z]"
-    - "const \\w+ = \\(.*\\) =>.*use[A-Z]"
+    - 'function (?!use[A-Z])[a-z]\w*\([^)]*\)\s*\{[\s\S]{0,300}?\buse(State|Effect|LayoutEffect|Memo|Callback|Ref|Context|Reducer)\('
+    - 'const (?!use[A-Z])[a-z]\w*\s*=\s*(\([^)]*\)|\w+)\s*=>\s*\{[\s\S]{0,300}?\buse(State|Effect|LayoutEffect|Memo|Callback|Ref|Context|Reducer)\('
 
 checklist:
-  - Does the function call any React hooks (useState, useEffect, etc.)?
-  - Does the function name start with "use" followed by an uppercase letter?
-  - Is the function exported and intended to be reused as a hook?
-  - Could this function be confused with a regular utility function?
+  - Does a lowercase-named function (not a component) call React hooks like useState or useEffect?
+  - Does the function name start with "use" followed by an uppercase letter (useFetchData, not usefetchdata)?
+  - Could this function be mistaken for a plain utility and called from a conditional or loop?
+  - Conversely, is any function named useXxx that calls no hooks (misleading naming)?
 
 fix: |
-  Rename the function to start with "use" followed by an uppercase letter.
-  For example, rename fetchData() to useFetchData() if it calls React hooks
-  internally.
+  Rename the function to start with "use" plus an uppercase letter, e.g.
+  fetchUserData() -> useFetchUserData(), and update all call sites. If the
+  function does not actually need hooks, remove the hook calls instead and
+  keep it a plain function.
 
 tags:
   - hooks

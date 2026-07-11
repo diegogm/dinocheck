@@ -3,41 +3,35 @@ name: SQL Injection Review
 level: blocker
 category: security
 description: |
-  Reviews SQL query construction for injection vulnerabilities.
-
-  CRITICAL - DO NOT REPORT AS VULNERABILITY if:
-  - execute(query, params) has a second parameter - this IS SAFE, parameterized queries
-    prevent SQL injection by design. No additional validation needed.
-  - Values come from internal sources (config, DB queries, constants) - not user input
-
-  ONLY REPORT if: f-strings, .format(), or string concatenation with user input
-  is used WITHOUT a separate params argument.
+  Detects SQL queries built by interpolating values into the query string with
+  f-strings, .format(), % formatting, or concatenation. If any interpolated
+  value can be influenced by a user, the attacker rewrites the query - reading,
+  modifying, or deleting arbitrary data. Parameterized queries
+  (execute(query, params) with a separate params argument) are safe by design:
+  do NOT report them.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "execute\\("
+    - "execute\\(\\s*f[\"']"
+    - "(?i)f[\"'].{0,40}(SELECT|INSERT|UPDATE|DELETE|WHERE)\\b"
+    - "(?i)[\"'].{0,60}(SELECT|INSERT INTO|UPDATE|DELETE FROM).{0,80}[\"']\\s*(%|\\+|\\.format)"
     - "\\.raw\\("
-    - "cursor\\."
-    - "SELECT.*FROM"
-    - "INSERT.*INTO"
-    - "UPDATE.*SET"
-    - "DELETE.*FROM"
+    - "(?i)query\\s*=.*(%s|\\{).*(SELECT|FROM|WHERE)"
 
 checklist:
-  - Is the query built with string interpolation or concatenation?
-  - Does any interpolated value originate from user input (HTTP requests, CLI args, file uploads)?
-  - Could the query be refactored to use parameterized queries?
-  - If using ORM raw(), is the input properly escaped?
-  - Are there any dynamic table/column names from user input?
-  - Does execute() receive a second argument with parameters? If yes, it IS parameterized and SAFE
-  - Do dynamic values come only from internal sources (config, constants, other DB queries)? If yes, it is SAFE
+  - Is the SQL string built with an f-string, .format(), % formatting, or + concatenation that embeds a variable?
+  - Can any embedded value originate from user input (HTTP params/body, headers, CLI args, file uploads), directly or through intermediate variables?
+  - Does execute() receive values as a separate params argument? If yes, it is parameterized and SAFE - do not report.
+  - For dynamic identifiers (table/column names, ORDER BY), is there a strict allowlist? Identifiers cannot be parameterized.
+  - For Model.objects.raw() or extra(), are all values passed via the params argument rather than interpolated?
 
 fix: |
-  Always use parameterized queries. If dynamic SQL is unavoidable,
-  use allowlists for table/column names. Never trust user input
-  in any part of a SQL query.
+  Pass values as parameters: cursor.execute("SELECT ... WHERE name = %s", [name])
+  and Model.objects.raw(sql, params=[...]). For dynamic table/column names or
+  sort directions, map user input through a hardcoded allowlist dict. Never
+  interpolate request-derived strings into SQL, even "just for internal tools".
 
 tags:
   - security

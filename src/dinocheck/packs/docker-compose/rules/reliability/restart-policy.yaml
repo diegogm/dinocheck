@@ -3,18 +3,23 @@ name: Missing or incorrect restart policy
 level: minor
 category: reliability
 description: |
-  Without a restart policy, containers won't automatically recover from
-  crashes or host reboots. This leads to silent failures and service
-  unavailability. The default "no" restart policy is rarely what you want
-  in production.
+  Detects services without a restart policy or with a policy that masks
+  failures. The default ("no") means a crashed container stays down after a
+  crash or host reboot, causing silent outages. At the other extreme,
+  restart: always blindly loops forever on a service that can never start
+  (bad config, missing migration), hiding the root cause behind constant
+  restarts.
 checklist:
-  - Service has no restart policy defined.
-  - Using restart: always which retries forever even for broken configs.
-  - No consideration for how the service handles repeated restarts.
+  - Do long-running services meant to survive crashes/reboots lack a restart policy entirely?
+  - "Is restart: always used where unless-stopped would be more appropriate (always resurrects containers you stopped manually, after a daemon restart)?"
+  - "For services with known-fragile startup, would restart: on-failure with a retry cap surface config errors faster than infinite retries?"
+  - "Are one-shot containers (migrations, seed jobs) correctly left with the default restart policy 'no' so they do not re-run in a loop?"
 fix: |
-  Use restart: unless-stopped for most services. Use restart: on-failure
-  with max_retries for services that might have configuration issues.
-  Avoid restart: always as it can mask fundamental problems.
+  Use restart: unless-stopped for typical long-running services - it
+  restarts on crash and reboot but respects manual stops. Use
+  restart: on-failure:5 for services where repeated failure should become
+  visible instead of looping forever. Keep restart: "no" (default) for
+  one-shot jobs. Under Swarm, configure deploy.restart_policy instead.
 
 tags:
   - docker-compose
@@ -28,19 +33,22 @@ triggers:
     - "**/compose*.yml"
     - "**/compose*.yaml"
   code_patterns:
-    - "services:"
-    - "image:"
+    - "\\bservices:"
 
 examples:
   bad: |
     services:
       app:
         image: myapp
-        # No restart policy - won't restart on crash
+        # No restart policy: stays down after a crash or host reboot
+      worker:
+        image: myworker
+        restart: always   # loops forever even on unfixable config errors
   good: |
     services:
       app:
         image: myapp
         restart: unless-stopped
-        # Or with limits:
-        # restart: on-failure:5
+      worker:
+        image: myworker
+        restart: on-failure:5

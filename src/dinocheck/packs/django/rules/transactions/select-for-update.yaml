@@ -23,3 +23,18 @@ tags:
   - transactions
   - race-condition
   - concurrency
+
+examples:
+  bad: |
+    product = Product.objects.get(pk=pk)
+    if product.stock == 0:
+        raise OutOfStock()
+    product.stock -= 1  # another request may have taken the last unit
+    product.save()
+  good: |
+    with transaction.atomic():
+        product = Product.objects.select_for_update().get(pk=pk)
+        if product.stock == 0:
+            raise OutOfStock()
+        product.stock = F("stock") - 1
+        product.save()

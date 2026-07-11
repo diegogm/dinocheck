@@ -1,8 +1,9 @@
 """Dinocheck CLI entry point.
 
-Dinocheck is a vibe coding companion - an LLM-powered code critic that helps
-you catch issues while you code. It's designed to run alongside your development
-workflow, not to fix code for you.
+Dinocheck is a vibe coding companion - an agent-native code critic. Your AI
+coding agent performs the analysis through `dino brief` and `dino report`;
+dinocheck selects the files and rules, then validates, scores, and caches
+the findings. It never modifies code and needs no API keys.
 """
 
 from pathlib import Path
@@ -18,7 +19,7 @@ from dinocheck.core.config import ConfigManager
 # Create main app
 app = typer.Typer(
     name="dino",
-    help="Dinocheck: Your vibe coding companion - LLM-powered code critic",
+    help="Dinocheck: Your vibe coding companion - agent-native AI code critic",
     no_args_is_help=True,
     pretty_exceptions_enable=False,
     rich_markup_mode=None,
@@ -37,16 +38,6 @@ ConfigOption = Annotated[
     ),
 ]
 
-VerboseOption = Annotated[
-    int,
-    typer.Option(
-        "-v",
-        "--verbose",
-        count=True,
-        help="Increase verbosity (-v, -vv, -vvv)",
-    ),
-]
-
 QuietOption = Annotated[
     bool,
     typer.Option(
@@ -56,43 +47,30 @@ QuietOption = Annotated[
     ),
 ]
 
+DebugOption = Annotated[
+    bool,
+    typer.Option(
+        "--debug",
+        help="Write detailed debug log to dino.log",
+    ),
+]
+
+
+def _setup_debug(debug: bool) -> None:
+    """Enable debug logging when requested."""
+    if debug:
+        from dinocheck.core.logging import setup_logger
+
+        setup_logger(debug=True)
+        console.info("Debug mode enabled - writing to dino.log", err=True)
+
 
 @app.command()
-def check(
+def brief(
     paths: Annotated[
         list[Path] | None,
         typer.Argument(
             help="Files/directories to analyze (default: current directory)",
-        ),
-    ] = None,
-    format: Annotated[
-        str,
-        typer.Option(
-            "--format",
-            "-f",
-            help="Output format",
-            click_type=click.Choice(["text", "json", "jsonl"]),
-        ),
-    ] = "text",
-    pack: Annotated[
-        str | None,
-        typer.Option(
-            "--pack",
-            help="Run only specific pack(s), comma-separated",
-        ),
-    ] = None,
-    rule: Annotated[
-        str | None,
-        typer.Option(
-            "--rule",
-            help="Run only specific rule(s), comma-separated",
-        ),
-    ] = None,
-    budget: Annotated[
-        int | None,
-        typer.Option(
-            "--budget",
-            help="Override max LLM calls",
         ),
     ] = None,
     diff: Annotated[
@@ -102,6 +80,116 @@ def check(
             help="Only analyze files with local git changes",
         ),
     ] = False,
+    format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Brief format",
+            click_type=click.Choice(["markdown", "json"]),
+        ),
+    ] = "markdown",
+    embed_code: Annotated[
+        bool,
+        typer.Option(
+            "--embed-code",
+            help="Embed file contents in the brief (for agents without file access)",
+        ),
+    ] = False,
+    pack: Annotated[
+        str | None,
+        typer.Option(
+            "--pack",
+            help="Use only specific pack(s), comma-separated",
+        ),
+    ] = None,
+    rule: Annotated[
+        str | None,
+        typer.Option(
+            "--rule",
+            help="Use only specific rule(s), comma-separated",
+        ),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "-o",
+            "--output",
+            help="Write brief to file",
+        ),
+    ] = None,
+    config: ConfigOption = None,
+    quiet: QuietOption = False,
+    debug: DebugOption = False,
+) -> None:
+    """Generate a review brief for the host coding agent (step 1).
+
+    Selects the files to review and the rules that apply to each, and emits
+    the instructions the agent needs to perform the analysis itself. Submit
+    the agent's findings afterwards with 'dino report'.
+
+    Examples:
+        dino brief --diff -o .dinocheck/brief.md  # Changed files only
+        dino brief src/                           # Specific directory
+        dino brief --format json                  # Machine-readable brief
+    """
+    from dinocheck.core.cache import SQLiteCache
+    from dinocheck.core.config import AGENT_ANALYZER, DEFAULT_CACHE_DB
+    from dinocheck.core.planner import AnalysisPlanner
+    from dinocheck.llm.prompts import BriefBuilder
+
+    _setup_debug(debug)
+    cfg = ConfigManager(config).load()
+
+    if pack:
+        cfg.packs = [p.strip() for p in pack.split(",") if p.strip()]
+    rule_filter = [r.strip() for r in rule.split(",") if r.strip()] if rule else None
+
+    cache_path = Path(DEFAULT_CACHE_DB)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache = SQLiteCache(cache_path, ttl_hours=168)
+
+    planner = AnalysisPlanner(cfg, cache, analyzer=AGENT_ANALYZER)
+    plan = planner.plan(paths or [Path(".")], rule_filter=rule_filter, diff_only=diff)
+
+    if format == "json":
+        formatted = BriefBuilder.build_json(plan, cfg, embed_code=embed_code)
+    else:
+        formatted = BriefBuilder.build_markdown(plan, cfg, embed_code=embed_code)
+
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(formatted, encoding="utf-8")
+        if not quiet:
+            console.success(f"Brief written to {output}", err=True)
+    else:
+        print(formatted, end="")
+
+    if not quiet:
+        console.info(
+            f"{len(plan.tasks)} file(s) to review, {plan.cache_hits} cached, "
+            f"{plan.skipped_no_rules} skipped (no rules)",
+            err=True,
+        )
+
+
+@app.command()
+def report(
+    results: Annotated[
+        Path,
+        typer.Argument(
+            help="Agent results JSON file matching the brief's output contract",
+        ),
+    ],
+    format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Output format",
+            click_type=click.Choice(["text", "json", "jsonl"]),
+        ),
+    ] = "text",
     output: Annotated[
         Path | None,
         typer.Option(
@@ -110,122 +198,151 @@ def check(
             help="Write output to file",
         ),
     ] = None,
-    debug: Annotated[
-        bool,
+    fail_on: Annotated[
+        str | None,
         typer.Option(
-            "--debug",
-            help="Write detailed debug log to dino.log",
+            "--fail-on",
+            help="Exit with code 1 if any issue at this level or above is found",
+            click_type=click.Choice(["blocker", "critical", "major", "minor", "info"]),
         ),
-    ] = False,
-    no_cache: Annotated[
-        bool,
-        typer.Option(
-            "--no-cache",
-            help="Disable cache, re-analyze all files",
-        ),
-    ] = False,
+    ] = None,
     config: ConfigOption = None,
-    verbose: VerboseOption = 0,
     quiet: QuietOption = False,
+    debug: DebugOption = False,
 ) -> None:
-    """Analyze code with LLM-powered critique.
+    """Validate and score the host agent's findings (step 2).
 
-    Dinocheck sends your code to an LLM for intelligent review. It doesn't do
-    pattern matching - that's what other linters are for. Instead, it uses
-    GPT/Claude/local models to understand your code semantically.
+    Reads the results JSON the agent produced from a 'dino brief', validates
+    it against the output contract, converts it to issues, deduplicates,
+    scores, caches, and prints the formatted result. Validation problems are
+    reported precisely so the agent can fix the file and retry.
 
     Examples:
-        dino check                    # Check current directory
-        dino check src/               # Check specific directory
-        dino check views.py models.py # Check specific files
-        dino check --diff             # Only files with local changes
-        dino check --format json      # Output as JSON
-        dino check --pack django      # Use only Django rules
+        dino report .dinocheck/results.json
+        dino report results.json --format json
     """
-    from dinocheck.core.engine import Engine
-    from dinocheck.core.logging import setup_logger
+    import sys
+    import time as time_module
 
-    # Setup debug logging if requested
-    if debug:
-        setup_logger(debug=True)
-        console.info("Debug mode enabled - writing to dino.log", err=True)
+    from pydantic import ValidationError
 
-    # Load and validate config
-    config_manager = ConfigManager(config)
-    cfg = config_manager.load()
-    errors = config_manager.validate()
-    if errors:
-        for error in errors:
-            console.error(f"Config error: {error}")
-        raise typer.Exit(2)
+    from dinocheck.cli.formatters import get_formatter
+    from dinocheck.core.cache import SQLiteCache
+    from dinocheck.core.config import AGENT_ANALYZER, DEFAULT_CACHE_DB
+    from dinocheck.core.issue_factory import IssueFactory
+    from dinocheck.core.planner import AnalysisPlanner
+    from dinocheck.core.scoring import ScoreCalculator
+    from dinocheck.core.types import AnalysisResult, Issue
+    from dinocheck.llm.schemas import AgentReport, CriticResponse
 
-    # Override budget if specified
-    if budget is not None:
-        cfg.max_llm_calls = budget
+    _setup_debug(debug)
+    start_time = time_module.time()
+    cfg = ConfigManager(config).load()
 
-    # Filter packs if specified
-    if pack:
-        cfg.packs = [p.strip() for p in pack.split(",") if p.strip()]
-
-    # Run analysis
-    engine = Engine(cfg, debug=debug)
-
-    if not quiet:
-        console.info(f"Dinocheck v{__version__} - Analyzing...", err=True)
-
-    # Create progress callback for verbose mode
-    def on_progress(step: str, details: str) -> None:
-        if verbose >= 1:
-            # Handle file-specific progress with nicer formatting
-            if step == "file_skip":
-                # Parse: "path → 0 rules, skipped"
-                path = details.split(" → ")[0]
-                console.file_status(path, 0, "skip", err=True)
-            elif step == "file_cache":
-                # Parse: "path → N rules, cached"
-                parts = details.split(" → ")
-                path = parts[0]
-                rules = int(parts[1].split(" ")[0])
-                console.file_status(path, rules, "cache", err=True)
-            elif step == "file_analyze":
-                # Parse: "path → N rules, will analyze"
-                parts = details.split(" → ")
-                path = parts[0]
-                rules = int(parts[1].split(" ")[0])
-                console.file_status(path, rules, "analyze", err=True)
-            else:
-                console.step(step, details, err=True)
+    if str(results) == "-":
+        raw = sys.stdin.read()
+    else:
+        if not results.exists():
+            console.error(f"Results file not found: {results}")
+            raise typer.Exit(2)
+        raw = results.read_text(encoding="utf-8")
 
     try:
-        result = engine.analyze(
-            paths=paths or [Path(".")],
-            rule_filter=[r.strip() for r in rule.split(",") if r.strip()] if rule else None,
-            on_progress=on_progress if verbose and not quiet else None,
-            diff_only=diff,
-            no_cache=no_cache,
-        )
-    except Exception as e:
-        console.error(f"Analysis error: {e}")
-        if verbose:
-            import traceback
-
-            traceback.print_exc()
+        agent_report = AgentReport.model_validate_json(raw)
+    except ValidationError as e:
+        console.error("Results file does not match the output contract:")
+        for err in e.errors():
+            location = ".".join(str(part) for part in err["loc"]) or "<root>"
+            console.print(f"  {location}: {err['msg']}", err=True)
+        console.print("Fix the JSON and run 'dino report' again.", style="dim", err=True)
         raise typer.Exit(2) from None
 
-    # Format output
-    from dinocheck.cli.formatters import get_formatter
+    if not agent_report.files:
+        console.error("Report contains no files. Include one entry per file listed in the brief.")
+        raise typer.Exit(2)
+
+    cache_path = Path(DEFAULT_CACHE_DB)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache = SQLiteCache(cache_path, ttl_hours=168)
+
+    # Re-plan over the reported paths to recompute triggered rules and
+    # cache keys from the files' CURRENT content
+    planner = AnalysisPlanner(cfg, cache, analyzer=AGENT_ANALYZER)
+    report_paths = [Path(f.path) for f in agent_report.files]
+    plan = planner.plan(report_paths, no_cache=True)
+    tasks_by_path = {str(task.file_ctx.path): task for task in plan.tasks}
+
+    factory = IssueFactory()
+    warnings: list[str] = []
+    all_issues: list[Issue] = []
+    files_processed = 0
+
+    for file_report in agent_report.files:
+        task = tasks_by_path.get(file_report.path)
+        if task is None:
+            warnings.append(
+                f"{file_report.path}: file not found or no applicable rules - entry ignored"
+            )
+            continue
+
+        response = CriticResponse(issues=file_report.issues)
+        issues, issue_warnings = factory.create_issues(
+            response,
+            task.file_ctx,
+            plan.pack_name,
+            source="agent",
+            allowed_rule_ids={rule.id for rule in task.rules},
+        )
+        warnings.extend(issue_warnings)
+        all_issues.extend(issues)
+        cache.put(task.file_hash, task.rules_hash, AGENT_ANALYZER, issues)
+        files_processed += 1
+
+    final_issues = factory.finalize(all_issues, disabled_rules=cfg.disabled_rules)
+    score = ScoreCalculator().calculate(final_issues)
+    duration_ms = int((time_module.time() - start_time) * 1000)
+
+    cache.log_run(
+        analyzer=AGENT_ANALYZER,
+        pack=plan.pack_name,
+        files=[str(p) for p in report_paths],
+        duration_ms=duration_ms,
+        issues_found=len(final_issues),
+    )
+
+    for warning in warnings:
+        console.warning(warning, err=True)
+
+    result = AnalysisResult(
+        issues=final_issues,
+        score=score,
+        meta={
+            "files_analyzed": files_processed,
+            "duration_ms": duration_ms,
+            "analyzer": AGENT_ANALYZER,
+        },
+    )
 
     formatter = get_formatter(format)
     formatted = formatter.format(result)
 
-    # Write output
     if output:
         output.write_text(formatted)
         if not quiet:
             console.success(f"Output written to {output}")
     else:
-        # Print directly - formatted already contains ANSI codes from Rich
         print(formatted, end="")
+
+    if fail_on:
+        from dinocheck.core.issue_factory import SEVERITY_ORDER
+
+        threshold = SEVERITY_ORDER.index(fail_on)
+        failing = [i for i in final_issues if SEVERITY_ORDER.index(i.level.value) <= threshold]
+        if failing:
+            console.error(
+                f"{len(failing)} issue(s) at level '{fail_on}' or above",
+            )
+            raise typer.Exit(1)
 
 
 # Packs subcommand
@@ -355,7 +472,7 @@ def cache_clear(
 
 
 # Logs subcommand
-logs_app = typer.Typer(help="View LLM call history")
+logs_app = typer.Typer(help="View analysis run history")
 app.add_typer(logs_app, name="logs")
 
 
@@ -370,41 +487,39 @@ def logs_list(
         ),
     ] = 20,
 ) -> None:
-    """List recent LLM calls."""
+    """List recent analysis runs."""
     from dinocheck.core.cache import SQLiteCache
     from dinocheck.core.config import DEFAULT_CACHE_DB
 
     cache = SQLiteCache(Path(DEFAULT_CACHE_DB), ttl_hours=168)
-    logs = cache.get_llm_logs(limit)
+    runs = cache.get_runs(limit)
 
-    if not logs:
-        console.info("No LLM calls logged yet")
+    if not runs:
+        console.info("No analysis runs logged yet")
         return
 
     table = console.table(
-        title="Recent LLM Calls",
+        title="Recent Analysis Runs",
         columns=[
             ("ID", "dim"),
             ("Timestamp", ""),
-            ("Model", "cyan"),
+            ("Analyzer", "cyan"),
             ("Pack", ""),
             ("Files", ""),
-            ("Tokens", ""),
-            ("Cost", "green"),
+            ("Duration", ""),
             ("Issues", "yellow"),
         ],
     )
 
-    for log in logs:
+    for run in runs:
         table.add_row(
-            log.id[:8],
-            log.timestamp[:19],
-            log.model,
-            log.pack,
-            str(len(log.files)),
-            str(log.total_tokens),
-            f"${log.cost_usd:.4f}",
-            str(log.issues_found),
+            run.id[:8],
+            run.timestamp[:19],
+            run.analyzer,
+            run.pack,
+            str(len(run.files)),
+            f"{run.duration_ms}ms",
+            str(run.issues_found),
         )
 
     console.print_table(table)
@@ -412,65 +527,31 @@ def logs_list(
 
 @logs_app.command("show")
 def logs_show(
-    log_id: Annotated[str, typer.Argument(help="Log ID (partial match)")],
+    run_id: Annotated[str, typer.Argument(help="Run ID (partial match)")],
 ) -> None:
-    """Show details of a specific LLM call."""
+    """Show details of a specific analysis run."""
     from dinocheck.core.cache import SQLiteCache
     from dinocheck.core.config import DEFAULT_CACHE_DB
 
     cache = SQLiteCache(Path(DEFAULT_CACHE_DB), ttl_hours=168)
-    log = cache.get_llm_log(log_id)
+    run = cache.get_run(run_id)
 
-    if not log:
-        console.error(f"Log not found: {log_id}")
+    if not run:
+        console.error(f"Run not found: {run_id}")
         raise typer.Exit(2)
 
-    console.header(f"LLM Call {log.id[:12]}...")
+    console.header(f"Analysis Run {run.id[:12]}...")
 
-    console.status_line("Timestamp", log.timestamp)
-    console.status_line("Model", log.model, style="cyan")
-    console.status_line("Pack", log.pack)
-    console.status_line("Duration", f"{log.duration_ms}ms")
-
-    console.print()
-    console.status_line(
-        "Tokens",
-        f"{log.prompt_tokens} prompt + {log.completion_tokens} completion = {log.total_tokens}",
-    )
-    console.status_line("Cost", f"${log.cost_usd:.4f}", style="green")
-    console.status_line("Issues found", str(log.issues_found), style="yellow")
+    console.status_line("Timestamp", run.timestamp)
+    console.status_line("Analyzer", run.analyzer, style="cyan")
+    console.status_line("Pack", run.pack)
+    console.status_line("Duration", f"{run.duration_ms}ms")
+    console.status_line("Issues found", str(run.issues_found), style="yellow")
 
     console.print()
     console.print("Files analyzed:", style="bold")
-    for f in log.files:
+    for f in run.files:
         console.print(f"  - {f}", style="dim")
-
-
-@logs_app.command("cost")
-def logs_cost(
-    days: Annotated[
-        int,
-        typer.Option(
-            "-d",
-            "--days",
-            help="Number of days to summarize",
-        ),
-    ] = 30,
-) -> None:
-    """Show cost summary."""
-    from dinocheck.core.cache import SQLiteCache
-    from dinocheck.core.config import DEFAULT_CACHE_DB
-
-    cache = SQLiteCache(Path(DEFAULT_CACHE_DB), ttl_hours=168)
-    summary = cache.get_cost_summary(days)
-
-    console.header(f"Cost Summary (Last {days} Days)")
-
-    console.status_line("Total Calls", str(summary.total_calls))
-    console.status_line("Total Tokens", f"{summary.total_tokens:,}")
-    console.status_line("Total Cost", f"${summary.total_cost:.4f}", style="green")
-    console.status_line("Avg Cost/Call", f"${summary.avg_cost_per_call:.4f}", style="dim")
-    console.status_line("Issues Found", str(summary.total_issues), style="yellow")
 
 
 @app.command()
@@ -571,6 +652,9 @@ def init(
     default_config = """\
 # Dinocheck - Your vibe coding companion
 # https://github.com/diegogm/dinocheck
+#
+# Dinocheck is agent-native: your AI coding agent performs the review via
+# 'dino brief' + 'dino report'. No API keys, no model configuration.
 
 # All rule packs are enabled by default.
 # To exclude specific packs, uncomment and add to exclude_packs:
@@ -578,13 +662,8 @@ def init(
 #   - vue
 #   - django
 
-# LLM configuration
-model: openai/gpt-5.2-codex  # Or: anthropic/claude-3-5-sonnet, ollama/llama3
-# base_url: https://api.example.com/v1  # Custom OpenAI-compatible endpoint
+# Response language for issue explanations
 language: en
-
-# Analysis budget (max LLM calls per run)
-max_llm_calls: 10
 
 # Analyze only specific directories (default: current directory)
 # include_paths:
@@ -605,21 +684,34 @@ max_llm_calls: 10
     config_path.write_text(default_config)
     console.success(f"Created config: {config_path}")
 
+    # Keep the local cache out of version control
+    gitignore = path / ".gitignore"
+    ignore_entry = ".dinocheck/"
+    if gitignore.exists():
+        lines = gitignore.read_text(encoding="utf-8").splitlines()
+        if ignore_entry not in (line.strip() for line in lines):
+            with gitignore.open("a", encoding="utf-8") as f:
+                f.write(f"\n# Dinocheck local cache\n{ignore_entry}\n")
+            console.print(f"  Added {ignore_entry} to .gitignore", style="dim")
+    else:
+        gitignore.write_text(f"# Dinocheck local cache\n{ignore_entry}\n", encoding="utf-8")
+        console.print(f"  Created .gitignore with {ignore_entry}", style="dim")
+
     # Offer to create skills for detected agents
     agent_configs = [
-        ("Claude Code", path / ".claude", _create_claude_skill),
-        ("OpenAI Codex", path / ".codex", _create_codex_skill),
-        ("Gemini CLI", path / ".gemini", _create_gemini_skill),
+        ("Claude Code", "claude", path / ".claude"),
+        ("OpenAI Codex", "codex", path / ".codex"),
+        ("Gemini CLI", "gemini", path / ".gemini"),
     ]
 
-    for agent_name, agent_dir, create_fn in agent_configs:
+    for agent_name, agent, agent_dir in agent_configs:
         if agent_dir.is_dir():
             create_skill = typer.confirm(
                 f"\nDetected {agent_dir.name} folder. Create a {agent_name} skill for dinocheck?",
                 default=True,
             )
             if create_skill:
-                create_fn(path, agent_dir, force)
+                _create_skill(agent, agent_dir, force)
 
 
 @app.command()
@@ -662,27 +754,27 @@ def skill(
     agents_created = []
 
     # Define agent configurations
-    agent_configs = {
-        "claude": (path / ".claude", _create_claude_skill),
-        "codex": (path / ".codex", _create_codex_skill),
-        "gemini": (path / ".gemini", _create_gemini_skill),
+    agent_dirs = {
+        "claude": path / ".claude",
+        "codex": path / ".codex",
+        "gemini": path / ".gemini",
     }
 
     if agent:
         # Specific agent requested
-        agent_dir, create_fn = agent_configs[agent]
+        agent_dir = agent_dirs[agent]
         if not agent_dir.is_dir():
             console.error(f"Agent folder not found: {agent_dir}")
             console.print(f"Create it with: mkdir {agent_dir}", style="dim")
             raise typer.Exit(1)
-        if create_fn(path, agent_dir, force):
+        if _create_skill(agent, agent_dir, force):
             agents_created.append(agent)
     else:
         # Auto-detect agents
-        for agent_name, (agent_dir, create_fn) in agent_configs.items():
+        for agent_name, agent_dir in agent_dirs.items():
             if agent_dir.is_dir():
                 agents_found.append(agent_name)
-                if create_fn(path, agent_dir, force):
+                if _create_skill(agent_name, agent_dir, force):
                     agents_created.append(agent_name)
 
         if not agents_found:
@@ -696,174 +788,18 @@ def skill(
         console.info("All skills already exist. Use --force to overwrite.")
 
 
-def _create_claude_skill(path: Path, claude_dir: Path, force: bool) -> bool:
-    """Create Claude Code skill. Returns True if created."""
-    skill_dir = claude_dir / "skills" / "dinocheck"
+def _create_skill(agent: str, agent_dir: Path, force: bool) -> bool:
+    """Create an agent skill from the packaged template. Returns True if created."""
+    from dinocheck.skills.loader import SkillTemplates
+
+    skill_dir = agent_dir / "skills" / "dinocheck"
     skill_file = skill_dir / "SKILL.md"
 
     if skill_file.exists() and not force:
         return False
 
-    skill_content = """\
----
-name: dinocheck
-description: >
-  Run LLM-powered code review with dinocheck. Use when you finish writing code,
-  before committing, or when the user asks to review, check, or analyze code quality.
-allowed-tools: Bash(dino:*)
----
-
-# Dinocheck - LLM Code Review
-
-Run dinocheck to get AI-powered code review feedback.
-
-## When to use
-
-- After writing or modifying code
-- Before committing changes
-- When asked to review code quality
-- When looking for potential bugs or improvements
-
-## Commands
-
-```bash
-# Check current directory
-dino check
-
-# Check specific files or directories
-dino check src/
-
-# Check only changed files (git diff)
-dino check --diff
-
-# Verbose output with progress
-dino check -v
-```
-
-## Workflow
-
-1. Run `dino check` on the relevant code
-2. Review the issues found
-3. Address critical and major issues first
-4. Use `dino explain <rule-id>` for more details on any rule
-"""
-
     skill_dir.mkdir(parents=True, exist_ok=True)
-    skill_file.write_text(skill_content)
-    console.print(f"  Created: {skill_file}", style="dim")
-    return True
-
-
-def _create_codex_skill(path: Path, codex_dir: Path, force: bool) -> bool:
-    """Create OpenAI Codex skill. Returns True if created."""
-    skill_dir = codex_dir / "skills" / "dinocheck"
-    skill_file = skill_dir / "SKILL.md"
-
-    if skill_file.exists() and not force:
-        return False
-
-    skill_content = """\
----
-name: dinocheck
-description: >
-  Run LLM-powered code review with dinocheck. Use when you finish writing code,
-  before committing, or when the user asks to review, check, or analyze code quality.
----
-
-# Dinocheck - LLM Code Review
-
-Run dinocheck to get AI-powered code review feedback.
-
-## When to use
-
-- After writing or modifying code
-- Before committing changes
-- When asked to review code quality
-- When looking for potential bugs or improvements
-
-## Commands
-
-```bash
-# Check current directory
-dino check
-
-# Check specific files or directories
-dino check src/
-
-# Check only changed files (git diff)
-dino check --diff
-
-# Verbose output with progress
-dino check -v
-```
-
-## Workflow
-
-1. Run `dino check` on the relevant code
-2. Review the issues found
-3. Address critical and major issues first
-4. Use `dino explain <rule-id>` for more details on any rule
-"""
-
-    skill_dir.mkdir(parents=True, exist_ok=True)
-    skill_file.write_text(skill_content)
-    console.print(f"  Created: {skill_file}", style="dim")
-    return True
-
-
-def _create_gemini_skill(path: Path, gemini_dir: Path, force: bool) -> bool:
-    """Create Gemini CLI skill. Returns True if created."""
-    skill_dir = gemini_dir / "skills" / "dinocheck"
-    skill_file = skill_dir / "SKILL.md"
-
-    if skill_file.exists() and not force:
-        return False
-
-    skill_content = """\
----
-name: dinocheck
-description: >
-  Run LLM-powered code review with dinocheck. Use when you finish writing code,
-  before committing, or when the user asks to review, check, or analyze code quality.
----
-
-# Dinocheck - LLM Code Review
-
-Run dinocheck to get AI-powered code review feedback.
-
-## When to use
-
-- After writing or modifying code
-- Before committing changes
-- When asked to review code quality
-- When looking for potential bugs or improvements
-
-## Commands
-
-```bash
-# Check current directory
-dino check
-
-# Check specific files or directories
-dino check src/
-
-# Check only changed files (git diff)
-dino check --diff
-
-# Verbose output with progress
-dino check -v
-```
-
-## Workflow
-
-1. Run `dino check` on the relevant code
-2. Review the issues found
-3. Address critical and major issues first
-4. Use `dino explain <rule-id>` for more details on any rule
-"""
-
-    skill_dir.mkdir(parents=True, exist_ok=True)
-    skill_file.write_text(skill_content)
+    skill_file.write_text(SkillTemplates.get(agent), encoding="utf-8")
     console.print(f"  Created: {skill_file}", style="dim")
     return True
 

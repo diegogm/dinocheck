@@ -3,30 +3,33 @@ name: Business Logic Review
 level: major
 category: correctness
 description: |
-  Reviews business logic for correctness, edge cases, and potential
-  bugs. This is where LLM analysis shines - understanding intent
-  and spotting logical errors that pass all syntax checks.
+  Reviews the core business logic of functions and service classes for semantic
+  correctness: wrong formulas, missing branches, invalid state transitions, and
+  off-by-one errors. These bugs pass type checkers and syntax linters because the
+  code is well-formed - only understanding the intent reveals that the behavior
+  is wrong.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
     - "def (process|handle|execute|run|perform|calculate|compute)"
-    - "def (create|update|delete|save|submit)"
+    - "def (create|update|delete|save|submit|apply|charge|refund|transfer)"
     - "def (validate|check|verify|ensure)"
-    - "class .*(Service|Handler|Processor|Manager)"
+    - "class \\w*(Service|Handler|Processor|Manager|Policy)\\b"
 
 checklist:
-  - Are all edge cases handled (empty, null, zero, negative)?
-  - Is the algorithm correct for boundary conditions?
-  - Are there off-by-one errors in loops or slicing?
-  - Could floating-point precision cause issues in financial code?
-  - Are state transitions valid and complete?
+  - Does the implementation actually compute what the function name and docstring promise?
+  - Are boundary conditions correct (first/last element, inclusive vs exclusive ranges, off-by-one in loops and slicing)?
+  - Are all inputs handled, including empty, None, zero, and negative values?
+  - Is float arithmetic used where money or exact quantities require Decimal?
+  - If the code models a state machine, are all transitions valid and is every state reachable/exitable?
 
 fix: |
-  Add explicit handling for edge cases. Use Decimal for financial
-  calculations. Add assertions or validation for preconditions.
-  Consider property-based testing for complex logic.
+  Correct the logic to match the documented intent. Add explicit early returns
+  for edge cases (empty, None, zero, negative). Use decimal.Decimal for money.
+  For range logic, state inclusivity explicitly in a comment or use half-open
+  intervals consistently. Add a regression test that pins the corrected behavior.
 
 tags:
   - correctness
@@ -36,11 +39,10 @@ tags:
 examples:
   bad: |
     def calculate_discount(price, quantity):
-        return price * quantity * 0.1  # What if quantity is 0?
+        return price * quantity * 0.1  # float money, no tiers, negative quantity accepted
   good: |
-    def calculate_discount(price, quantity):
+    def calculate_discount(price: Decimal, quantity: int) -> Decimal:
         if quantity <= 0:
             return Decimal("0")
-        if quantity >= 100:
-            return price * quantity * Decimal("0.2")
-        return price * quantity * Decimal("0.1")
+        rate = Decimal("0.2") if quantity >= 100 else Decimal("0.1")
+        return price * quantity * rate

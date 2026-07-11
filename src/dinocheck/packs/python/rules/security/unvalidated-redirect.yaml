@@ -1,11 +1,12 @@
 id: python/unvalidated-redirect
 name: Unvalidated Redirect (Open Redirect)
-level: critical
+level: major
 category: security
 description: |
-  Detects redirects to URLs from user input without validation.
-  Open redirects can be used for phishing attacks by making
-  malicious links appear to come from a trusted domain.
+  Detects redirects whose target URL comes from user input (typically a ?next=
+  or return_url parameter) without host validation. Attackers craft links on
+  your trusted domain that bounce victims to a phishing site, and open
+  redirects can also be chained to steal OAuth tokens or bypass URL allowlists.
 
 triggers:
   file_patterns:
@@ -14,21 +15,21 @@ triggers:
     - "redirect\\("
     - "HttpResponseRedirect"
     - "RedirectView"
-    - "next="
-    - "return_url"
-    - "redirect_to"
+    - "[\"'](next|return_url|redirect_to|callback_url|continue)[\"']"
 
 checklist:
-  - Is the redirect URL from user input (query params, form)?
-  - Is the URL validated against a whitelist of allowed domains?
-  - Could a relative URL be interpreted as absolute?
-  - Are protocol-relative URLs (//) blocked?
-  - Is url_has_allowed_host_and_scheme() used?
+  - Does the redirect target come from a query parameter, form field, or header (next, return_url, referer)?
+  - Is the URL validated against the app's own host(s), e.g. with Django's url_has_allowed_host_and_scheme()?
+  - Are absolute URLs (https://evil.com), protocol-relative URLs (//evil.com), and backslash tricks (/\evil.com) rejected?
+  - Is there a safe fallback destination when validation fails, instead of trusting the raw value?
+  - Is this redirect part of an auth/OAuth flow where an open redirect leaks tokens or codes in the fragment/query?
 
 fix: |
-  Validate redirect URLs against allowed hosts. Use Django's
-  url_has_allowed_host_and_scheme(). Prefer relative URLs.
-  Never redirect to arbitrary user-provided URLs.
+  Validate before redirecting: in Django, use
+  url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()},
+  require_https=True) and fall back to a fixed path ('/') when it fails.
+  Prefer redirecting to named routes or an allowlist of internal paths over
+  accepting arbitrary URLs.
 
 tags:
   - security
@@ -41,7 +42,7 @@ examples:
         next_url = request.GET.get('next', '/')
         if authenticate(request):
             return redirect(next_url)  # Open redirect!
-        # Attacker: /login?next=https://evil.com/steal-creds
+        # Attacker link: /login?next=https://evil.com/steal-creds
   good: |
     from django.utils.http import url_has_allowed_host_and_scheme
 

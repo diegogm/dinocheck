@@ -8,64 +8,34 @@ pip install dinocheck
 uv add dinocheck
 ```
 
-## Configuration
+## How it works
 
-### Create configuration file
+Dinocheck is agent-native: your AI coding agent (Claude Code, Codex, Gemini
+CLI) performs the review itself. Zero config - no API keys, no model setup,
+no external LLM calls.
 
-```bash
-dino init
-```
-
-This creates a `dino.yaml` file in your project root.
-
-### Set your API key
+## Setup
 
 ```bash
-# OpenAI
-export OPENAI_API_KEY=sk-...
-
-# Anthropic
-export ANTHROPIC_API_KEY=sk-ant-...
-
-# Or use a local model with Ollama (no API key needed)
+dino init    # creates dino.yaml and offers to create the agent skill
+# or just:
+dino skill   # creates the skill for detected agents (.claude/.codex/.gemini)
 ```
 
-### Example `dino.yaml`
-
-```yaml
-# All packs enabled by default. Exclude what you don't need:
-# exclude_packs:
-#   - vue
-#   - django
-
-model: openai/gpt-5.2-codex  # or anthropic/claude-3-5-sonnet, ollama/llama3
-language: en
-```
-
-## Basic Usage
+That's it. When you ask your agent to review code (or it decides to check its
+own work), the skill runs this loop:
 
 ```bash
-# Analyze current directory
-dino check
+# 1. Dinocheck selects the files and the rules that apply to each
+dino brief --diff -o .dinocheck/brief.md
 
-# Analyze specific files
-dino check src/views.py src/models.py
+# 2. The agent reads the brief and analyzes each file with its checklists
 
-# Only analyze changed files (git diff)
-dino check --diff
-
-# Verbose output (show progress)
-dino check -v
-
-# Debug mode (detailed logs in dino.log)
-dino check --debug
-
-# Output as JSON
-dino check --format json
-
-# View LLM costs
-dino logs cost
+# 3. Dinocheck validates the findings, scores, caches, and prints the result
+dino report .dinocheck/results.json
 ```
+
+You can also run `dino brief` yourself and paste the brief into any assistant.
 
 ## Output Formats
 
@@ -75,7 +45,10 @@ dino logs cost
 | `json` | Full JSON for tooling integration |
 | `jsonl` | JSON Lines for streaming |
 
-## GitHub Actions Integration
+## CI Integration
+
+Dinocheck needs an AI coding agent to perform the analysis, so in CI you run
+it through an agent CLI (e.g. Claude Code in headless mode):
 
 ```yaml
 name: Dinocheck
@@ -89,7 +62,10 @@ jobs:
       - uses: astral-sh/setup-uv@v5
 
       - run: uv add dinocheck
-      - run: uv run dino check --diff
+      - run: uv run dino skill --agent claude
+      - run: |
+          claude -p "Run the dinocheck skill on the files changed in this PR \
+            and summarize the findings. Fail only on blocker or critical issues."
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```

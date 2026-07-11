@@ -3,17 +3,23 @@ name: Unsafe innerHTML usage
 level: critical
 category: security
 description: |
-  Setting innerHTML with user-controlled content creates XSS vulnerabilities.
-  Attackers can inject malicious scripts that execute in users' browsers,
-  stealing credentials or performing actions on their behalf.
+  Detects HTML injected into the DOM from dynamic strings: innerHTML /
+  outerHTML assignments, insertAdjacentHTML, and React's
+  dangerouslySetInnerHTML. If any part of the string is user-controlled, the
+  attacker's markup and script handlers execute in other users' browsers
+  (XSS), enabling session theft and account takeover.
 checklist:
-  - innerHTML set with user input or external data.
-  - Template strings containing user data assigned to innerHTML.
-  - dangerouslySetInnerHTML in React without sanitization.
+  - Is innerHTML/outerHTML assigned or insertAdjacentHTML called with a non-constant string?
+  - Does the string interpolate user input, API data, or URL parameters (template literals are the usual path)?
+  - Is the content sanitized with DOMPurify (or equivalent) immediately before insertion?
+  - Would textContent suffice because the content is plain text, not markup?
+  - In React code, is dangerouslySetInnerHTML fed unsanitized data?
 fix: |
-  Use textContent for plain text. For HTML content, use a sanitizer like
-  DOMPurify. In React, avoid dangerouslySetInnerHTML when possible, or
-  sanitize the content first.
+  Use textContent (or DOM APIs like createElement/append) for plain text —
+  it cannot execute. When real HTML must be rendered, sanitize at the point
+  of insertion: element.innerHTML = DOMPurify.sanitize(html). In React,
+  prefer JSX rendering; if dangerouslySetInnerHTML is unavoidable, pass only
+  sanitized content.
 
 tags:
   - typescript
@@ -25,13 +31,13 @@ triggers:
     - "**/*.ts"
     - "**/*.tsx"
     - "**/*.mts"
+    - "**/*.cts"
     - "**/*.js"
     - "**/*.jsx"
   code_patterns:
-    - "innerHTML"
-    - "outerHTML"
-    - "dangerouslySetInnerHTML"
-    - "insertAdjacentHTML"
+    - '\.(innerHTML|outerHTML)\s*='
+    - 'dangerouslySetInnerHTML'
+    - 'insertAdjacentHTML\('
 
 examples:
   bad: |

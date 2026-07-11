@@ -6,42 +6,6 @@ import pytest
 
 from dinocheck.core.config import DinocheckConfig
 from dinocheck.core.types import Issue, IssueLevel, Location
-from dinocheck.providers.mock import MockProvider
-
-
-@pytest.fixture
-def mock_provider():
-    """Mock LLM provider with deterministic responses."""
-    return MockProvider(
-        responses={
-            "n-plus-one": {
-                "issues": [
-                    {
-                        "rule_id": "django/n-plus-one",
-                        "level": "major",
-                        "location": {"start_line": 5, "end_line": 7},
-                        "title": "N+1 query in loop",
-                        "why": "Accessing author inside loop causes N+1 queries",
-                        "do": ["Add select_related('author')"],
-                        "confidence": 0.95,
-                    }
-                ]
-            },
-            "ownership": {
-                "issues": [
-                    {
-                        "rule_id": "django/missing-ownership-filter",
-                        "level": "blocker",
-                        "location": {"start_line": 10, "end_line": 12},
-                        "title": "ViewSet missing ownership filter",
-                        "why": "Returns all records without filtering by user",
-                        "do": ["Override get_queryset to filter by request.user"],
-                        "confidence": 0.98,
-                    }
-                ]
-            },
-        }
-    )
 
 
 @pytest.fixture
@@ -49,8 +13,6 @@ def sample_config(tmp_path):
     """Sample configuration for testing."""
     return DinocheckConfig(
         packs=["python", "django"],
-        model="mock/test-model",
-        max_llm_calls=3,
     )
 
 
