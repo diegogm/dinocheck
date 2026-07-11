@@ -1,0 +1,832 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Agent-native AI code critic for vibe coding">
+      
+      
+      
+        <link rel="canonical" href="https://diegogm.github.io/dinocheck/plan-agent-native-mode/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Plan: Agent-Native Mode (zero-config, host-model analysis) - Dinocheck</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="green" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#plan-agent-native-mode-zero-config-host-model-analysis" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Dinocheck" class="md-header__button md-logo" aria-label="Dinocheck" data-md-component="logo">
+      
+  <img src="../assets/favicon.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dinocheck
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Plan: Agent-Native Mode (zero-config, host-model analysis)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/diegogm/dinocheck" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    diegogm/dinocheck
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Dinocheck" class="md-nav__button md-logo" aria-label="Dinocheck" data-md-component="logo">
+      
+  <img src="../assets/favicon.png" alt="logo">
+
+    </a>
+    Dinocheck
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/diegogm/dinocheck" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    diegogm/dinocheck
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-concept" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Concept
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-why-this-shape-alternatives-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Why this shape (alternatives considered)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-refactor-split-the-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Refactor: split the Engine
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-new-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. New commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. New commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dino-brief-paths-diff-format-markdownjson-embed-code-o-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dino brief [PATHS] [--diff] [--format markdown|json] [--embed-code] [-o FILE]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dino-report-resultsjson-format-textjsonjsonl-o-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dino report RESULTS.json [--format text|json|jsonl] [-o FILE]
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-config-validation-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Config &amp; validation changes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-skill-rewrite-the-integration-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Skill rewrite (the integration surface)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-cache-correctness-pre-existing-gap-becomes-critical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Cache correctness (pre-existing gap, becomes critical)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-bugs-cleanups-to-fix-along-the-way" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Bugs &amp; cleanups to fix along the way
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-phases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Phases
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Risks
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="plan-agent-native-mode-zero-config-host-model-analysis">Plan: Agent-Native Mode (zero-config, host-model analysis)</h1>
+<p><strong>Status:</strong> Implemented (all phases). <strong>Superseded in part:</strong> API mode was
+subsequently removed entirely (irreversible product decision) - dinocheck is
+agent-native only. Sections mentioning <code>mode: api</code>, the Engine, or LiteLLM
+describe a transitional state that no longer exists.
+<strong>Goal:</strong> Remove the hard dependency on an external LLM API. When dinocheck runs
+inside an AI coding agent (Claude Code, Codex, Gemini CLI), the <em>host model
+itself</em> performs the analysis. Dinocheck's job becomes: select files, select
+rules, produce a precise review brief, then validate/score/cache the results
+the agent produces. Zero configuration, zero API keys → much lower adoption
+friction.</p>
+<hr />
+<h2 id="1-concept">1. Concept</h2>
+<p>Today the pipeline is:</p>
+<div class="highlight"><pre><span></span><code>discover files → match rules → cache check → [LiteLLM call per file] → issues → score → format
+</code></pre></div>
+<p>The proposal splits the pipeline at the LLM boundary and exposes both halves
+as CLI commands, so any host agent can be the "executor" in the middle:</p>
+<div class="highlight"><pre><span></span><code>dino brief   →  (host model analyzes)  →  dino report
+─────────────                             ──────────────
+discover files                            validate JSON against schema
+match rules per file                      convert to Issue objects
+cache check                               dedupe + limit + score
+emit review brief                         write cache
+                                          format (text/json/jsonl)
+</code></pre></div>
+<p>Everything deterministic stays in dinocheck (triggers, cache, scoring,
+dedup, formatting). Only the semantic judgment moves to the host model.</p>
+<p>Key insight: <strong>the brief does not need to embed file contents.</strong> The host
+agent already has file access — the brief lists file paths, the full text of
+each applicable rule (description, checklist, fix, examples), and the exact
+output contract. This keeps the brief small even for large changesets. An
+<code>--embed-code</code> flag covers agents without filesystem access.</p>
+<h2 id="2-why-this-shape-alternatives-considered">2. Why this shape (alternatives considered)</h2>
+<ul>
+<li><strong>A. Two-command CLI handshake (<code>brief</code>/<code>report</code>) — chosen.</strong> Agent-agnostic
+  (works identically for Claude/Codex/Gemini skills), preserves cache/score/
+  dedup/formatters, fully testable without any model.</li>
+<li><strong>B. Pure skill (ship rules inside SKILL.md, no CLI).</strong> Zero install, but
+  loses cache, scoring, triggers, dedup, and 135 rules don't fit in a skill
+  context. Rejected.</li>
+<li><strong>C. MCP server.</strong> Requires server registration per agent → reintroduces the
+  configuration burden the feature is meant to remove. Rejected for now; the
+  CLI handshake doesn't preclude adding MCP later on top of the same planner.</li>
+</ul>
+<p><strong>API mode stays as a secondary path</strong> (config <code>mode: api</code>) because headless
+environments (CI) have no host model. Default behavior: <code>mode: agent</code>. This is
+a product decision that can be revisited — if API mode is dropped entirely,
+delete <code>providers/</code>, <code>max_llm_calls</code>, cost tracking, and the ThreadPool
+executor in a follow-up.</p>
+<h2 id="3-refactor-split-the-engine">3. Refactor: split the Engine</h2>
+<p><code>Engine.analyze()</code> (engine.py:70) currently interleaves planning and
+execution. Extract:</p>
+<ul>
+<li><strong><code>core/planner.py</code> — <code>AnalysisPlanner</code></strong>: steps 0–3 of today's
+  <code>analyze()</code> (include_paths, pack composition, discovery, rule triggering,
+  rule_filter, cache lookup). Returns an <code>AnalysisPlan</code>.</li>
+<li><strong><code>core/types/analysis_plan.py</code> — <code>AnalysisPlan</code></strong>: <code>tasks:
+  list[FileAnalysisTask]</code>, <code>cached_issues: list[Issue]</code>, counters
+  (skipped/cached/pending).</li>
+<li><strong><code>core/types/file_analysis_task.py</code> — <code>FileAnalysisTask</code></strong>: <code>file_ctx</code>,
+  <code>rules</code>, <code>file_hash</code>, <code>rules_hash</code>.</li>
+<li><strong><code>core/issue_factory.py</code> — <code>IssueFactory</code></strong>: today's
+  <code>Engine._response_to_issues</code> + <code>_deduplicate</code> + <code>_limit_per_file</code>
+  (engine.py:387-455), shared by both modes.</li>
+<li><strong><code>Engine</code></strong> becomes the API-mode executor: consumes an <code>AnalysisPlan</code>,
+  runs the ThreadPool + LiteLLM loop, delegates to <code>IssueFactory</code> and
+  <code>ScoreCalculator</code>.</li>
+</ul>
+<p>Per CLAUDE.md refactoring principles: no compatibility aliases, update all
+callers, one class per file.</p>
+<h2 id="4-new-commands">4. New commands</h2>
+<h3 id="dino-brief-paths-diff-format-markdownjson-embed-code-o-file"><code>dino brief [PATHS] [--diff] [--format markdown|json] [--embed-code] [-o FILE]</code></h3>
+<p>Runs <code>AnalysisPlanner</code>, emits the brief for pending (uncached) tasks:</p>
+<ul>
+<li>Header: output contract — per-file JSON matching <code>CriticResponse</code>
+  (llm/schemas.py), the confidence bar (≥0.8), the "don't invent rules"
+  guidance (reuse the content of today's <code>SYSTEM_TEMPLATE</code>).</li>
+<li>Per file: path, line count, <code>file_hash</code>, and the full text of each
+  triggered rule (description, checklist, fix, examples — today's prompt only
+  sends <code>description[:100]</code>, see critic.py:85; the brief fixes that).</li>
+<li>Footer: cached results summary + the exact <code>dino report</code> invocation to run.</li>
+<li>New <code>llm/prompts/brief.py</code> — <code>BriefBuilder</code> (mirrors <code>CriticPromptBuilder</code>).</li>
+<li>Exit 0 with "nothing to analyze" when all files are cached/skipped.</li>
+</ul>
+<h3 id="dino-report-resultsjson-format-textjsonjsonl-o-file"><code>dino report RESULTS.json [--format text|json|jsonl] [-o FILE]</code></h3>
+<ul>
+<li>Input: <code>{ "files": [ { "path": ..., "issues": [CriticIssue...] } ] }</code>,
+  validated with the existing Pydantic schemas → invalid input yields precise,
+  machine-readable errors so the agent can self-correct and retry.</li>
+<li>Recomputes <code>file_hash</code> at report time; a file changed since the brief is
+  cached under its <em>current</em> hash (content is hashed from disk), and a
+  missing file is reported as an error for that entry.</li>
+<li>Pipeline: <code>IssueFactory</code> → disabled_rules filter → dedupe → limit →
+  <code>ScoreCalculator</code> → cache <code>put</code> → existing formatters.</li>
+<li>Logs the run via <code>cache.log_llm_call</code> with <code>model="agent"</code> and
+  <code>cost_usd=0.0</code> so <code>dino logs</code> keeps working.</li>
+</ul>
+<h2 id="5-config-validation-changes">5. Config &amp; validation changes</h2>
+<ul>
+<li><code>DinocheckConfig.mode: Literal["agent", "api"] = "agent"</code>.</li>
+<li><code>ConfigManager.validate()</code> (config.py:149) only checks the API key when
+  <code>mode == "api"</code> — this is the blocker for zero-config today.</li>
+<li><code>dino check</code> in agent mode prints a pointer to <code>dino brief</code> / the skill
+  instead of failing with a missing-key error.</li>
+<li><code>dino init</code> template: agent mode by default; <code>model:</code> becomes an opt-in
+  comment under an "API mode (CI)" section.</li>
+</ul>
+<h2 id="6-skill-rewrite-the-integration-surface">6. Skill rewrite (the integration surface)</h2>
+<p>The three near-identical inline skill strings in <code>cli/main.py:699-868</code> move to
+package data templates (<code>src/dinocheck/skills/templates/{claude,codex,gemini}/SKILL.md</code>)
+loaded by <code>dino skill</code> / <code>dino init</code>. New skill workflow:</p>
+<div class="highlight"><pre><span></span><code>1. dino brief --diff -o .dinocheck/brief.md   (or PATHS the user asked about)
+2. Read the brief. For each file: open it, evaluate ONLY the listed rules
+   using their checklists. Follow the output contract exactly.
+3. Write results to .dinocheck/results.json
+4. dino report .dinocheck/results.json
+5. Present the formatted output; fix nothing unless asked.
+</code></pre></div>
+<p><code>allowed-tools: Bash(dino:*)</code> stays. The repo's own
+<code>.claude/skills/dinocheck/SKILL.md</code> is regenerated from the new template.</p>
+<h2 id="7-cache-correctness-pre-existing-gap-becomes-critical">7. Cache correctness (pre-existing gap, becomes critical)</h2>
+<p>The cache key is <code>(file_hash, rules_hash)</code> only — results from different
+models (or agent vs API mode) collide. Add the analyzer identity
+(<code>model</code> string or <code>"agent"</code>) to the key via a new column + migration
+<code>m002_add_analyzer_column</code> (migrations framework already exists).</p>
+<h2 id="8-bugs-cleanups-to-fix-along-the-way">8. Bugs &amp; cleanups to fix along the way</h2>
+<p>Found during the review; several become load-bearing for agent mode:</p>
+<ol>
+<li><strong>engine.py:267</strong> — <code>raise</code> inside the <code>as_completed</code> loop aborts the whole
+   run on a single file failure, discarding completed results. Collect errors,
+   continue, surface at the end.</li>
+<li><strong>critic.py:49</strong> — code fence hardcoded to <code>```python</code> for all
+   packs (react/latex packs exist). Derive from file extension.</li>
+<li><strong>critic.py:71</strong> — silent 10,000-char truncation of file content; at
+   minimum, log/annotate it. Agent mode sidesteps this (no embedding).</li>
+<li><strong>engine.py:424</strong> — <code>except Exception: continue</code> silently drops issues the
+   LLM returned (e.g. an invalid <code>level</code> string). Log at warning level; in
+   <code>dino report</code>, surface as validation errors instead.</li>
+<li><strong>engine.py:214</strong> — files beyond <code>max_llm_calls</code> are silently dropped;
+   report the truncation in <code>meta</code>/output.</li>
+<li><strong>engine.py:366</strong> — <code>CriticResponse.model_validate(result.model_dump())</code>
+   re-validates an already-validated model. Remove.</li>
+<li><strong>engine.py:28</strong> — <code>MAX_TOKENS_PER_CALL</code> is defined but never used.</li>
+<li><strong>engine.py:375-382</strong> — cost computed from <code>estimate_tokens</code> instead of the
+   actual <code>usage</code> returned by LiteLLM. Fix in API mode; moot in agent mode.</li>
+<li><strong>interfaces.py:16</strong> — <code>Analyzer</code> ABC ("ruff, mypy") is dead code and
+   contradicts the LLM-first design decision. Delete.</li>
+<li><strong>cli/main.py</strong> — <code>check</code> mixes CLI parsing with progress-string re-parsing
+    (splitting <code>" → "</code> strings it built itself); pass structured progress
+    events instead. Low priority.</li>
+</ol>
+<h2 id="9-phases">9. Phases</h2>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Work</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Engine split: <code>AnalysisPlanner</code>, <code>AnalysisPlan</code>, <code>FileAnalysisTask</code>, <code>IssueFactory</code>; <code>Engine</code> consumes the plan. Fixes #1, #6, #7, #9. Tests for planner.</td>
+<td>~1 day</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Cache analyzer-identity column + migration <code>m002</code>.</td>
+<td>~0.5 day</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>dino brief</code> (<code>BriefBuilder</code>) + <code>dino report</code> with schema validation, hashing, scoring, cache write. Fixes #4. Integration tests with fixture JSON (no LLM needed).</td>
+<td>~1–1.5 days</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Config <code>mode</code>, validation gating, <code>dino init</code> template. Fixes zero-config blocker.</td>
+<td>~0.5 day</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Skill templates as package data, rewrite content for brief/report loop, regenerate repo skill, <code>dino skill</code> reads templates.</td>
+<td>~0.5 day</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Docs (README, getting-started, integrations, CLAUDE.md architecture), CHANGELOG. Remaining cleanups (#2, #3, #5, #8).</td>
+<td>~0.5 day</td>
+</tr>
+</tbody>
+</table>
+<p>Total ≈ 4–5 days of focused work. Phases 1–3 are the core; 4–6 polish.</p>
+<h2 id="10-risks">10. Risks</h2>
+<ul>
+<li><strong>No structured-output enforcement on the host model.</strong> Mitigation: <code>dino
+  report</code> is a strict validator with actionable errors; agents retry cheaply.</li>
+<li><strong>Result variability across host models.</strong> Same as today across API models;
+  the checklist-driven rules keep judgments anchored.</li>
+<li><strong>File drift between brief and report.</strong> Hashes recomputed at report time;
+  cache never stores stale associations.</li>
+<li><strong>CI/headless.</strong> Covered by keeping <code>mode: api</code>.</li>
+<li><strong>Score comparability</strong> between agent and API runs. The analyzer-identity
+  cache column keeps them from cross-contaminating; document that scores are
+  per-analyzer.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
