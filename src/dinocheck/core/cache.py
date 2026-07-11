@@ -24,12 +24,12 @@ class SQLiteCache(Cache):
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         file_hash TEXT NOT NULL,
         rules_hash TEXT NOT NULL,
+        analyzer TEXT NOT NULL DEFAULT '',
         issues_json TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(file_hash, rules_hash)
+        UNIQUE(file_hash, rules_hash, analyzer)
     );
     CREATE INDEX IF NOT EXISTS idx_cache_created ON cache(created_at);
-    CREATE INDEX IF NOT EXISTS idx_cache_lookup ON cache(file_hash, rules_hash);
 
     -- LLM call logs table
     CREATE TABLE IF NOT EXISTS llm_logs (
@@ -50,7 +50,7 @@ class SQLiteCache(Cache):
     CREATE INDEX IF NOT EXISTS idx_llm_logs_model ON llm_logs(model);
     """
 
-    CURRENT_VERSION = 1
+    CURRENT_VERSION = 2
 
     def __init__(self, db_path: Path, ttl_hours: int = 168):
         self.db_path = db_path
@@ -84,30 +84,31 @@ class SQLiteCache(Cache):
 
     # ==================== Cache Methods ====================
 
-    def get(self, file_hash: str, rules_hash: str) -> list[Issue] | None:
+    def get(self, file_hash: str, rules_hash: str, analyzer: str) -> list[Issue] | None:
         """Get cached issues for a file if not expired."""
         with self._connect() as conn:
             row = conn.execute(
                 """SELECT issues_json FROM cache
                    WHERE file_hash = ?
                    AND rules_hash = ?
+                   AND analyzer = ?
                    AND created_at > datetime('now', ?)""",
-                (file_hash, rules_hash, f"-{self.ttl_hours} hours"),
+                (file_hash, rules_hash, analyzer, f"-{self.ttl_hours} hours"),
             ).fetchone()
 
             if row:
                 return self._deserialize_issues(row["issues_json"])
         return None
 
-    def put(self, file_hash: str, rules_hash: str, issues: list[Issue]) -> None:
+    def put(self, file_hash: str, rules_hash: str, analyzer: str, issues: list[Issue]) -> None:
         """Cache issues for a file."""
         issues_json = self._serialize_issues(issues)
         with self._connect() as conn:
             conn.execute(
                 """INSERT OR REPLACE INTO cache
-                   (file_hash, rules_hash, issues_json, created_at)
-                   VALUES (?, ?, ?, CURRENT_TIMESTAMP)""",
-                (file_hash, rules_hash, issues_json),
+                   (file_hash, rules_hash, analyzer, issues_json, created_at)
+                   VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                (file_hash, rules_hash, analyzer, issues_json),
             )
 
     def clear(self, older_than_hours: int | None = None) -> int:

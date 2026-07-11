@@ -1,6 +1,6 @@
 # Plan: Agent-Native Mode (zero-config, host-model analysis)
 
-**Status:** Proposed
+**Status:** Implemented (all phases)
 **Goal:** Remove the hard dependency on an external LLM API. When dinocheck runs
 inside an AI coding agent (Claude Code, Codex, Gemini CLI), the *host model
 itself* performs the analysis. Dinocheck's job becomes: select files, select

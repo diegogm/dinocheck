@@ -10,22 +10,14 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from dinocheck.core.types import AnalysisResult, CacheStats, FileContext, Issue, Rule
-
-
-class Analyzer(ABC):
-    """Base class for deterministic analyzers (ruff, mypy, etc.)."""
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Analyzer name."""
-        ...
-
-    @abstractmethod
-    def analyze(self, paths: list[Path], config: dict[str, Any]) -> Iterator[Issue]:
-        """Run analysis on paths and yield issues."""
-        ...
+from dinocheck.core.types import (
+    AnalysisResult,
+    CacheStats,
+    CompletionResult,
+    FileContext,
+    Issue,
+    Rule,
+)
 
 
 class Pack(ABC):
@@ -95,7 +87,7 @@ class LLMProvider(ABC):
         system: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
-    ) -> BaseModel:
+    ) -> CompletionResult:
         """Complete a prompt with structured output (synchronous, thread-safe)."""
         ...
 
@@ -106,7 +98,7 @@ class LLMProvider(ABC):
         system: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
-    ) -> BaseModel:
+    ) -> CompletionResult:
         """Complete a prompt with structured output (async).
 
         Default implementation runs sync version in a thread.
@@ -142,15 +134,20 @@ class Formatter(ABC):
 
 
 class Cache(ABC):
-    """Cache interface for analysis results."""
+    """Cache interface for analysis results.
+
+    Results are keyed by file content, rule set, AND the analyzer that
+    produced them (a model identifier or 'agent'), so results from
+    different analyzers never collide.
+    """
 
     @abstractmethod
-    def get(self, file_hash: str, rules_hash: str) -> list[Issue] | None:
+    def get(self, file_hash: str, rules_hash: str, analyzer: str) -> list[Issue] | None:
         """Get cached issues for a file."""
         ...
 
     @abstractmethod
-    def put(self, file_hash: str, rules_hash: str, issues: list[Issue]) -> None:
+    def put(self, file_hash: str, rules_hash: str, analyzer: str, issues: list[Issue]) -> None:
         """Cache issues for a file."""
         ...
 

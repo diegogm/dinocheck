@@ -8,17 +8,50 @@ pip install dinocheck
 uv add dinocheck
 ```
 
-## Configuration
+## Choose your mode
 
-### Create configuration file
+Dinocheck has two analysis modes:
+
+- **Agent mode (default)**: your AI coding agent (Claude Code, Codex, Gemini
+  CLI) performs the review itself. Zero config - no API keys, no model setup.
+- **API mode**: `dino check` calls an LLM API directly. For CI and headless
+  environments.
+
+## Agent mode (default)
+
+### Setup
 
 ```bash
-dino init
+dino init    # creates dino.yaml and offers to create the agent skill
+# or just:
+dino skill   # creates the skill for detected agents (.claude/.codex/.gemini)
 ```
 
-This creates a `dino.yaml` file in your project root.
+That's it. When you ask your agent to review code (or it decides to check its
+own work), the skill runs this loop:
 
-### Set your API key
+```bash
+# 1. Dinocheck selects the files and the rules that apply to each
+dino brief --diff -o .dinocheck/brief.md
+
+# 2. The agent reads the brief and analyzes each file with its checklists
+
+# 3. Dinocheck validates the findings, scores, caches, and prints the result
+dino report .dinocheck/results.json
+```
+
+You can also run `dino brief` yourself and paste the brief into any assistant.
+
+## API mode (CI / headless)
+
+### Configure
+
+```yaml
+# dino.yaml
+mode: api
+model: openai/gpt-5.2-codex  # or anthropic/claude-3-5-sonnet, ollama/llama3
+language: en
+```
 
 ```bash
 # OpenAI
@@ -30,19 +63,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 # Or use a local model with Ollama (no API key needed)
 ```
 
-### Example `dino.yaml`
-
-```yaml
-# All packs enabled by default. Exclude what you don't need:
-# exclude_packs:
-#   - vue
-#   - django
-
-model: openai/gpt-5.2-codex  # or anthropic/claude-3-5-sonnet, ollama/llama3
-language: en
-```
-
-## Basic Usage
+### Basic Usage
 
 ```bash
 # Analyze current directory
@@ -92,4 +113,7 @@ jobs:
       - run: uv run dino check --diff
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DINO_MODE: api
 ```
+
+CI has no host agent, so `dino check` needs API mode and an API key.

@@ -19,10 +19,12 @@
 
 ---
 
-Dinocheck is an AI-powered code critic designed to **enhance your vibe coding sessions**. It's not a traditional linter - those focus on syntax and style. Dinocheck uses GPT, Claude, or local models to understand your code **semantically** and provide intelligent feedback on the things that matter: logic bugs, security issues, and architectural problems.
+Dinocheck is an AI-powered code critic designed to **enhance your vibe coding sessions**. It's not a traditional linter - those focus on syntax and style. Dinocheck uses AI to understand your code **semantically** and provide intelligent feedback on the things that matter: logic bugs, security issues, and architectural problems.
+
+**Zero config by default**: when you code with an AI agent (Claude Code, Codex, Gemini CLI), the agent itself performs the review through the dinocheck skill - no API keys, no model setup. Dinocheck selects the files and rules, the agent analyzes, and dinocheck validates, scores, and caches the results.
 
 ```bash
-$ dino check src/views.py
+$ dino report .dinocheck/results.json
 
 ------------------------------------------------------------
 ✓ Analysis Complete - Score: 72/100
@@ -81,12 +83,13 @@ This fits the vibe coding workflow: you write code with AI assistance, and Dinoc
 
 | Feature | Description |
 |---------|-------------|
-| **LLM-First Analysis** | Uses GPT-4, Claude, or local models for semantic code review |
-| **Rule Packs** | Python, Django, React, TypeScript, CSS, Docker, Compose, Shell, Vue |
-| **Smart Caching** | SQLite cache avoids re-analyzing unchanged files |
-| **Cost Tracking** | Monitor LLM usage and costs with `dino logs` |
+| **Agent-Native** | Your AI coding agent performs the review - zero config, no API keys |
+| **LLM-First Analysis** | Semantic code review driven by AI, not pattern matching |
+| **Rule Packs** | Python, Django, React, TypeScript, CSS, Docker, Compose, Shell, Vue, LaTeX |
+| **Smart Caching** | SQLite cache avoids re-analyzing unchanged files (per analyzer) |
+| **API Mode for CI** | Optional headless mode via OpenAI, Anthropic, Ollama, and 100+ providers (LiteLLM) |
 | **Multi-Language** | Get feedback in English, Spanish, French, etc. |
-| **100+ Providers** | OpenAI, Anthropic, Ollama, and more via LiteLLM |
+| **Cost Tracking** | Monitor LLM usage and costs with `dino logs` |
 
 ## Quick Start
 
@@ -98,58 +101,56 @@ pip install dinocheck
 uv add dinocheck
 ```
 
-### Configuration
+### Agent mode (default - zero config)
+
+If you code with Claude Code, Codex, or Gemini CLI, install the skill and
+you're done. No API keys.
 
 ```bash
-# Create dino.yaml
-dino init
-
-# Set your API key
-export OPENAI_API_KEY=sk-...
+dino init    # creates dino.yaml and offers to create the agent skill
+# or just:
+dino skill   # creates the skill for detected agents
 ```
 
-Example `dino.yaml`:
+From then on, asking your agent to "review the code" (or the agent deciding
+to check its own work) runs this loop:
+
+```bash
+dino brief --diff -o .dinocheck/brief.md   # 1. dinocheck picks files + rules
+# 2. the agent analyzes each file following the brief's checklists
+dino report .dinocheck/results.json        # 3. dinocheck validates, scores, caches
+```
+
+### API mode (CI / headless)
+
+Where no agent is present, dinocheck can call an LLM API directly. Set
+`mode: api` and a model in `dino.yaml`, export the API key, and use
+`dino check`:
 
 ```yaml
-# All packs enabled by default. Exclude what you don't need:
-# exclude_packs:
-#   - vue
-#   - django
-
+mode: api
 model: openai/gpt-5.2-codex  # or anthropic/claude-3-5-sonnet, ollama/llama3
 language: en
 ```
 
-### Usage
-
 ```bash
-# Analyze current directory
-dino check
+export OPENAI_API_KEY=sk-...
 
-# Analyze specific files
-dino check src/views.py src/models.py
-
-# Only analyze changed files (git diff)
-dino check --diff
-
-# Verbose output (show progress)
-dino check -v
-
-# Debug mode (detailed logs in dino.log)
-dino check --debug
-
-# Output as JSON
+dino check              # analyze current directory
+dino check --diff       # only changed files
+dino check -v           # verbose progress
 dino check --format json
-
-# View LLM costs
-dino logs cost
+dino logs cost          # view LLM costs
 ```
 
 ## CLI Reference
 
 | Command | Description |
 |---------|-------------|
-| `dino check [paths]` | Analyze code with LLM |
+| `dino brief [paths]` | Generate a review brief for the host agent (agent mode) |
+| `dino brief --diff` | Brief covering only changed files |
+| `dino report FILE` | Validate, score, and cache the agent's findings |
+| `dino check [paths]` | Analyze code calling an LLM API (api mode) |
 | `dino check --diff` | Analyze only changed files |
 | `dino check -v` | Verbose output with progress |
 | `dino check --debug` | Enable debug logging to dino.log |
@@ -207,7 +208,11 @@ jobs:
       - run: uv run dino check --diff
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DINO_MODE: api
 ```
+
+CI has no host agent, so `dino check` needs API mode (`DINO_MODE: api` or
+`mode: api` in `dino.yaml`) and an API key.
 
 ## Supported LLM Providers
 

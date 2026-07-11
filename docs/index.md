@@ -6,7 +6,9 @@
 
 **Your vibe coding companion - LLM-powered code critic**
 
-Dinocheck is an AI-powered code critic designed to **enhance your vibe coding sessions**. It's not a traditional linter - those focus on syntax and style. Dinocheck uses GPT, Claude, or local models to understand your code **semantically** and provide intelligent feedback on the things that matter: logic bugs, security issues, and architectural problems.
+Dinocheck is an AI-powered code critic designed to **enhance your vibe coding sessions**. It's not a traditional linter - those focus on syntax and style. Dinocheck uses AI to understand your code **semantically** and provide intelligent feedback on the things that matter: logic bugs, security issues, and architectural problems.
+
+**Zero config by default**: when you code with an AI agent (Claude Code, Codex, Gemini CLI), the agent itself performs the review through the dinocheck skill - no API keys, no model setup. See [Coding Agents](integrations.md).
 
 ```bash
 $ dino check src/views.py
@@ -68,9 +70,10 @@ This fits the vibe coding workflow: you write code with AI assistance, and Dinoc
 
 | Feature | Description |
 |---------|-------------|
-| **LLM-First Analysis** | Uses GPT-4, Claude, or local models for semantic code review |
-| **Rule Packs** | Python, Django, React, TypeScript, CSS, Docker, Compose, Shell, Vue |
-| **Smart Caching** | SQLite cache avoids re-analyzing unchanged files |
-| **Cost Tracking** | Monitor LLM usage and costs with `dino logs` |
+| **Agent-Native** | Your AI coding agent performs the review - zero config, no API keys |
+| **LLM-First Analysis** | Semantic code review driven by AI, not pattern matching |
+| **Rule Packs** | Python, Django, React, TypeScript, CSS, Docker, Compose, Shell, Vue, LaTeX |
+| **Smart Caching** | SQLite cache avoids re-analyzing unchanged files (per analyzer) |
+| **API Mode for CI** | Optional headless mode via OpenAI, Anthropic, Ollama, and 100+ providers (LiteLLM) |
 | **Multi-Language** | Get feedback in English, Spanish, French, etc. |
-| **100+ Providers** | OpenAI, Anthropic, Ollama, and more via LiteLLM |
+| **Cost Tracking** | Monitor LLM usage and costs with `dino logs` |

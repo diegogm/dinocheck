@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from dotenv import load_dotenv
@@ -11,10 +12,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Default cache location
 DEFAULT_CACHE_DB = ".dinocheck/cache.db"
 
+# Analyzer identity used for cache keys and logs in agent mode
+AGENT_ANALYZER = "agent"
+
 
 class DinocheckConfig(BaseModel):
     """Main Dinocheck configuration - simplified."""
 
+    # "agent": the host coding agent analyzes via `dino brief` / `dino report`
+    # (zero config, no API key). "api": `dino check` calls an LLM API directly.
+    mode: Literal["agent", "api"] = "agent"
     packs: list[str] | None = None  # None = all packs enabled
     exclude_packs: list[str] = Field(default_factory=list)
     model: str = "openai/gpt-5.2-codex"
@@ -61,6 +68,7 @@ class EnvSettings(BaseSettings):
         extra="ignore",
     )
 
+    mode: Literal["agent", "api"] | None = None
     model: str | None = None
     language: str | None = None
 
@@ -125,6 +133,8 @@ class ConfigManager:
         self._config = DinocheckConfig.model_validate(config_dict)
 
         # Override with environment settings
+        if env_settings.mode:
+            self._config.mode = env_settings.mode
         if env_settings.model:
             self._config.model = env_settings.model
         if env_settings.language:
@@ -150,8 +160,9 @@ class ConfigManager:
         """Validate configuration and return list of errors."""
         errors = []
 
-        # Check API key (skip for local providers)
-        if self.config.provider not in ("ollama",):
+        # Check API key only in API mode (agent mode needs none - that's the point).
+        # Local providers like Ollama are also exempt.
+        if self.config.mode == "api" and self.config.provider not in ("ollama",):
             api_key = self.get_api_key()
             if not api_key:
                 errors.append(f"API key not found: {self.config.api_key_env}")

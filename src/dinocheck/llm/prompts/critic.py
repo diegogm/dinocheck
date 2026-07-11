@@ -1,6 +1,10 @@
 """Prompt builder for code critic analysis."""
 
+from dinocheck.core.logging import get_logger
 from dinocheck.core.types import FileContext, Rule
+from dinocheck.utils.languages import LanguageDetector
+
+logger = get_logger()
 
 
 class CriticPromptBuilder:
@@ -46,10 +50,10 @@ Each issue must have:
 {rules_text}
 
 ## Code to Review:
-```python
+```{fence_language}
 {content}
 ```
-
+{truncation_notice}
 Analyze the code for issues matching the active rules. Focus on the most critical issues first.
 Return your findings as JSON with the schema provided.
 """
@@ -69,13 +73,27 @@ Return your findings as JSON with the schema provided.
         """Build user prompt for LLM analysis."""
         rules_text = cls._format_rules(rules)
         content = file_ctx.content[: cls.MAX_CONTENT_LENGTH]
+        truncation_notice = ""
+        if len(file_ctx.content) > cls.MAX_CONTENT_LENGTH:
+            truncation_notice = (
+                f"\nNOTE: File truncated to the first {cls.MAX_CONTENT_LENGTH} characters "
+                f"(full size: {len(file_ctx.content)}). Only review the visible portion.\n"
+            )
+            logger.warning(
+                "File %s truncated for prompt: %d of %d chars sent",
+                file_ctx.path,
+                cls.MAX_CONTENT_LENGTH,
+                len(file_ctx.content),
+            )
         language_instruction = cls._get_language_instruction(language)
 
         return cls.USER_TEMPLATE.format(
             language_instruction=language_instruction,
             file_path=file_ctx.path,
             rules_text=rules_text,
+            fence_language=LanguageDetector.fence_language(file_ctx.path),
             content=content,
+            truncation_notice=truncation_notice,
         )
 
     @classmethod

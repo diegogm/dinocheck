@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from dinocheck.core.interfaces import LLMProvider
+from dinocheck.core.types import CompletionResult
 
 
 class MockProvider(LLMProvider):
@@ -26,7 +27,7 @@ class MockProvider(LLMProvider):
         system: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
-    ) -> BaseModel:
+    ) -> CompletionResult:
         """Return mock response based on prompt content (synchronous)."""
         self.calls.append(
             {
@@ -39,16 +40,14 @@ class MockProvider(LLMProvider):
         # Check for matching response
         for key, response in self.responses.items():
             if key in prompt:
-                if isinstance(response, dict):
-                    return response_schema.model_validate(response)
-                # Already validated, return as-is
                 if isinstance(response, BaseModel):
-                    return response
-                return response_schema.model_validate(response)
+                    # Already validated, return as-is
+                    return CompletionResult(data=response)
+                return CompletionResult(data=response_schema.model_validate(response))
 
         # Return empty response - use model_construct to bypass validation
         # Note: This skips validation so required fields without defaults will be unset
-        return response_schema.model_construct()
+        return CompletionResult(data=response_schema.model_construct())
 
     def estimate_tokens(self, text: str) -> int:
         """Estimate token count."""

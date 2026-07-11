@@ -162,7 +162,8 @@ class TestInitCommand:
         assert skill_file.exists()
         content = skill_file.read_text()
         assert "name: dinocheck" in content
-        assert "dino check" in content
+        assert "dino brief" in content
+        assert "dino report" in content
 
     def test_init_creates_codex_skill(self, tmp_path, monkeypatch):
         """Should create Codex skill when .codex exists."""
@@ -180,7 +181,8 @@ class TestInitCommand:
         assert skill_file.exists()
         content = skill_file.read_text()
         assert "name: dinocheck" in content
-        assert "dino check" in content
+        assert "dino brief" in content
+        assert "dino report" in content
 
     def test_init_skips_skill_when_declined(self, tmp_path, monkeypatch):
         """Should not create skill when user declines."""
@@ -213,7 +215,8 @@ class TestInitCommand:
         assert skill_file.exists()
         content = skill_file.read_text()
         assert "name: dinocheck" in content
-        assert "dino check" in content
+        assert "dino brief" in content
+        assert "dino report" in content
 
 
 class TestLogsCommand:

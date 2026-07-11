@@ -9,6 +9,7 @@ import litellm
 from pydantic import BaseModel
 
 from dinocheck.core.interfaces import LLMProvider
+from dinocheck.core.types import CompletionResult
 
 # Suppress LiteLLM debug info messages
 litellm.suppress_debug_info = True
@@ -61,7 +62,7 @@ class LiteLLMProvider(LLMProvider):
         system: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
-    ) -> BaseModel:
+    ) -> CompletionResult:
         """Complete a prompt with structured output (synchronous version).
 
         This method is thread-safe and designed for use with ThreadPoolExecutor.
@@ -102,12 +103,33 @@ class LiteLLMProvider(LLMProvider):
             # Parse response into Pydantic model
             result = response_schema.model_validate_json(content)
 
-            return result
+            return CompletionResult(
+                data=result,
+                prompt_tokens=self._usage_field(response, "prompt_tokens"),
+                completion_tokens=self._usage_field(response, "completion_tokens"),
+                cost_usd=self._response_cost(response),
+            )
 
         except RuntimeError:
             raise
         except Exception as e:
             raise RuntimeError(f"LLM call failed: {e}") from e
+
+    @staticmethod
+    def _usage_field(response: object, field: str) -> int | None:
+        """Extract a token count from the response usage block, if reported."""
+        usage = getattr(response, "usage", None)
+        value = getattr(usage, field, None)
+        return int(value) if isinstance(value, int) else None
+
+    @staticmethod
+    def _response_cost(response: object) -> float | None:
+        """Compute the actual call cost from the provider response, if possible."""
+        try:
+            cost = litellm.completion_cost(completion_response=response)
+            return float(cost)
+        except Exception:
+            return None
 
     async def complete_structured(
         self,
@@ -116,7 +138,7 @@ class LiteLLMProvider(LLMProvider):
         system: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
-    ) -> BaseModel:
+    ) -> CompletionResult:
         """Complete a prompt with structured output (async).
 
         Runs the sync version in a thread to avoid blocking the event loop.

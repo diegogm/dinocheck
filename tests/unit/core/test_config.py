@@ -11,6 +11,7 @@ class TestDinocheckConfig:
     def test_default_values(self):
         """Should have sensible defaults."""
         config = DinocheckConfig()
+        assert config.mode == "agent"  # Zero-config agent mode by default
         assert config.packs is None  # None means all packs enabled
         assert config.language == "en"
         assert config.max_llm_calls >= 1
@@ -176,7 +177,19 @@ packs:
         assert config.model == "openai/gpt-4o"
 
     def test_validate_missing_api_key(self, tmp_path, monkeypatch):
-        """Should report error for missing API key."""
+        """Should report error for missing API key in API mode."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+        manager = ConfigManager()
+        manager.load()
+        manager.config.mode = "api"
+        errors = manager.validate()
+
+        assert any("API key" in e for e in errors)
+
+    def test_validate_agent_mode_needs_no_api_key(self, tmp_path, monkeypatch):
+        """Agent mode should validate without any API key configured."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
@@ -184,7 +197,8 @@ packs:
         manager.load()
         errors = manager.validate()
 
-        assert any("API key" in e for e in errors)
+        assert manager.config.mode == "agent"
+        assert errors == []
 
     def test_validate_no_packs(self):
         """Should report error for no packs."""

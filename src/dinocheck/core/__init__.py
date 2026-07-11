@@ -1,7 +1,6 @@
 """Core module for Dinocheck."""
 
 from dinocheck.core.interfaces import (
-    Analyzer,
     Cache,
     Formatter,
     LLMProvider,
@@ -22,7 +21,6 @@ from dinocheck.core.types import (
 
 __all__ = [
     "AnalysisResult",
-    "Analyzer",
     "Cache",
     "DiffHunk",
     "FileContext",

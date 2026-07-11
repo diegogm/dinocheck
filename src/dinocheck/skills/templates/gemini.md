@@ -5,7 +5,6 @@ description: >
   following the brief's rules, then submit the results. Use when you finish
   writing code, before committing, or when asked to review, check, or analyze
   code quality. No API keys or LLM configuration needed.
-allowed-tools: Bash(dino:*)
 ---
 
 # Dinocheck - Agent-Native Code Review

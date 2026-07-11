@@ -2,9 +2,50 @@
 
 ## Main Commands
 
+### `dino brief`
+
+Generate a review brief for the host coding agent (agent mode, step 1).
+Selects files and matching rules and emits the instructions the agent needs
+to perform the analysis itself. No LLM API is called.
+
+```bash
+# Brief for changed files (preferred in the skill workflow)
+dino brief --diff -o .dinocheck/brief.md
+
+# Brief for specific paths
+dino brief src/
+
+# Machine-readable brief
+dino brief --format json
+
+# Embed file contents (for agents without file access)
+dino brief --embed-code
+
+# Restrict packs or rules
+dino brief --pack django
+dino brief --rule n-plus-one
+```
+
+### `dino report`
+
+Validate and score the agent's findings (agent mode, step 2). Reads the
+results JSON produced from a brief, validates it against the output contract,
+deduplicates, scores, caches, and prints the formatted result.
+
+```bash
+dino report .dinocheck/results.json
+dino report results.json --format json
+dino report results.json -o review.txt
+```
+
+Validation problems are reported precisely (exit code 2) so the agent can fix
+the JSON and retry.
+
 ### `dino check`
 
-Analyze code with LLM.
+Analyze code by calling an LLM API directly. Requires `mode: api` in
+`dino.yaml` and an API key; in agent mode it points you to
+`dino brief` / `dino report` instead.
 
 ```bash
 # Analyze current directory
@@ -135,7 +176,11 @@ dino logs cost
 
 | Command | Description |
 |---------|-------------|
-| `dino check [paths]` | Analyze code with LLM |
+| `dino brief [paths]` | Generate a review brief for the host agent |
+| `dino brief --diff` | Brief covering only changed files |
+| `dino brief --embed-code` | Include file contents in the brief |
+| `dino report FILE` | Validate, score, and cache agent findings |
+| `dino check [paths]` | Analyze code with LLM API (api mode) |
 | `dino check --diff` | Analyze only changed files |
 | `dino check -v` | Verbose output with progress |
 | `dino check --debug` | Enable debug logging to dino.log |

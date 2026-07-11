@@ -1,19 +1,25 @@
 # Dinocheck - Your vibe coding companion
 # https://github.com/diegogm/dinocheck
 
+# Analysis mode:
+#   agent (default): your AI coding agent performs the review via
+#                    'dino brief' + 'dino report'. Zero config, no API keys.
+#   api:             'dino check' calls an LLM API directly (CI / headless).
+mode: agent
+
 # All rule packs are enabled by default.
 # To exclude specific packs, uncomment and add to exclude_packs:
 # exclude_packs:
 #   - vue
 #   - django
 
-# LLM configuration
-model: openai/gpt-5.1-codex  # Or: anthropic/claude-3-5-sonnet, ollama/llama3
-# base_url: https://api.example.com/v1  # Custom OpenAI-compatible endpoint
+# Response language for issue explanations
 language: en
 
-# Analysis budget (max LLM calls per run)
-max_llm_calls: 10
+# --- API mode settings (only used when mode: api) ---
+# model: openai/gpt-5.2-codex  # Or: anthropic/claude-3-5-sonnet, ollama/llama3
+# base_url: https://api.example.com/v1  # Custom OpenAI-compatible endpoint
+# max_llm_calls: 10  # Analysis budget (max LLM calls per run)
 
 # Disable specific rules (by ID)
 # disabled_rules:

@@ -13,7 +13,13 @@ dino init
 ### Full Example
 
 ```yaml
-# LLM Model (provider/model format)
+# Analysis mode: agent (default) or api
+#   agent: your AI coding agent reviews via 'dino brief' + 'dino report'
+#          (zero config, no API keys)
+#   api:   'dino check' calls an LLM API directly (CI / headless)
+mode: agent
+
+# LLM Model (provider/model format) - only used in api mode
 model: openai/gpt-5.2-codex
 
 # Response language (en, es, fr, de, etc.)
@@ -84,9 +90,20 @@ Patterns are matched against directory names and file paths:
 These work alongside the built-in exclusions (hidden directories, `__pycache__`,
 `node_modules`, `.venv`, `venv`).
 
+## Analysis Modes
+
+| Mode | Who analyzes | Requirements | Entry point |
+|------|--------------|--------------|-------------|
+| `agent` (default) | Your AI coding agent | None | `dino brief` → `dino report` |
+| `api` | An LLM API via LiteLLM | `model` + API key | `dino check` |
+
+In agent mode no API key is required and `dino check` is disabled (it points
+to the brief/report workflow). Results from different analyzers (each API
+model, or the agent) are cached independently.
+
 ## Environment Variables
 
-### API Keys
+### API Keys (api mode only)
 
 | Variable | Description |
 |----------|-------------|
@@ -100,6 +117,7 @@ These work alongside the built-in exclusions (hidden directories, `__pycache__`,
 You can override config values via environment variables with the `DINO_` prefix:
 
 ```bash
+export DINO_MODE=api
 export DINO_MODEL=anthropic/claude-3-5-sonnet
 export DINO_LANGUAGE=es
 ```

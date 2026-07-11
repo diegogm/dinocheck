@@ -2,12 +2,17 @@
 
 ## Project Overview
 
-Dinocheck is an LLM-powered code critic for vibe coding. It's a linter that uses AI (GPT, Claude, Ollama) to review code semantically - not pattern matching.
+Dinocheck is an LLM-powered code critic for vibe coding. It's a linter that reviews code semantically - not pattern matching. It has two modes:
+
+- **agent (default)**: the host coding agent (Claude Code, Codex, Gemini CLI) performs the analysis via `dino brief` (files + rules + output contract) and `dino report` (validate, score, cache). Zero config, no API keys.
+- **api**: `dino check` calls an LLM API directly (GPT, Claude, Ollama via LiteLLM). For CI/headless.
 
 ## Key Commands
 
 ```bash
-uv run dino check              # Analyze code
+uv run dino brief --diff       # Agent mode step 1: emit review brief
+uv run dino report results.json # Agent mode step 2: validate + score findings
+uv run dino check              # API mode: analyze code (requires mode: api)
 uv run dino check --debug      # Analyze with detailed dino.log
 uv run dino check -v           # Verbose progress output
 uv run dino packs list         # List rule packs
@@ -30,9 +35,11 @@ src/dinocheck/
 │       ├── json_formatter.py
 │       └── jsonl_formatter.py
 ├── core/
-│   ├── engine.py            # Main orchestrator
-│   ├── config.py            # YAML + .env config loading
-│   ├── cache.py             # SQLite cache + LLM logging
+│   ├── planner.py           # AnalysisPlanner: discovery, rule triggering, cache lookup
+│   ├── engine.py            # API-mode executor (LLM calls over a plan)
+│   ├── issue_factory.py     # IssueFactory: response -> Issue, filters, dedupe, limits
+│   ├── config.py            # YAML + .env config loading (mode: agent|api)
+│   ├── cache.py             # SQLite cache (keyed per analyzer) + LLM logging
 │   ├── scoring.py           # Score calculation
 │   ├── workspace.py         # Git diff integration
 │   ├── interfaces.py        # Abstract base classes
@@ -43,20 +50,28 @@ src/dinocheck/
 │       ├── location.py
 │       ├── rule.py
 │       ├── rule_trigger.py
+│       ├── analysis_plan.py
+│       ├── file_analysis_task.py
 │       ├── analysis_result.py
+│       ├── completion_result.py
 │       ├── file_context.py
 │       ├── diff_hunk.py
 │       ├── llm_call_log.py
 │       └── cache_stats.py
 ├── providers/
-│   ├── litellm_provider.py  # LiteLLM integration
+│   ├── litellm_provider.py  # LiteLLM integration (api mode)
 │   └── mock.py              # Testing mock
 ├── llm/
-│   ├── schemas.py           # Pydantic structured outputs
+│   ├── schemas.py           # Pydantic structured outputs + AgentReport contract
 │   └── prompts/
-│       └── critic.py        # CriticPromptBuilder for analysis prompts
+│       ├── critic.py        # CriticPromptBuilder for api-mode prompts
+│       └── brief.py         # BriefBuilder for agent-mode review briefs
+├── skills/
+│   ├── loader.py            # SkillTemplates: packaged agent skill templates
+│   └── templates/           # claude.md / codex.md / gemini.md
 ├── utils/
-│   └── hashing.py           # ContentHasher for cache keys
+│   ├── hashing.py           # ContentHasher for cache keys
+│   └── languages.py         # LanguageDetector for code fences
 └── packs/
     ├── loader.py            # Pack loading and composition
     ├── python/
@@ -96,6 +111,7 @@ tests/
 
 ## Design Decisions
 
+- **Agent-first**: Default mode delegates analysis to the host coding agent (`dino brief` -> agent -> `dino report`); the API mode is the fallback for CI
 - **LLM-first**: No pattern matching, pure LLM analysis
 - **No fix command**: Linter only, doesn't modify code
 - **Structured outputs**: All LLM responses use Pydantic models
@@ -132,9 +148,9 @@ tags:
 ## Configuration
 
 `dino.yaml` or `.env`:
-- `provider.model`: LLM model (gpt-4o-mini, claude-3-5-sonnet, ollama/llama3)
-- `provider.api_key_env`: Environment variable for API key
-- `output.language`: Response language (en, es, fr, etc.)
+- `mode`: `agent` (default, host agent analyzes) or `api` (direct LLM calls)
+- `model`: LLM model for api mode (gpt-4o-mini, claude-3-5-sonnet, ollama/llama3)
+- `language`: Response language (en, es, fr, etc.)
 - `packs`: Enabled rule packs (python, django)
 - `custom_rules_dir`: Directory for custom YAML rules
 
