@@ -74,13 +74,19 @@ class AnalysisPlanner:
         for rule in composed_pack.rules:
             logger.debug("  Rule: %s (%s) - %s", rule.id, rule.level.value, rule.name)
 
-        # 3. Discover files
+        # 3. Discover files relevant to the enabled packs (any language)
         scan_paths = [] if diff_only else paths
         progress(
             "discover_files",
             f"Scanning {'changed files' if diff_only else f'{len(paths)} path(s)'}...",
         )
-        files = list(self.workspace.discover(scan_paths, diff_only=diff_only))
+        files = list(
+            self.workspace.discover(
+                scan_paths,
+                diff_only=diff_only,
+                is_candidate=composed_pack.is_candidate_file,
+            )
+        )
         progress("discover_files", f"Found {len(files)} file(s) to analyze")
         logger.info("Discovered %d file(s) to analyze", len(files))
         for f in files:
@@ -148,5 +154,9 @@ class AnalysisPlanner:
 
     @staticmethod
     def _hash_rules(rules: list[Rule]) -> str:
-        """Hash a rule set for cache keying."""
-        return ContentHasher.hash_rules([r.id for r in rules])
+        """Hash a rule set for cache keying.
+
+        Uses content fingerprints, not just IDs: editing a rule's text
+        invalidates cached results produced under the old wording.
+        """
+        return ContentHasher.hash_rules([r.fingerprint for r in rules])

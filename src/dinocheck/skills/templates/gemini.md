@@ -34,6 +34,8 @@ validates, scores, and caches your findings.
 3. For each file listed in the brief:
    - Open the file and evaluate ONLY the rules listed for it, using their
      checklists. Do not invent rules.
+   - If the brief marks changed lines, focus your review on those ranges;
+     report issues elsewhere only when the changes cause them.
    - Only report issues you are at least 80% confident about.
 
 4. Write your findings to `.dinocheck/results.json` following the brief's

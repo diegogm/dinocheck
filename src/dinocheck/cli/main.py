@@ -198,6 +198,14 @@ def report(
             help="Write output to file",
         ),
     ] = None,
+    fail_on: Annotated[
+        str | None,
+        typer.Option(
+            "--fail-on",
+            help="Exit with code 1 if any issue at this level or above is found",
+            click_type=click.Choice(["blocker", "critical", "major", "minor", "info"]),
+        ),
+    ] = None,
     config: ConfigOption = None,
     quiet: QuietOption = False,
     debug: DebugOption = False,
@@ -279,7 +287,11 @@ def report(
 
         response = CriticResponse(issues=file_report.issues)
         issues, issue_warnings = factory.create_issues(
-            response, task.file_ctx, plan.pack_name, source="agent"
+            response,
+            task.file_ctx,
+            plan.pack_name,
+            source="agent",
+            allowed_rule_ids={rule.id for rule in task.rules},
         )
         warnings.extend(issue_warnings)
         all_issues.extend(issues)
@@ -320,6 +332,17 @@ def report(
             console.success(f"Output written to {output}")
     else:
         print(formatted, end="")
+
+    if fail_on:
+        from dinocheck.core.issue_factory import SEVERITY_ORDER
+
+        threshold = SEVERITY_ORDER.index(fail_on)
+        failing = [i for i in final_issues if SEVERITY_ORDER.index(i.level.value) <= threshold]
+        if failing:
+            console.error(
+                f"{len(failing)} issue(s) at level '{fail_on}' or above",
+            )
+            raise typer.Exit(1)
 
 
 # Packs subcommand
@@ -660,6 +683,19 @@ language: en
 
     config_path.write_text(default_config)
     console.success(f"Created config: {config_path}")
+
+    # Keep the local cache out of version control
+    gitignore = path / ".gitignore"
+    ignore_entry = ".dinocheck/"
+    if gitignore.exists():
+        lines = gitignore.read_text(encoding="utf-8").splitlines()
+        if ignore_entry not in (line.strip() for line in lines):
+            with gitignore.open("a", encoding="utf-8") as f:
+                f.write(f"\n# Dinocheck local cache\n{ignore_entry}\n")
+            console.print(f"  Added {ignore_entry} to .gitignore", style="dim")
+    else:
+        gitignore.write_text(f"# Dinocheck local cache\n{ignore_entry}\n", encoding="utf-8")
+        console.print(f"  Created .gitignore with {ignore_entry}", style="dim")
 
     # Offer to create skills for detected agents
     agent_configs = [

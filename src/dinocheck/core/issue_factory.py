@@ -24,8 +24,13 @@ class IssueFactory:
         file_ctx: FileContext,
         pack_name: str,
         source: str = "llm",
+        allowed_rule_ids: set[str] | None = None,
     ) -> tuple[list[Issue], list[str]]:
         """Convert a critic response to issues.
+
+        When allowed_rule_ids is given, findings citing any other rule are
+        dropped - the analyzer was explicitly told not to invent rules.
+        Findings pointing outside the file's line range are dropped too.
 
         Returns:
             Tuple of (issues, warnings). Warnings describe entries that were
@@ -33,9 +38,17 @@ class IssueFactory:
         """
         issues: list[Issue] = []
         warnings: list[str] = []
+        total_lines = file_ctx.content.count("\n") + 1
 
         for critic_issue in response.issues:
             location = f"{file_ctx.path}:{critic_issue.location.start_line}"
+
+            if allowed_rule_ids is not None and critic_issue.rule_id not in allowed_rule_ids:
+                warnings.append(
+                    f"{location}: rule '{critic_issue.rule_id}' is not in this file's "
+                    f"rule list - issue dropped"
+                )
+                continue
 
             try:
                 level = IssueLevel(critic_issue.level)
@@ -46,10 +59,19 @@ class IssueFactory:
                 )
                 continue
 
-            try:
-                start_line = critic_issue.location.start_line
-                end_line = critic_issue.location.end_line
+            start_line = critic_issue.location.start_line
+            end_line = critic_issue.location.end_line
+            if start_line < 1 or start_line > total_lines:
+                warnings.append(
+                    f"{location}: start_line out of range (file has {total_lines} lines) "
+                    f"- issue dropped"
+                )
+                continue
+            if end_line is not None:
+                # A slightly overshot end is a common off-by-one; clamp it
+                end_line = max(start_line, min(end_line, total_lines))
 
+            try:
                 snippet = CodeExtractor.extract_snippet(file_ctx.content, start_line, end_line)
                 context = CodeExtractor.extract_context(file_ctx.content, start_line)
 

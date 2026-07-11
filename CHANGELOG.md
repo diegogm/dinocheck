@@ -9,6 +9,19 @@ Codex, Gemini CLI) performs the analysis; dinocheck never calls an LLM API.
 This decision is final - there is no API mode and none is planned.
 
 ### Added
+- **Multi-language analysis**: discovery is driven by the enabled packs'
+  file patterns instead of being hardcoded to `*.py` - react, vue, css,
+  docker, compose, shell, and latex files are now actually discovered,
+  both in directory scans and in `--diff` mode
+- **Changed-line focus**: in `--diff` mode the brief marks each file's
+  changed line ranges ("Changed lines: 6-10") or flags it as a new file,
+  and instructs the agent to focus its review there
+- **Anti-hallucination validation** in `dino report`: findings citing rules
+  not in the file's rule list are dropped with a warning; findings pointing
+  outside the file's line range are dropped; overshot end lines are clamped
+- `dino report --fail-on LEVEL`: exit 1 when issues at or above the given
+  severity survive validation (CI gating)
+- `dino init` adds `.dinocheck/` to `.gitignore`
 - **Agent-native analysis**: the host coding agent performs the review
   itself - zero config, no API keys
   - `dino brief`: emits a review brief (files, triggered rules with full
@@ -28,6 +41,16 @@ This decision is final - there is no API mode and none is planned.
   deterministic core
 - Invalid findings (e.g. bad severity level) are surfaced as warnings
   instead of silently dropped
+
+### Fixed
+- `**/x` rule patterns now match root-level files: a repo-root `Dockerfile`,
+  `docker-compose.yml`, or `views.py` previously never triggered any rule
+- React pack rules now trigger on `.tsx` files (previously `.jsx` only)
+- Cache keys use rule content fingerprints, so editing a rule's checklist,
+  fix, examples, or severity invalidates stale cached results
+- Files larger than 1 MB are skipped with a warning instead of being sent
+  to the analyzer
+- `--diff` briefs use cwd-relative paths instead of absolute paths
 
 ### Removed
 - **API mode, entirely**: the `Engine`, the `providers/` package (LiteLLM),

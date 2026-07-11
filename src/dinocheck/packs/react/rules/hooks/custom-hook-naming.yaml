@@ -12,6 +12,7 @@ description: |
 triggers:
   file_patterns:
     - "**/*.jsx"
+    - "**/*.tsx"
   code_patterns:
     - "function \\w+.*\\{[\\s\\S]*use[A-Z]"
     - "const \\w+ = \\(.*\\) =>.*use[A-Z]"

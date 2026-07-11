@@ -11,6 +11,7 @@ description: |
 triggers:
   file_patterns:
     - "**/*.jsx"
+    - "**/*.tsx"
   code_patterns:
     - "useEffect\\("
     - "useMemo\\("

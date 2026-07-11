@@ -1,5 +1,6 @@
 """Rule type for code quality rules."""
 
+import hashlib
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -24,6 +25,28 @@ class Rule:
     tags: list[str] = field(default_factory=list)
     triggers: RuleTrigger = field(default_factory=RuleTrigger)
     examples: dict[str, str] | None = None  # {"bad": ..., "good": ...}
+
+    @property
+    def fingerprint(self) -> str:
+        """Content-addressed identity for cache keying.
+
+        Includes everything the analyzer sees, so editing a rule's text
+        (checklist, fix, examples, severity) invalidates cached results
+        produced under the old wording - not just renaming its ID.
+        """
+        examples = self.examples or {}
+        content = "\x1f".join(
+            [
+                self.id,
+                self.level.value,
+                self.description,
+                "\x1e".join(self.checklist),
+                self.fix,
+                examples.get("bad", ""),
+                examples.get("good", ""),
+            ]
+        )
+        return f"{self.id}:{hashlib.sha256(content.encode()).hexdigest()[:16]}"
 
     @classmethod
     def from_yaml(cls, data: dict[str, Any]) -> "Rule":

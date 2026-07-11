@@ -132,6 +132,7 @@ dino brief --format json         # machine-readable brief
 dino brief --embed-code          # include file contents in the brief
 dino report results.json         # validate, score, cache, and print
 dino report results.json -f json # JSON output for tooling
+dino report results.json --fail-on critical  # CI gate on severity
 dino logs list                   # review past analysis runs
 ```
 
@@ -143,6 +144,7 @@ dino logs list                   # review past analysis runs
 | `dino brief --diff` | Brief covering only changed files |
 | `dino brief --embed-code` | Include file contents in the brief |
 | `dino report FILE` | Validate, score, and cache the agent's findings (step 2) |
+| `dino report FILE --fail-on LEVEL` | Exit 1 on issues at/above a severity (CI) |
 | `dino packs list` | List available packs |
 | `dino packs info NAME` | Show pack details |
 | `dino explain RULE_ID` | Explain a rule |

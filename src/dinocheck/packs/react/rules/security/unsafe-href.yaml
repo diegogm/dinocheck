@@ -10,6 +10,7 @@ description: |
 triggers:
   file_patterns:
     - "**/*.jsx"
+    - "**/*.tsx"
   code_patterns:
     - "href=\\{"
     - "<a\\s"

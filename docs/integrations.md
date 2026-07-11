@@ -19,9 +19,10 @@ dino brief --diff          ->  the agent analyzes      ->  dino report results.j
 2. **The agent** reads the brief, opens each file with its own tools, and
    evaluates only the listed rules.
 3. **`dino report`** validates the agent's JSON against the output contract
-   (with precise errors the agent can act on), converts it to issues,
-   deduplicates, scores, caches, and prints the same formatted output as any
-   other dinocheck run.
+   (with precise errors the agent can act on), rejects findings that cite
+   rules not in the brief or point outside the file, converts the rest to
+   issues, deduplicates, scores, caches, and prints the formatted output.
+   `--fail-on LEVEL` turns it into a CI gate.
 
 ## Supported Agents
 

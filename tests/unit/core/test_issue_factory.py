@@ -67,6 +67,48 @@ class TestCreateIssues:
 
         assert issues[0].source == "agent"
 
+    def test_unknown_rule_id_is_dropped_with_warning(self, factory, file_ctx):
+        """Findings citing rules not in the brief are rejected (no invented rules)."""
+        response = CriticResponse(issues=[_critic_issue(rule_id="made-up/rule")])
+
+        issues, warnings = factory.create_issues(
+            response, file_ctx, "django", allowed_rule_ids={"django/n-plus-one"}
+        )
+
+        assert issues == []
+        assert len(warnings) == 1
+        assert "made-up/rule" in warnings[0]
+
+    def test_allowed_rule_id_passes(self, factory, file_ctx):
+        response = CriticResponse(issues=[_critic_issue(rule_id="django/n-plus-one")])
+
+        issues, warnings = factory.create_issues(
+            response, file_ctx, "django", allowed_rule_ids={"django/n-plus-one"}
+        )
+
+        assert len(issues) == 1
+        assert warnings == []
+
+    def test_start_line_out_of_range_is_dropped(self, factory, file_ctx):
+        """The fixture file has 5 lines; line 999 is a hallucination."""
+        response = CriticResponse(issues=[_critic_issue(start_line=999)])
+
+        issues, warnings = factory.create_issues(response, file_ctx, "django")
+
+        assert issues == []
+        assert len(warnings) == 1
+        assert "out of range" in warnings[0]
+
+    def test_overshot_end_line_is_clamped(self, factory, file_ctx):
+        issue = _critic_issue(start_line=4)
+        issue.location.end_line = 999
+        response = CriticResponse(issues=[issue])
+
+        issues, warnings = factory.create_issues(response, file_ctx, "django")
+
+        assert warnings == []
+        assert issues[0].location.end_line <= file_ctx.content.count("\n") + 1
+
 
 def _issue(rule_id="a/rule", level=IssueLevel.MINOR, line=1, title="t", path="f.py"):
     return Issue(

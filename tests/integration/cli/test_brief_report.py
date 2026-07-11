@@ -180,3 +180,160 @@ class TestReportCommand:
 
         assert result.exit_code == 2
         assert "not found" in result.stderr
+
+
+class TestBriefDiffFocus:
+    """Tests for changed-line focus in diff mode."""
+
+    def test_brief_marks_changed_lines(self, tmp_path, monkeypatch):
+        import subprocess
+
+        monkeypatch.chdir(tmp_path)
+        subprocess.run(["git", "init", "-q"], check=True)
+        subprocess.run(["git", "config", "user.email", "t@t.com"], check=True)
+        subprocess.run(["git", "config", "user.name", "T"], check=True)
+
+        app_dir = tmp_path / "app"
+        app_dir.mkdir()
+        views = app_dir / "views.py"
+        views.write_text("from .models import Book\n\n\ndef unrelated():\n    return 1\n")
+        subprocess.run(["git", "add", "."], check=True)
+        subprocess.run(["git", "commit", "-qm", "base"], check=True)
+
+        # Append a change that triggers ORM rules
+        views.write_text(
+            views.read_text()
+            + "\n\ndef book_list(request):\n    for b in Book.objects.all():\n"
+            + "        print(b.author.name)\n"
+        )
+
+        result = runner.invoke(app, ["brief", "--diff", "--quiet"])
+
+        assert result.exit_code == 0
+        assert "Changed lines:" in result.stdout
+        assert "Focus your review here" in result.stdout
+
+    def test_brief_marks_new_files(self, tmp_path, monkeypatch):
+        import subprocess
+
+        monkeypatch.chdir(tmp_path)
+        subprocess.run(["git", "init", "-q"], check=True)
+        subprocess.run(["git", "config", "user.email", "t@t.com"], check=True)
+        subprocess.run(["git", "config", "user.name", "T"], check=True)
+        (tmp_path / "keep").write_text("")
+        subprocess.run(["git", "add", "."], check=True)
+        subprocess.run(["git", "commit", "-qm", "base"], check=True)
+
+        app_dir = tmp_path / "app"
+        app_dir.mkdir()
+        (app_dir / "views.py").write_text(VIEWS_CONTENT)
+
+        result = runner.invoke(app, ["brief", "--diff", "--quiet"])
+
+        assert result.exit_code == 0
+        assert "New file - review it in full." in result.stdout
+
+    def test_diff_discovers_non_python_files(self, tmp_path, monkeypatch):
+        """--diff must surface changed react/docker/latex files, not just .py."""
+        import subprocess
+
+        monkeypatch.chdir(tmp_path)
+        subprocess.run(["git", "init", "-q"], check=True)
+        subprocess.run(["git", "config", "user.email", "t@t.com"], check=True)
+        subprocess.run(["git", "config", "user.name", "T"], check=True)
+        (tmp_path / "keep").write_text("")
+        subprocess.run(["git", "add", "."], check=True)
+        subprocess.run(["git", "commit", "-qm", "base"], check=True)
+
+        (tmp_path / "App.tsx").write_text(
+            "export function App() {\n"
+            "  const items = [1, 2];\n"
+            "  return <ul>{items.map(i => <li>{i}</li>)}</ul>;\n"
+            "}\n"
+        )
+
+        result = runner.invoke(app, ["brief", "--diff", "--quiet"])
+
+        assert result.exit_code == 0
+        assert "App.tsx" in result.stdout
+
+
+class TestReportValidation:
+    """Tests for anti-hallucination validation in dino report."""
+
+    def _results(self, issues):
+        return {"files": [{"path": "app/views.py", "issues": issues}]}
+
+    def test_invented_rule_id_is_dropped(self, project):
+        results = project / "results.json"
+        results.write_text(
+            json.dumps(
+                self._results(
+                    [
+                        {
+                            "rule_id": "invented/not-a-rule",
+                            "level": "blocker",
+                            "location": {"start_line": 2},
+                            "title": "Fake",
+                            "why": "Fake",
+                            "do": ["Fake"],
+                        }
+                    ]
+                )
+            )
+        )
+
+        result = runner.invoke(app, ["report", "results.json", "--format", "json", "-o", "o.json"])
+
+        assert result.exit_code == 0
+        assert "invented/not-a-rule" in result.stderr
+        data = json.loads((project / "o.json").read_text())
+        assert data["summary"]["total_issues"] == 0
+
+    def test_fail_on_gates_exit_code(self, project):
+        results = project / "results.json"
+        results.write_text(
+            json.dumps(
+                self._results(
+                    [
+                        {
+                            "rule_id": "django/n-plus-one",
+                            "level": "major",
+                            "location": {"start_line": 4, "end_line": 5},
+                            "title": "N+1 query",
+                            "why": "Query per row",
+                            "do": ["select_related"],
+                        }
+                    ]
+                )
+            )
+        )
+
+        gated = runner.invoke(app, ["report", "results.json", "--fail-on", "major", "--quiet"])
+        assert gated.exit_code == 1
+
+        relaxed = runner.invoke(app, ["report", "results.json", "--fail-on", "critical", "--quiet"])
+        assert relaxed.exit_code == 0
+
+
+class TestInitGitignore:
+    """Tests for cache dir hygiene in dino init."""
+
+    def test_init_adds_dinocheck_to_gitignore(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".gitignore").write_text("*.pyc\n")
+
+        result = runner.invoke(app, ["init"])
+
+        assert result.exit_code == 0
+        content = (tmp_path / ".gitignore").read_text()
+        assert "*.pyc" in content
+        assert ".dinocheck/" in content
+
+    def test_init_creates_gitignore(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["init"])
+
+        assert result.exit_code == 0
+        assert ".dinocheck/" in (tmp_path / ".gitignore").read_text()

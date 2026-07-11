@@ -27,10 +27,13 @@ companion - it provides a second opinion on code, it does not fix it.
 
 1. For each file listed below, read the file and evaluate ONLY the rules
    listed for it, using their checklists. Do not invent new rules.
-2. Only report issues you are confident about (>= 80% confidence).
-3. Be specific: identify exact line numbers and provide actionable suggestions.
-4. Prioritize security and correctness over style.
-5. A file with no issues gets an empty issues array.
+2. When a file lists changed lines, focus your review on those ranges (read
+   the surrounding code for context); report issues elsewhere only when the
+   listed changes cause them.
+3. Only report issues you are confident about (>= 80% confidence).
+4. Be specific: identify exact line numbers and provide actionable suggestions.
+5. Prioritize security and correctness over style.
+6. A file with no issues gets an empty issues array.
 {language_instruction}
 ## Output contract
 
@@ -101,6 +104,8 @@ dino report <results-file.json>
                 {
                     "path": str(task.file_ctx.path),
                     "lines": task.file_ctx.content.count("\n") + 1,
+                    "new": task.file_ctx.is_new,
+                    "changed_lines": [list(r) for r in cls.changed_ranges(task)],
                     "rules": [cls._rule_to_dict(rule) for rule in task.rules],
                     **({"content": task.file_ctx.content} if embed_code else {}),
                 }
@@ -122,7 +127,7 @@ dino report <results-file.json>
         language_instruction = ""
         if config.language != "en":
             language_instruction = (
-                f"6. Respond in {config.language}: all issue titles, explanations, "
+                f"7. Respond in {config.language}: all issue titles, explanations, "
                 f"and action items must be in {config.language}.\n"
             )
         return cls.HEADER_TEMPLATE.format(language_instruction=language_instruction)
@@ -142,6 +147,14 @@ dino report <results-file.json>
         lines = file_ctx.content.count("\n") + 1
         parts = [f"### {file_ctx.path} ({lines} lines)\n"]
 
+        if file_ctx.is_new:
+            parts.append("New file - review it in full.\n")
+        else:
+            ranges = cls.changed_ranges(task)
+            if ranges:
+                formatted = ", ".join(f"{s}-{e}" if s != e else str(s) for s, e in ranges)
+                parts.append(f"Changed lines: {formatted}. Focus your review here.\n")
+
         parts.append(f"Rules to evaluate ({len(task.rules)}):\n")
         for rule in task.rules:
             parts.append(cls._format_rule(rule, file_ctx.path.suffix))
@@ -151,6 +164,22 @@ dino report <results-file.json>
             parts.append(f"File content:\n\n```{fence}\n{file_ctx.content}\n```\n")
 
         return "\n".join(parts)
+
+    @staticmethod
+    def changed_ranges(task: FileAnalysisTask) -> list[tuple[int, int]]:
+        """Merge the file's diff hunks into sorted, non-overlapping line ranges."""
+        spans = sorted(
+            (hunk.start_line, hunk.end_line)
+            for hunk in task.file_ctx.diff_hunks
+            if hunk.start_line <= hunk.end_line
+        )
+        merged: list[tuple[int, int]] = []
+        for start, end in spans:
+            if merged and start <= merged[-1][1] + 1:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+            else:
+                merged.append((start, end))
+        return merged
 
     @classmethod
     def _format_rule(cls, rule: Rule, file_suffix: str) -> str:

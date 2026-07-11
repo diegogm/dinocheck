@@ -3,7 +3,7 @@
 import fnmatch
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +36,32 @@ class Pack(ABC):
         """Pack-level trigger configuration."""
         return {}
 
+    @staticmethod
+    def matches_file_pattern(path: Path, pattern: str) -> bool:
+        """Match a path against a rule file pattern.
+
+        fnmatch treats `**/` as requiring at least one directory, so
+        `**/Dockerfile` would never match a root-level `Dockerfile`.
+        Rule patterns mean "at any depth", so `**/x` also matches bare `x`.
+        """
+        path_str = path.as_posix()
+        if fnmatch.fnmatch(path_str, pattern):
+            return True
+        return pattern.startswith("**/") and fnmatch.fnmatch(path_str, pattern[3:])
+
+    def is_candidate_file(self, path: Path) -> bool:
+        """Check whether any rule could apply to this path (patterns only).
+
+        Used during discovery to decide which files are worth reading;
+        content patterns are evaluated later in get_rules_for_file.
+        """
+        for rule in self.rules:
+            if not rule.triggers.file_patterns:
+                return True
+            if any(self.matches_file_pattern(path, p) for p in rule.triggers.file_patterns):
+                return True
+        return False
+
     def get_rules_for_file(self, path: Path, content: str) -> list[Rule]:
         """Get applicable rules for a specific file."""
         applicable = []
@@ -43,7 +69,8 @@ class Pack(ABC):
             # Check file patterns
             if rule.triggers.file_patterns:
                 matched = any(
-                    fnmatch.fnmatch(str(path), pattern) for pattern in rule.triggers.file_patterns
+                    self.matches_file_pattern(path, pattern)
+                    for pattern in rule.triggers.file_patterns
                 )
                 if not matched:
                     continue
@@ -108,8 +135,18 @@ class WorkspaceScanner(ABC):
     """Scans workspace for files to analyze."""
 
     @abstractmethod
-    def discover(self, paths: list[Path], diff_only: bool = True) -> Iterator[FileContext]:
-        """Discover files to analyze."""
+    def discover(
+        self,
+        paths: list[Path],
+        diff_only: bool = True,
+        is_candidate: Callable[[Path], bool] | None = None,
+    ) -> Iterator[FileContext]:
+        """Discover files to analyze.
+
+        is_candidate pre-filters walked/changed files by path (e.g. against
+        the enabled rule packs' file patterns) before reading their content.
+        Explicitly given file paths bypass the filter - the user asked for them.
+        """
         ...
 
     @abstractmethod
