@@ -3,32 +3,34 @@ name: Resource Lifecycle Management
 level: major
 category: reliability
 description: |
-  Reviews management of resources like file handles, database connections,
-  locks, and network sockets. Ensures resources are properly acquired,
-  used, and released even when errors occur.
+  Detects resources - file handles, sockets, DB connections, locks, sessions -
+  that are acquired without a guaranteed release path. If an exception occurs
+  between acquire and release, the resource leaks; under load, leaked handles
+  and connections exhaust pools and file descriptor limits and take the service down.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "open\\("
-    - "connect\\("
-    - "acquire\\("
-    - "Lock\\("
-    - "socket\\("
-    - "Session\\("
+    - "\\bopen\\("
+    - "\\.connect\\("
+    - "\\.acquire\\("
+    - "(Lock|Semaphore)\\("
+    - "socket\\.socket\\("
+    - "Session\\(\\)"
 
 checklist:
-  - Is the resource used within a context manager (with statement)?
-  - If not using context manager, is there proper try/finally cleanup?
-  - Could an exception leave the resource in an inconsistent state?
-  - Are there timeout configurations for network resources?
-  - Could resource exhaustion occur under load?
+  - Is the resource opened with a `with` statement, or released in a `finally` block that runs on every path?
+  - Between acquire and release, can an exception or early return skip the cleanup call?
+  - Is a resource created per call/request when it should be pooled or reused (e.g. one requests.Session per request)?
+  - Do network resources have explicit timeouts so they cannot hang forever holding the resource?
+  - If the resource is stored on an object, is there a defined close/teardown path (context manager protocol, close method that callers invoke)?
 
 fix: |
-  Use context managers (with statement) for automatic cleanup.
-  For resources without context manager support, use try/finally.
-  Set appropriate timeouts for network operations.
+  Use context managers (`with open(...) as f:`) for everything that supports
+  them; use contextlib.closing() or try/finally otherwise. Give objects that
+  own resources __enter__/__exit__ or an explicit close() called by their owner.
+  Set timeouts on all network operations.
 
 tags:
   - reliability
@@ -44,4 +46,4 @@ examples:
   good: |
     with open("data.txt") as f:
         data = f.read()
-        process(data)
+    process(data)

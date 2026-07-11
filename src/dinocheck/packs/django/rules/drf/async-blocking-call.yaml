@@ -1,33 +1,34 @@
 id: django/async-blocking-call
-name: Blocking Call in Async Context
+name: Blocking Call in Async Django View
 level: critical
 category: performance
 description: |
-  Detects synchronous blocking calls inside async views or
-  coroutines. This defeats the purpose of async and can cause
-  the entire event loop to stall.
+  Detects synchronous blocking calls inside async Django views and coroutines:
+  direct ORM queries, requests-based HTTP calls, or time.sleep(). Under ASGI a
+  single blocking call stalls the event loop for every in-flight request, and
+  unwrapped ORM access from async code raises SynchronousOnlyOperation at
+  runtime.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
     - "async def"
-    - "await"
     - "@sync_to_async"
     - "@async_to_sync"
 
 checklist:
-  - Are there ORM queries without sync_to_async wrapper?
-  - Are file operations wrapped for async?
-  - Are external HTTP calls using async client?
-  - Is time.sleep() used instead of asyncio.sleep()?
-  - Are third-party libraries async-compatible?
-  - Could blocking calls starve the event loop?
+  - Are ORM calls (Model.objects..., .save(), .delete()) made directly inside async functions without the async API (aget, afirst) or sync_to_async?
+  - Are HTTP requests made with requests/urllib instead of httpx.AsyncClient or aiohttp?
+  - Is time.sleep() used instead of await asyncio.sleep()?
+  - Is blocking file I/O or a sync-only third-party SDK called directly in a coroutine?
+  - Are sync_to_async/async_to_sync wrappers applied at sensible boundaries rather than layered redundantly per call?
 
 fix: |
-  Use sync_to_async for Django ORM operations. Use aiohttp/httpx
-  for HTTP calls. Use aiofiles for file operations. Replace
-  time.sleep with asyncio.sleep.
+  Use Django's native async ORM methods (aget, acount, async for) where
+  available, or wrap ORM/sync calls with asgiref.sync.sync_to_async. Use
+  httpx.AsyncClient for outbound HTTP and asyncio.sleep for delays. If the view
+  is mostly synchronous work, make it a regular sync view instead.
 
 tags:
   - performance
@@ -42,7 +43,7 @@ examples:
         return {'user': user, 'stats': response.json()}
   good: |
     async def get_user_data(user_id):
-        user = await sync_to_async(User.objects.get)(id=user_id)
+        user = await User.objects.aget(id=user_id)
         async with httpx.AsyncClient() as client:
             response = await client.get(f'/api/stats/{user_id}')
         return {'user': user, 'stats': response.json()}

@@ -3,35 +3,37 @@ name: Flaky Test Pattern Detection
 level: major
 category: testing
 description: |
-  Detects test patterns that can cause intermittent failures,
-  such as time dependencies, random data, shared state, or
-  external service calls without mocking.
+  Detects test constructs that make results depend on the environment instead of
+  the code: real clocks and sleeps, unseeded randomness, live network calls,
+  and state shared between tests. These tests pass locally and fail
+  intermittently in CI, eroding trust until real failures get ignored too.
 
 triggers:
   file_patterns:
     - "**/test_*.py"
     - "**/*_test.py"
     - "**/tests.py"
+    - "**/tests/**/*.py"
   code_patterns:
     - "time\\.sleep"
-    - "datetime\\.now"
-    - "random\\."
-    - "requests\\.get|post|put"
-    - "httpx\\."
-    - "uuid\\."
+    - "datetime\\.(now|today|utcnow)"
+    - "random\\.(random|randint|choice|shuffle|sample)"
+    - "requests\\.(get|post|put|delete)"
+    - "httpx\\.(get|post|Client|AsyncClient)"
+    - "uuid\\.uuid4"
 
 checklist:
-  - Does the test depend on current time or date?
-  - Is there randomness that could cause different outcomes?
-  - Does the test call external services without mocking?
-  - Is there shared state between tests?
-  - Does test order matter?
-  - Are there race conditions in async tests?
+  - Does the test use time.sleep() to wait for something instead of polling a condition or controlling the clock?
+  - Do assertions depend on the real current time/date (datetime.now, token expiry, "today" boundaries)?
+  - Is unseeded randomness (random.*, uuid4) used in a way that can change the asserted outcome between runs?
+  - Does the test hit real external services (HTTP, email, third-party APIs) instead of mocks/fakes?
+  - Does the test rely on state left by other tests (module globals, shared DB rows, class attributes), so order matters?
 
 fix: |
-  Mock time with freezegun. Seed random generators. Mock external
-  calls. Use setUp/tearDown for isolation. Use pytest-randomly
-  to detect order dependencies.
+  Freeze time with freezegun or inject a clock. Seed randomness or pass fixed
+  values. Mock external calls (responses, respx, unittest.mock). Give each test
+  its own fixtures and clean up shared state; run with pytest-randomly to catch
+  order dependencies. Replace sleeps with explicit waits on conditions.
 
 tags:
   - testing

@@ -1,33 +1,35 @@
 id: react/large-component
 name: Large Component Should Be Split
-level: major
+level: minor
 category: maintainability
 description: |
-  Detects components that are too large and handle too many responsibilities.
-  Large components are harder to test, reuse, and maintain. They often mix
-  concerns like data fetching, business logic, and presentation, making
-  the code fragile and difficult to reason about.
+  Detects components that have grown too large and mix several
+  responsibilities: many useState/useEffect hooks, data fetching, business
+  logic, and hundreds of lines of JSX in one function. Such components are
+  hard to test and reuse, re-render as one monolithic block, and every change
+  risks breaking unrelated sections.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
     - "**/*.tsx"
   code_patterns:
-    - "function \\w+.*return\\s*\\("
-    - "const \\w+ = \\(.*\\) =>"
+    - '(?:\buseState[<(][\s\S]*?){4}'
+    - '(?:\buseEffect\([\s\S]*?){4}'
 
 checklist:
-  - Does the component have more than 200-300 lines of JSX?
-  - Does it manage more than 3-4 pieces of state?
-  - Does it handle multiple unrelated responsibilities?
-  - Could sections of the JSX be extracted into child components?
-  - Does it mix data fetching, business logic, and presentation?
-  - Are there multiple useEffect hooks handling unrelated side effects?
+  - Is the component several hundred lines long or does its JSX render clearly separable sections?
+  - Does it manage 4+ pieces of unrelated state or 3+ unrelated useEffect hooks?
+  - Does it mix data fetching, business logic, and presentation in one body?
+  - Could each visual section become its own child component with a narrow props interface?
+  - Could related state + effects be extracted into a custom hook (useXxx)?
 
 fix: |
-  Split the component into smaller, focused components. Extract
-  data fetching into custom hooks, move business logic into separate
-  functions or hooks, and create presentational components for UI sections.
+  Split by responsibility: extract each visual section into a child component,
+  move data fetching and related state into custom hooks (e.g. useUsers(),
+  useAnalytics()), and keep the parent as a thin composition layer. Group
+  state that changes together; unrelated state belongs in the child that uses
+  it.
 
 tags:
   - maintainability

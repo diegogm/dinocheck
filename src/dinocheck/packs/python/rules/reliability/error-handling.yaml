@@ -3,29 +3,30 @@ name: Error Handling Review
 level: major
 category: error-handling
 description: |
-  Reviews error handling patterns to ensure exceptions are handled
-  appropriately for the context. A linter can detect bare except,
-  but only semantic analysis can determine if the handling strategy
-  is correct for the situation.
+  Reviews whether each try/except block handles errors appropriately for its
+  context: what is caught, what is swallowed, and what the caller learns.
+  A linter flags bare excepts; this rule judges the strategy - silently ignoring
+  a cache miss is fine, silently ignoring a payment failure loses money.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "except.*:"
+    - "except .*:"
     - "try:"
 
 checklist:
-  - Is the exception type appropriate for what could be raised?
-  - Should this error be logged, re-raised, or silently ignored?
-  - Is critical business logic protected from silent failures?
-  - Are transient errors (network, DB) handled with retry logic?
-  - Could this error handling mask a bug that should crash loudly?
+  - Does `except Exception` or a bare except swallow failures in business-critical operations (payments, writes, notifications)?
+  - Is the caught exception type specific to what the try block can actually raise, or does it also hide unrelated bugs (TypeError, KeyError)?
+  - When an error is caught, is it logged with enough context (IDs, operation) or re-raised - or does it vanish with `pass`?
+  - Are transient failures (network, DB timeouts) either retried or propagated, rather than treated as permanent?
+  - Does the except block leave the system in a consistent state (rollbacks, cleanup) before continuing?
 
 fix: |
-  Consider the context: cache misses can be silently ignored,
-  but payment failures should never be. Log unexpected errors,
-  use specific exception types, and fail fast for programming errors.
+  Catch the narrowest exception type the operation can raise. Decide explicitly
+  per site: ignore (only for genuinely optional operations, with a comment),
+  log-and-degrade, retry with backoff, or wrap and re-raise with `raise ... from e`.
+  Never `except Exception: pass` around code whose failure matters.
 
 tags:
   - error-handling

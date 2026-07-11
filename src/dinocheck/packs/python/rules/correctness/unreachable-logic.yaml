@@ -3,30 +3,33 @@ name: Unreachable Logic Detection
 level: major
 category: correctness
 description: |
-  Detects code that can never execute due to logical contradictions,
-  not syntax errors. Unlike dead code detected by linters, this
-  requires understanding the semantic meaning of conditions.
+  Detects branches that can never execute because their condition contradicts an
+  enclosing or earlier check (e.g. `if not x` nested inside `if x`), or elif arms
+  shadowed by an earlier equivalent condition. Unlike dead code after return that
+  linters catch, these require understanding what the conditions mean - and they
+  usually indicate the author intended something else.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "if .+ and .+:"
-    - "if .+ or .+:"
-    - "while .+:"
-    - "elif .+:"
+    - "if (.+):\\n\\s*if not \\1"
+    - "if not (.+):\\n\\s*if \\1"
+    - "elif (.+):(.+\\n){0,6}?\\s*elif \\1:"
+    - "if .+ and not .+:"
 
 checklist:
-  - Are there contradictory conditions (x and not x)?
-  - Is there code after an unconditional return/raise?
-  - Are there conditions that can never be true given prior checks?
-  - Is the same condition checked multiple times with different outcomes?
-  - Are there mutually exclusive conditions in elif chains?
+  - Is a condition tested inside a branch that already guarantees its opposite (x and then not x)?
+  - In an if/elif chain, is any arm's condition already implied or excluded by an earlier arm, making it dead?
+  - Given earlier returns/raises/guards, can this branch's condition still be true when execution reaches it?
+  - Does a compound condition contain contradictory terms (a and not a) or terms made redundant by prior checks?
+  - If the branch is unreachable, what did the author probably intend - is the real bug a wrong condition elsewhere?
 
 fix: |
-  Remove unreachable code or fix the logical condition. If the
-  unreachable code was intentional (defensive), add a comment
-  explaining why it exists.
+  Determine the intended behavior first: often the fix is correcting the
+  condition, not deleting the branch. Remove genuinely dead branches. If a
+  never-true check is kept deliberately as defense-in-depth, replace it with an
+  assertion or add a comment explaining why it exists.
 
 tags:
   - correctness
@@ -44,3 +47,5 @@ examples:
     def process(user):
         if user.is_admin:
             grant_access()
+        else:
+            log_security_event()

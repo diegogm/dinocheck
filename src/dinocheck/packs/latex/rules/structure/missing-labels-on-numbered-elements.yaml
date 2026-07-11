@@ -3,16 +3,24 @@ name: Missing labels on numbered elements
 level: minor
 category: structure
 description: |
-  Detects numbered figures, tables, equations, and sections that are likely to
-  be referenced later but do not define stable labels.
+  Detects numbered elements (figures, tables, equations, sections) without a
+  \label{}, and cross-references written as hardcoded text ("see Figure 3").
+  Hardcoded numbers silently become wrong the moment anything is inserted,
+  removed, or reordered, and unlabeled elements cannot be referenced at all,
+  forcing brittle manual numbering.
 
 checklist:
-  - Are figures/tables/equations introduced without \label{}?
-  - Are manual references like "Figure 3" used instead of \ref{} or \autoref{}?
-  - Would renumbering break cross-references in the document?
+  - Do figure/table/equation/align environments with a \caption lack a \label (placed after or inside the caption)?
+  - Are elements referenced with literal text like "Figure 3" or "Section 2.1" instead of \ref/\autoref/\cref?
+  - Would inserting a new figure or section before an existing one silently invalidate any written-out number?
+  - Do labels follow a consistent prefix convention (fig:, tab:, eq:, sec:) so references stay readable?
+  - Are there \ref{} calls to keys that no \label{} defines (rendering as "??")?
 fix: |
-  Add explicit \label{} entries close to numbered environments and reference
-  them using \ref{} or \autoref{} instead of hardcoded numbers.
+  Add \label{} to every numbered element you reference - in figures/tables
+  place it after (or inside) \caption, since \label captures the most recent
+  number. Reference with \ref{fig:latency} (plus a non-breaking tie:
+  Figure~\ref{...}), or \autoref/\cref to generate the element name
+  automatically. Use consistent prefixes: fig:, tab:, eq:, sec:.
 
 tags:
   - latex
@@ -23,10 +31,10 @@ triggers:
   file_patterns:
     - "**/*.tex"
   code_patterns:
-    - "\\begin\\{figure"
-    - "\\begin\\{table"
-    - "\\begin\\{equation"
-    - "Figure [0-9]+"
+    - "\\\\begin\\{figure"
+    - "\\\\begin\\{table"
+    - "\\\\begin\\{(equation|align)"
+    - "\\b(Figure|Table|Equation|Section)\\s+[0-9]"
 
 examples:
   bad: |

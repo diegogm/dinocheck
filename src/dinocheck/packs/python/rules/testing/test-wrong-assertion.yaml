@@ -3,34 +3,36 @@ name: Test with Wrong Assertion
 level: major
 category: testing
 description: |
-  Detects tests that pass but for the wrong reason, such as
-  asserting on the wrong value, using assertions that always
-  pass, or testing implementation instead of behavior.
+  Detects assertions that cannot fail or don't check what the test name claims:
+  assertTrue on an object that is always truthy, type checks instead of value
+  checks, comparing a value to itself, or asserting on the input rather than the
+  result. The test stays green while the behavior it supposedly covers breaks.
 
 triggers:
   file_patterns:
     - "**/test_*.py"
     - "**/*_test.py"
     - "**/tests.py"
+    - "**/tests/**/*.py"
   code_patterns:
-    - "assert "
-    - "assertEqual"
-    - "assertTrue"
-    - "assertFalse"
-    - "self\\.assert"
+    - "assertTrue\\("
+    - "assertFalse\\("
+    - "assert \\w+$"
+    - "assertIsNotNone"
+    - "isinstance\\(.*assert|assert.*isinstance"
 
 checklist:
-  - Does assertTrue/assertFalse check the correct condition?
-  - Could the assertion pass for wrong reasons (e.g., assert response)?
-  - Is the expected value actually what's being tested?
-  - Are there assertions on type instead of value?
-  - Could the test pass with completely wrong output?
-  - Is the test checking behavior or implementation details?
+  - Is assertTrue/assert applied to an object that is always truthy (a response object, a non-empty container, a function reference)?
+  - Does the assertion check only the type or non-None-ness when the test's purpose is a specific value or status?
+  - Is the asserted expected value correct, and is it independent of the code under test (not computed by the same logic being tested)?
+  - Would the test still pass if the function returned a plausible wrong answer? Try mentally mutating the code.
+  - Does the assertion match the test name - a test called test_calculates_tax should assert the tax amount?
 
 fix: |
-  Use specific assertions (assertEqual, assertIn, assertRaises).
-  Check actual values, not just truthiness. Test behavior, not
-  implementation. Add negative test cases.
+  Assert exact expected values: assertEqual(response.status_code, 200) instead
+  of assertTrue(response); assertEqual(result, 6) instead of isinstance checks.
+  Hardcode expected values in the test rather than recomputing them with the
+  production code. One behavior per test, named after it.
 
 tags:
   - testing
@@ -41,11 +43,11 @@ examples:
   bad: |
     def test_get_user(self):
         response = client.get('/api/users/1/')
-        self.assertTrue(response)  # Always passes if response exists!
+        self.assertTrue(response)  # Always passes: response object is truthy!
 
     def test_calculate_total(self):
         result = calculate_total([1, 2, 3])
-        self.assertTrue(isinstance(result, int))  # Doesn't check value!
+        self.assertTrue(isinstance(result, int))  # Doesn't check the value!
   good: |
     def test_get_user(self):
         response = client.get('/api/users/1/')

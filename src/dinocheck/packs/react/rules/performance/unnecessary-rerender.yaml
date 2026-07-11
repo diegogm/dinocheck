@@ -1,34 +1,36 @@
 id: react/unnecessary-rerender
 name: Unnecessary Component Re-render
-level: major
+level: minor
 category: performance
 description: |
-  Detects patterns that cause unnecessary re-renders in React components.
-  Common causes include creating new function references on every render,
-  passing new object references as props, or missing memoization for
-  expensive computations.
+  Detects render-time work that defeats memoization and causes avoidable
+  re-renders: inline arrow functions passed to memoized children, values
+  recomputed on every render (filter/sort inside JSX), and unstable context
+  values. On large lists or expensive subtrees this turns every keystroke
+  into a full re-render cascade.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
     - "**/*.tsx"
   code_patterns:
-    - "onClick=\\{\\(\\) =>"
-    - "onChange=\\{\\(\\) =>"
-    - "onSubmit=\\{\\(\\) =>"
-    - "=\\{\\(\\) =>"
+    - 'on[A-Z]\w+=\{\s*\([^)]*\)\s*=>'
+    - 'on[A-Z]\w+=\{\s*\w+\s*=>'
+    - '=\{\s*\w+\.(filter|map|sort|slice|reduce)\('
 
 checklist:
-  - Are anonymous functions created inline as event handler props?
-  - Could useCallback prevent re-creating the function on every render?
-  - Are expensive computations repeated on every render without useMemo?
-  - Does the parent component pass new references to memoized children?
-  - Are context values causing widespread re-renders?
+  - Are inline arrow functions passed as props to memoized components or components rendering expensive subtrees?
+  - Are arrays/objects computed inline in JSX (items.filter(...) inside a prop) on every render?
+  - Would useCallback (for handlers) or useMemo (for computations) give the child a stable reference?
+  - Is a context Provider value re-created on each render ({{ ... }} inline), re-rendering all consumers?
+  - Is the receiving component actually memoized? If nothing compares references, the inline function is fine.
 
 fix: |
-  Wrap callback functions with useCallback and expensive computations
-  with useMemo. Extract inline handlers to named functions within the
-  component. Use React.memo on child components that receive stable props.
+  Wrap handlers passed to memoized children in useCallback, and expensive or
+  reference-compared computations in useMemo. Memoize context values before
+  passing them to a Provider. Apply React.memo to pure children that receive
+  stable props. Do not memoize blindly: only where a profiler or a memoized
+  consumer justifies it.
 
 tags:
   - performance
@@ -52,7 +54,7 @@ examples:
         handleClick(id);
       }, []);
 
-      const categorizedItems = useMemo(() => {
+      const itemsByCategory = useMemo(() => {
         return groupByCategory(items);
       }, [items]);
 
@@ -60,7 +62,7 @@ examples:
         <ExpensiveChild
           key={item.id}
           onClick={handleItemClick}
-          data={categorizedItems[item.category]}
+          data={itemsByCategory[item.category]}
         />
       ));
     }

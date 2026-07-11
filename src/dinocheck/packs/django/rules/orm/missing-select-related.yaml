@@ -21,3 +21,13 @@ fix: Add select_related('field_name') to the queryset.
 tags:
   - performance
   - orm
+
+examples:
+  bad: |
+    invoices = Invoice.objects.filter(status="open")
+    for invoice in invoices:
+        print(invoice.customer.email)  # one extra query per invoice
+  good: |
+    invoices = Invoice.objects.filter(status="open").select_related("customer")
+    for invoice in invoices:
+        print(invoice.customer.email)  # customer already joined

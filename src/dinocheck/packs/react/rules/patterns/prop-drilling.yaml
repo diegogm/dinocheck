@@ -1,33 +1,35 @@
 id: react/prop-drilling
 name: Excessive Prop Drilling
-level: major
+level: minor
 category: maintainability
 description: |
-  Detects excessive prop drilling where props are passed through multiple
-  intermediate components that don't use them. This makes the code harder
-  to maintain, refactor, and understand because changes to the prop
-  require updating every component in the chain.
+  Detects props threaded through multiple intermediate components that never
+  use them, only forward them. Every rename or type change then touches the
+  whole chain, intermediate components gain false dependencies, and the data
+  flow becomes hard to trace and refactor.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
     - "**/*.tsx"
   code_patterns:
-    - "props\\."
-    - "\\.\\.\\.(props|rest)"
-    - "\\{.*,.*,.*,.*\\}"
+    - '\b(\w+)=\{\1\}'
+    - '\.\.\.(props|rest)\b'
+    - '\(\{\s*\w+(\s*,\s*\w+){4,}'
 
 checklist:
-  - Is the same prop passed through 3 or more component levels?
-  - Do intermediate components only forward the prop without using it?
-  - Are many props spread through intermediate components with {...rest}?
-  - Would React Context or a state management library simplify the data flow?
-  - Is component composition (children/render props) a better fit?
+  - Is the same prop passed down through 3 or more component levels?
+  - Do intermediate components receive the prop only to forward it, without reading it?
+  - Are broad spreads ({...props}, {...rest}) used to blindly relay many values?
+  - Would React Context (or a state/store hook) let the consumer read the value directly?
+  - Would composition (passing the ready-made element as children) remove the intermediate hops?
 
 fix: |
-  Use React Context for data that many components at different nesting
-  levels need. Alternatively, use component composition by passing
-  components as children or render props to skip intermediate layers.
+  For data needed at several depths (current user, theme, locale), create a
+  Context with a provider near the data source and read it with useContext in
+  the consumer. Alternatively, restructure with composition: build the inner
+  element where the data lives and pass it down as children, so intermediate
+  layers stay data-agnostic. Reserve drilling for 1-2 levels.
 
 tags:
   - maintainability

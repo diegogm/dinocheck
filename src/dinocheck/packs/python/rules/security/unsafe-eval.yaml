@@ -3,9 +3,11 @@ name: Unsafe eval/exec Usage
 level: critical
 category: security
 description: |
-  Detects usage of eval/exec or dynamic code execution patterns
-  that can run untrusted input. These can lead to arbitrary code
-  execution if user-controlled data reaches them.
+  Detects eval(), exec(), and compile() on dynamically built strings. If any
+  part of the evaluated string can be influenced by users, configuration, or
+  external data, this is arbitrary code execution inside your process. Even on
+  "internal" input it is fragile: a safer parser almost always exists.
+  (Unsafe deserializers like pickle are covered by python/insecure-deserialization.)
 
 triggers:
   file_patterns:
@@ -13,18 +15,20 @@ triggers:
   code_patterns:
     - "\\beval\\("
     - "\\bexec\\("
-    - "compile\\(.*\\)"
+    - "(?<!re\\.)\\bcompile\\(\\s*[\"'f]"
 
 checklist:
-  - Is the input to eval/exec derived from user input or external sources?
-  - Can the same behavior be achieved with a safe parser or mapping?
-  - Are there safeguards (allowlists) or strict validation in place?
-  - Is dynamic code execution absolutely required for this feature?
+  - Can the string passed to eval/exec contain content from users, HTTP requests, files, environment, or config?
+  - Is eval used merely to parse data - would json.loads() or ast.literal_eval() do the same safely?
+  - Is eval used for dynamic dispatch - would a dict mapping names to functions do the same safely?
+  - If dynamic execution is genuinely required (plugin system), is the input restricted to a strict allowlist or sandboxed?
 
 fix: |
-  Avoid eval/exec. Use explicit parsing (e.g., json, ast.literal_eval)
-  or safe mappings. If dynamic execution is unavoidable, ensure strict
-  allowlists and validation so only expected constructs are permitted.
+  Replace eval on data with json.loads() or ast.literal_eval(). Replace
+  eval-based dispatch with an explicit dict of allowed operations
+  ({"add": operator.add}[name]). For arithmetic expressions, use a dedicated
+  expression parser. If exec is unavoidable, hardcode the executed code and
+  never interpolate external strings into it.
 
 tags:
   - security
@@ -34,11 +38,13 @@ tags:
 examples:
   bad: |
     def run_expression(expr):
-        return eval(expr)  # User-controlled input could execute code
+        return eval(expr)  # User-controlled input executes arbitrary code
   good: |
     import ast
+    import operator
+
+    OPS = {"add": operator.add, "sub": operator.sub}
 
     def run_expression(expr):
-        allowed = {"add": lambda a, b: a + b}
-        data = ast.literal_eval(expr)
-        return allowed[data["op"]](*data["args"])
+        data = ast.literal_eval(expr)  # data only, no code execution
+        return OPS[data["op"]](*data["args"])

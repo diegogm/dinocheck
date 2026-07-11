@@ -3,17 +3,24 @@ name: Oversized paragraphs and manual formatting
 level: minor
 category: readability
 description: |
-  Detects hard-to-maintain authoring patterns such as manual line breaks,
-  repeated spacing commands, or very long paragraphs that hide structure.
+  Detects manual layout hacks - forced line breaks (\\) in prose, repeated
+  \vspace/\hspace/\newline, blank-line control via \par tricks - and very
+  long wall-of-text paragraphs. Manual spacing fights the typesetting
+  engine, breaks as soon as the template or font changes, and hides
+  document structure that sections, paragraphs, and lists express robustly.
 
 checklist:
-  - Are `\\` line breaks used for layout in normal prose?
-  - Are repeated spacing hacks (`\vspace`, `\hspace`, `\newline`) replacing structure?
-  - Could long paragraphs be split into clearer sections or lists?
+  - Are \\ line breaks used to end sentences or separate paragraphs in normal prose (instead of a blank line)?
+  - Are \vspace, \hspace, \newline, \bigskip or similar sprinkled repeatedly to fake margins and paragraph spacing?
+  - Do very long paragraphs bundle several distinct ideas that would be clearer as separate paragraphs, lists, or subsections?
+  - Would the layout survive a template/class change, or does it depend on hand-tuned spacing values?
 fix: |
-  Prefer semantic structure (sections, paragraphs, lists, environments) over
-  manual spacing and forced line breaks. Keep source readable and stable under
-  style/template changes.
+  Express structure semantically: blank lines for paragraphs, \section/
+  \subsection for structure, itemize/enumerate/description for enumerations.
+  Remove \\ from prose (it is for tabular rows, addresses, and poetry) and
+  delete ad hoc \vspace/\hspace; if spacing must change globally, adjust it
+  once in the preamble (e.g. \setlength{\parskip}{...} or the class options)
+  rather than at each site.
 
 tags:
   - latex
@@ -24,17 +31,21 @@ triggers:
   file_patterns:
     - "**/*.tex"
   code_patterns:
-    - '\\\\'
+    - '[a-z.,]\\\\\s*(\n|$)'
     - '\\vspace'
     - '\\hspace'
     - '\\newline'
+    - '\\bigskip'
 
 examples:
   bad: |
     We evaluated three settings.\\
-    The first setting...\\
+    The first setting focuses on latency.\\
     \vspace{8pt}
+    The second setting focuses on throughput.
   good: |
     We evaluated three settings.
 
-    The first setting focuses on...
+    The first setting focuses on latency.
+
+    The second setting focuses on throughput.

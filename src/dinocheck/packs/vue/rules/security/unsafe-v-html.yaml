@@ -3,16 +3,21 @@ name: Unsafe v-html usage
 level: critical
 category: security
 description: |
-  Using v-html renders raw HTML into the DOM, which can lead to XSS if the
-  content is user-provided or not properly sanitized. Vue does not sanitize
-  HTML for you.
+  Detects v-html bindings fed with dynamic content. v-html inserts the string
+  as raw HTML with no sanitization, so any user-provided or API-provided
+  value that reaches it becomes stored or reflected XSS: attacker markup and
+  event handlers execute in every visitor's browser.
 checklist:
-  - v-html is used to render dynamic HTML content.
-  - The HTML originates from user input, external APIs, or untrusted sources.
-  - There is no explicit sanitization step before rendering.
+  - Is v-html used to render dynamic content (anything not a hardcoded constant)?
+  - Can the bound value originate from user input, external APIs, URL parameters, or a CMS?
+  - Is the value sanitized with DOMPurify (or equivalent) immediately before binding, on every path?
+  - Would plain interpolation ({{ }}) or component-based rendering (e.g. a markdown component) suffice?
 fix: |
-  Avoid v-html when possible. If rendering HTML is required, sanitize the
-  content with a trusted sanitizer before passing it to v-html.
+  Prefer text interpolation ({{ value }}), which escapes automatically. If
+  HTML rendering is required, sanitize at the binding site — e.g. a computed
+  property returning DOMPurify.sanitize(this.raw) — and bind v-html to that
+  computed value only. Do not rely on the backend having sanitized it unless
+  that is enforced and tested.
 
 tags:
   - vue
@@ -23,11 +28,25 @@ triggers:
   file_patterns:
     - "**/*.vue"
   code_patterns:
-    - "v-html=\""
+    - 'v-html\s*='
 
 examples:
   bad: |
-    <div v-html="comment.body"></div>
+    <template>
+      <div v-html="comment.body"></div>
+    </template>
   good: |
-    <div v-html="sanitize(comment.body)"></div>
-
+    <template>
+      <div v-html="sanitizedBody"></div>
+    </template>
+    <script>
+    import DOMPurify from 'dompurify'
+    export default {
+      props: { comment: Object },
+      computed: {
+        sanitizedBody() {
+          return DOMPurify.sanitize(this.comment.body)
+        }
+      }
+    }
+    </script>

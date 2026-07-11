@@ -3,31 +3,34 @@ name: Missing Edge Case Handling
 level: major
 category: correctness
 description: |
-  Detects functions that don't handle common edge cases like
-  None, empty collections, zero, negative numbers, or boundary
-  conditions that could cause unexpected behavior.
+  Detects operations that crash or misbehave on legitimate edge inputs: division
+  by len() of an empty collection, indexing [0]/[-1] on possibly-empty sequences,
+  max()/min() on empty iterables, or None flowing into attribute access. These
+  failures typically surface in production with real data rather than in
+  happy-path tests.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "def \\w+\\(.*\\):"
-    - "\\[.*\\]"
-    - "for .+ in .+:"
-    - "/ |// |% "
+    - "/\\s*len\\("
+    - "\\[(0|-1)\\]"
+    - "\\b(max|min)\\("
+    - "\\.pop\\(\\)"
+    - "\\.split\\(.*\\)\\["
 
 checklist:
-  - What happens if input is None?
-  - What happens if collection is empty?
-  - What happens if number is zero or negative?
-  - What happens at boundary values (0, -1, MAX_INT)?
-  - What happens if string is empty or whitespace only?
-  - Is there division that could divide by zero?
+  - Can a division by len(x) or another denominator receive an empty collection or zero?
+  - Is [0], [-1], .pop() or next() applied to a sequence/iterator that may be empty?
+  - Is max()/min() called on an iterable that may be empty, without a default= argument?
+  - Can None reach this code and hit attribute access or arithmetic?
+  - Are negative numbers, empty strings, or whitespace-only strings meaningful inputs here, and are they handled?
 
 fix: |
-  Add explicit handling for edge cases. Use early returns for
-  invalid inputs. Document expected input constraints. Consider
-  using Optional type hints to make None-handling explicit.
+  Guard with an early return or explicit check before the risky operation
+  (if not items: return ...). Use max(items, default=...) and
+  next(it, default). Make None-tolerance explicit with Optional type hints
+  and validate at the function boundary.
 
 tags:
   - correctness
@@ -37,7 +40,7 @@ tags:
 examples:
   bad: |
     def average(numbers):
-        return sum(numbers) / len(numbers)  # Fails on empty list!
+        return sum(numbers) / len(numbers)  # ZeroDivisionError on empty list
   good: |
     def average(numbers):
         if not numbers:

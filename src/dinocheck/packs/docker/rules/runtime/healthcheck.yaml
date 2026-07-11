@@ -3,16 +3,25 @@ name: Missing HEALTHCHECK instruction
 level: minor
 category: reliability
 description: |
-  Without a HEALTHCHECK, Docker and orchestrators cannot determine if the
-  application inside the container is actually healthy. The container may
-  appear running while the application is deadlocked or unresponsive.
+  Detects Dockerfiles for long-running services that define no HEALTHCHECK
+  instruction. Without it, Docker and orchestrators only know that the process
+  exists, not that the application works: a container can stay "running" while
+  the app is deadlocked, out of connections, or returning errors. A health
+  check enables automatic recovery and correct startup ordering (e.g.
+  depends_on with condition service_healthy in Compose).
 checklist:
-  - Dockerfile has no HEALTHCHECK instruction.
-  - Service exposes HTTP endpoints but has no health probe.
-  - Long-running application without liveness verification.
+  - Does the final image run a long-lived service (server, worker, daemon) rather than a one-shot CLI or build tool?
+  - Is there no HEALTHCHECK instruction in the final build stage?
+  - Does the image EXPOSE a port or start a network listener without any liveness probe?
+  - If a HEALTHCHECK exists, does it verify real application behavior (endpoint, query) instead of just process existence?
+  - Are --interval, --timeout, --retries and --start-period sensible for the app's startup time?
 fix: |
-  Add a HEALTHCHECK instruction that verifies application health. Use curl,
-  wget, or a custom health check script. Set appropriate intervals and timeouts.
+  Add a HEALTHCHECK in the final stage that exercises the application, e.g.:
+  HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl -fsS http://localhost:8000/health || exit 1
+  If curl/wget is not in the image, ship a tiny healthcheck script or use the
+  runtime's own client (pg_isready, redis-cli ping, node healthcheck.js).
+  One-shot images (CLI tools, builders) do not need a HEALTHCHECK.
 
 tags:
   - docker
@@ -25,17 +34,17 @@ triggers:
     - "**/Dockerfile.*"
     - "**/*.dockerfile"
   code_patterns:
-    - "EXPOSE"
-    - "CMD"
+    - "\\bEXPOSE\\s+\\d"
+    - "\\n(CMD|ENTRYPOINT)[\\s\\[]"
 
 examples:
   bad: |
-    FROM python:3.11
+    FROM python:3.11-slim
     EXPOSE 8000
-    CMD ["uvicorn", "main:app"]
+    CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
   good: |
-    FROM python:3.11
+    FROM python:3.11-slim
     EXPOSE 8000
-    HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
-      CMD curl -f http://localhost:8000/health || exit 1
-    CMD ["uvicorn", "main:app"]
+    HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+      CMD curl -fsS http://localhost:8000/health || exit 1
+    CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

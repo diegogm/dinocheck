@@ -14,11 +14,11 @@ triggers:
     - "**/*.sass"
     - "**/*.less"
   code_patterns:
-    - "display:.*display:"
-    - "color:.*color:"
-    - "background:.*background:"
-    - "margin:.*margin:"
-    - "padding:.*padding:"
+    - "display:[^}]*display:"
+    - "color:[^}]*color:"
+    - "background:[^}]*background:"
+    - "margin:[^}]*margin:"
+    - "padding:[^}]*padding:"
 checklist:
   - Is the same property declared multiple times in one rule?
   - Is this intentional for browser fallbacks?

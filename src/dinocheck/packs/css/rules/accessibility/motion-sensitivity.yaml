@@ -3,11 +3,11 @@ name: Motion Without Reduced Motion Support
 level: major
 category: accessibility
 description: |
-  Animations and transitions can cause discomfort or health issues
-  for users with vestibular disorders. WCAG 2.1 Success Criterion
-  2.3.3 requires respecting the prefers-reduced-motion media query.
-  Large or continuous animations should be disabled or minimized
-  when the user prefers reduced motion.
+  Detects animations and transitions defined without a prefers-reduced-motion
+  fallback. Large movements, parallax, spinning, and auto-playing animations
+  can trigger dizziness and nausea in users with vestibular disorders. WCAG
+  2.1 (2.3.3 Animation from Interactions) expects non-essential motion to be
+  disableable, and the OS-level signal for that is prefers-reduced-motion.
 triggers:
   file_patterns:
     - "**/*.css"
@@ -15,32 +15,30 @@ triggers:
     - "**/*.sass"
     - "**/*.less"
   code_patterns:
-    - "animation:"
-    - "animation-name:"
-    - "@keyframes"
-    - "transition:"
+    - 'animation(-name)?:'
+    - '@keyframes'
+    - 'transition:'
 checklist:
-  - Are there significant animations that could cause discomfort?
-  - Is prefers-reduced-motion media query respected?
-  - Do animations have reasonable durations (<500ms)?
-  - Are parallax or scroll-triggered animations handled?
+  - Does the file define animations or transitions involving movement (translate, scale, rotate, parallax)?
+  - Is there any @media (prefers-reduced-motion) block that disables or reduces them?
+  - Are animations continuous/infinite or larger than small UI feedback (those need the fallback most)?
+  - Are trivial transitions (color, opacity under ~300ms) correctly left alone (they rarely need it)?
+  - Is motion essential to the feature, or purely decorative and safe to remove?
 fix: |
-  Wrap animations in a prefers-reduced-motion media query:
+  Add a reduced-motion path. Either disable globally:
 
   @media (prefers-reduced-motion: reduce) {
-    * {
+    *, *::before, *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
   }
 
-  Or conditionally enable animations:
+  or, better, opt in to motion only when allowed:
 
   @media (prefers-reduced-motion: no-preference) {
-    .element {
-      animation: slide 0.3s ease;
-    }
+    .element { animation: slide 0.3s ease; }
   }
 tags:
   - accessibility

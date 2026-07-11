@@ -3,17 +3,24 @@ name: Missing defensive set options
 level: major
 category: reliability
 description: |
-  Without set -e, scripts continue after errors. Without set -u, undefined
-  variables silently expand to empty strings. Without set -o pipefail, only
-  the last command's exit status is checked in pipelines.
+  Detects scripts that run without defensive shell options. Without set -e a
+  failed command is silently ignored and the script marches on; without
+  set -u a typo in a variable name expands to the empty string (rm -rf
+  "$PREFIXX/" becomes rm -rf "/"); without set -o pipefail a failure early
+  in a pipeline is masked by the last command's success.
 checklist:
-  - Script lacks set -e (exit on error).
-  - Script lacks set -u (error on undefined variables).
-  - Script uses pipes without set -o pipefail.
-  - No error handling strategy is evident.
+  - Does the script lack set -e (or set -o errexit), so failures do not stop execution?
+  - Does the script lack set -u (or set -o nounset), so misspelled/unset variables expand empty?
+  - Does the script use pipelines but lack set -o pipefail (bash), so upstream failures are hidden?
+  - If strict options are intentionally omitted, is error handling done explicitly (checked exit codes, || exit)?
+  - Are the options set at the top of the script, before any real work happens?
 fix: |
-  Add defensive options at script start: set -euo pipefail
-  Or use the equivalent: set -e; set -u; set -o pipefail
+  Start bash scripts with:
+    set -euo pipefail
+  For POSIX sh use set -eu (pipefail is not POSIX; check pipeline results
+  explicitly or use intermediate files). Where a specific command may fail
+  legitimately, opt out locally with cmd || true instead of dropping the
+  options globally.
 
 tags:
   - shell
@@ -25,15 +32,15 @@ triggers:
     - "**/*.sh"
     - "**/*.bash"
   code_patterns:
-    - "^#!/"
+    - "^#!"
 
 examples:
   bad: |
     #!/bin/bash
     cd /some/dir
-    rm -rf *
+    rm -rf "$SUBDIRR/"*   # typo'd variable expands empty: deletes /some/dir/*
   good: |
     #!/bin/bash
     set -euo pipefail
     cd /some/dir
-    rm -rf ./*
+    rm -rf "${SUBDIR:?}/"*

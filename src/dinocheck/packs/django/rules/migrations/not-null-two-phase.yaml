@@ -3,26 +3,57 @@ name: NOT NULL Without Two-Phase Migration
 level: critical
 category: migrations
 description: |
-  Adding NOT NULL to existing column requires two-phase migration
-  to avoid blocking writes and data loss.
+  Detects a NOT NULL column added or enforced on an existing table in a single
+  migration. Adding a non-nullable field with a default rewrites/validates every
+  row while holding a lock (long write blockage on big tables), and making an
+  existing column NOT NULL fails outright if any row still holds NULL. Existing
+  rows need a backfill before the constraint lands.
 
 triggers:
   file_patterns:
     - "**/migrations/*.py"
   code_patterns:
-    - "AddField.*null=False"
-    - "AlterField.*null=False"
+    - "AddField[\\s\\S]{0,400}null=False"
+    - "AlterField[\\s\\S]{0,400}null=False"
+    - "migrations\\.AddField"
 
 checklist:
-  - Adding NOT NULL without default
-  - Missing data backfill migration
+  - Does the migration add a field without null=True to a model whose table already has rows in production?
+  - Does an AlterField tighten null=True to null=False, and is every existing row guaranteed non-NULL (is there a backfill migration before it)?
+  - Is the table large or hot enough that the row rewrite/constraint validation lock causes noticeable write downtime?
+  - Can old application code still running during deploy insert rows without this field, violating the new constraint?
+  - Is this a brand-new model created in the same migration? Then NOT NULL is safe - do not report.
 
 fix: |
-  Phase 1: Add nullable field
-  Phase 2: Backfill data
-  Phase 3: Make field NOT NULL
+  Split into phases across releases: (1) AddField with null=True, (2) deploy
+  code that always writes the field, (3) backfill existing rows with RunPython
+  or a batched command, (4) AlterField to null=False once no NULLs remain. On
+  PostgreSQL, prefer adding a NOT VALID check constraint and validating it
+  separately for very large tables.
 
 tags:
   - migrations
   - database
   - safety
+
+examples:
+  bad: |
+    operations = [
+        migrations.AddField(
+            model_name='order',
+            name='status',
+            field=models.CharField(max_length=20, null=False, default='pending'),
+        ),  # Single phase: locks and rewrites every existing row
+    ]
+  good: |
+    # Migration 1: add as nullable
+    operations = [
+        migrations.AddField(
+            model_name='order',
+            name='status',
+            field=models.CharField(max_length=20, null=True),
+        ),
+    ]
+    # Migration 2: backfill in batches
+    # operations = [migrations.RunPython(backfill_status, migrations.RunPython.noop)]
+    # Migration 3 (next release): AlterField(... null=False, default='pending')

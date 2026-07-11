@@ -3,16 +3,26 @@ name: Container running as root
 level: major
 category: security
 description: |
-  Running containers as root increases the attack surface. If a container is
-  compromised, the attacker gains root privileges which can lead to container
-  escape vulnerabilities or access to sensitive host resources.
+  Detects images whose final stage runs as root (the Docker default when no
+  USER instruction is present). If the application is compromised, the
+  attacker gets UID 0 inside the container, which amplifies kernel and
+  runtime escape vulnerabilities and gives write access to anything mounted
+  from the host. Running as a dedicated non-root user is a cheap,
+  high-value hardening measure.
 checklist:
-  - Dockerfile does not specify a non-root USER instruction.
-  - The final stage runs as root (UID 0).
-  - No explicit user switching before the ENTRYPOINT/CMD.
+  - Is there no USER instruction in the final stage, or is the last USER root/0?
+  - Does the image create a dedicated unprivileged user (useradd/adduser) and switch to it before ENTRYPOINT/CMD?
+  - Are files the app needs owned by that user (COPY --chown or chown in a RUN step)?
+  - Does the service genuinely need root (e.g. binding ports <1024 without NET_BIND_SERVICE, managing devices), and is that documented?
+  - In multi-stage builds, does the check apply to the final runtime stage (builder stages may stay root)?
 fix: |
-  Add a USER instruction to run as a non-privileged user. Create the user
-  if needed with adduser/useradd.
+  Create and switch to a non-root user in the final stage:
+    RUN useradd -r -u 1001 appuser
+    COPY --chown=appuser:appuser . /app
+    USER appuser
+  If the app must listen on a port below 1024, listen on a high port instead
+  and map it, or grant only cap_net_bind_service at runtime. Some base images
+  ship a ready-made user (node, nginx-unprivileged) - prefer those.
 
 tags:
   - docker
@@ -25,15 +35,15 @@ triggers:
     - "**/Dockerfile.*"
     - "**/*.dockerfile"
   code_patterns:
-    - "^FROM"
+    - "FROM\\s+\\S+"
 
 examples:
   bad: |
-    FROM python:3.11
+    FROM python:3.11-slim
     COPY . /app
     CMD ["python", "app.py"]
   good: |
-    FROM python:3.11
+    FROM python:3.11-slim
     RUN useradd -r -u 1001 appuser
     COPY --chown=appuser:appuser . /app
     USER appuser

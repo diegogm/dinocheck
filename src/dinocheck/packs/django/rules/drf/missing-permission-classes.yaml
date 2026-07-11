@@ -3,31 +3,34 @@ name: API Authorization Review
 level: critical
 category: security
 description: |
-  Reviews DRF views and viewsets for proper authorization.
-  Missing permission_classes is just one issue - semantic analysis
-  is needed to verify the permissions are appropriate for the
-  data being accessed and operations being performed.
+  Reviews DRF views and viewsets for missing or insufficient authorization.
+  A view without permission_classes silently inherits project defaults (often
+  AllowAny), and IsAuthenticated alone still lets any logged-in user read or
+  modify other users' objects when object-level checks and queryset scoping are
+  missing.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "ViewSet"
-    - "APIView"
+    - "ViewSet\\b"
+    - "APIView\\b"
     - "@api_view"
     - "permission_classes"
 
 checklist:
-  - Are permission classes explicitly defined or relying on defaults?
-  - Do permissions match the sensitivity of the data/operation?
-  - Are object-level permissions needed (user can only edit own data)?
-  - Could a lower-privileged user access this endpoint?
-  - Are custom permissions properly implemented?
+  - Does every view declare permission_classes explicitly, or is it knowingly relying on a safe project-wide default?
+  - Do the permissions match the operation's sensitivity - are write/delete actions more restricted than reads?
+  - For per-user resources, is there object-level enforcement (has_object_permission or get_queryset filtered by request.user), not just IsAuthenticated?
+  - Can a user reach other users' objects by guessing IDs because queryset is Model.objects.all() without ownership filtering?
+  - Do custom actions (@action) and overridden methods keep the same permission checks as the standard ones?
 
 fix: |
-  Define explicit permission_classes on every view. Use object-level
-  permissions when users should only access their own resources.
-  Consider custom permissions for complex authorization logic.
+  Declare explicit permission_classes on every view; set a restrictive
+  DEFAULT_PERMISSION_CLASSES (e.g. IsAuthenticated) so omissions fail closed.
+  For ownership, combine an object-level permission class with get_queryset()
+  filtered by request.user - filtering alone protects list/detail, the
+  permission class protects custom actions.
 
 tags:
   - security
@@ -37,7 +40,7 @@ tags:
 examples:
   bad: |
     class UserViewSet(ModelViewSet):
-        queryset = User.objects.all()  # No permissions, uses global default
+        queryset = User.objects.all()  # No permissions, inherits global default
   good: |
     class UserViewSet(ModelViewSet):
         permission_classes = [IsAuthenticated, IsOwnerOrAdmin]

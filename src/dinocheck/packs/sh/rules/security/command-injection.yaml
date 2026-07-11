@@ -3,16 +3,25 @@ name: Potential command injection
 level: critical
 category: security
 description: |
-  Using eval, backticks with user input, or unsanitized variables in commands
-  can lead to command injection vulnerabilities. Attackers can execute
-  arbitrary commands by crafting malicious input.
+  Detects shell code where external input (arguments, environment variables,
+  file contents, command output) reaches eval, sh -c, or an interpolated
+  command string. An attacker who controls that input can inject arbitrary
+  commands (e.g. a filename like "; rm -rf ~"). This is the shell equivalent
+  of SQL injection and usually yields full code execution.
 checklist:
-  - eval is used with variables containing user input.
-  - Backticks or $() contain unvalidated external data.
-  - Variables from environment or arguments used directly in commands.
+  - Is eval applied to a string containing variables that originate outside the script?
+  - Is a command line built by string concatenation and run via sh -c / bash -c with external data inside?
+  - Do backticks or $( ) interpolate unvalidated variables into the command itself (not just as quoted arguments)?
+  - Can option injection occur - a value starting with a dash being parsed as a flag - where -- would end option parsing?
+  - When dynamic commands are unavoidable, is input validated against an allowlist or escaped with printf %q?
 fix: |
-  Avoid eval when possible. Use arrays for command arguments. Validate and
-  sanitize all external input. Use printf %q for escaping when necessary.
+  Avoid eval and string-built commands. Pass external data only as quoted
+  arguments, using arrays for dynamic argument lists:
+    cmd=(process_file --input "$USER_INPUT")
+    "${cmd[@]}"
+  Use -- before positional arguments (cat -- "$file") to stop option
+  injection. If you truly must build a string, escape each value with
+  printf %q and validate against an allowlist first.
 
 tags:
   - shell
@@ -23,17 +32,20 @@ triggers:
   file_patterns:
     - "**/*.sh"
     - "**/*.bash"
+    - "**/.*rc"
   code_patterns:
-    - "eval "
-    - "`.*\\$"
-    - "\\$\\(.*\\$"
+    - "\\beval\\s"
+    - "`[^`\\n]*\\$"
+    - "\\$\\([^)\\n]*\\$"
+    - "(sh|bash)\\s+-c\\s+[\"'][^\"'\\n]*\\$"
 
 examples:
   bad: |
     eval "process_file $USER_INPUT"
     result=`cat $filename`
+    bash -c "grep $pattern /var/log/app.log"
   good: |
-    # Use arrays and proper quoting
-    cmd=("process_file" "$USER_INPUT")
+    cmd=(process_file "$USER_INPUT")
     "${cmd[@]}"
     result=$(cat -- "$filename")
+    grep -e "$pattern" -- /var/log/app.log

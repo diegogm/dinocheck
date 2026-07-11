@@ -3,33 +3,32 @@ name: Error Information Leakage
 level: critical
 category: security
 description: |
-  Detects error handling that could expose internal system details
-  to users, such as stack traces, file paths, database queries,
-  or internal IP addresses.
+  Detects error handling that returns internal details to clients: raw exception
+  messages, stack traces, file paths, SQL fragments, or hostnames in API/HTTP
+  responses. Attackers use these details to map the schema, framework versions,
+  and file layout of the system; users should only ever see generic messages.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "except.*:"
-    - "raise.*\\("
-    - "traceback"
-    - "str\\(e\\)|str\\(err\\)|str\\(ex\\)"
-    - "\\.message"
+    - "except .+ as (e|err|ex|exc)\\b"
+    - "str\\((e|err|ex|exc)\\)"
+    - "traceback\\.(format_exc|print_exc)"
+    - "repr\\((e|err|ex|exc)\\)"
 
 checklist:
-  - Are exception details returned in API responses?
-  - Could stack traces reach end users?
-  - Are internal file paths exposed in error messages?
-  - Are database query errors shown to users?
-  - Could error messages reveal system architecture?
-  - Are internal hostnames or IPs in error responses?
+  - Is str(e), repr(e), or traceback output included in an HTTP/API response body returned to the client?
+  - Can an unexpected exception propagate to the user with framework debug pages enabled, instead of being caught and genericized?
+  - Do error responses reveal file paths, SQL, table/column names, internal hostnames, or library versions?
+  - Do error messages distinguish "user not found" from "wrong password" or otherwise confirm existence of private resources?
+  - Is the detailed exception still logged server-side (with a correlation ID) so debugging remains possible?
 
 fix: |
-  Return generic error messages to users. Log detailed errors
-  server-side with correlation IDs. Use error codes instead of
-  messages for client debugging. Never expose stack traces in
-  production.
+  Return a generic message and appropriate status code to the client, and log
+  the full exception server-side with logger.exception() plus a correlation ID
+  the client can quote. Map known error types to safe messages; treat everything
+  else as "Internal error". Keep DEBUG=False in production.
 
 tags:
   - security
@@ -47,6 +46,6 @@ examples:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=404)
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error fetching user %s", user_id)
         return Response({'error': 'Internal error'}, status=500)

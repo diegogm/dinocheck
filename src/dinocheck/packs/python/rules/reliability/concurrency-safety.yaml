@@ -3,9 +3,10 @@ name: Concurrency Safety Review
 level: critical
 category: concurrency
 description: |
-  Reviews concurrent code for race conditions, deadlocks, and
-  thread-safety issues. These bugs are notoriously hard to detect
-  with static analysis and require understanding the execution context.
+  Reviews threaded, multiprocess, and async code for race conditions, deadlocks,
+  and unprotected shared state. Check-then-act sequences on shared data, mutation
+  outside locks, and inconsistent lock ordering produce corruption that rarely
+  reproduces in tests and only appears under production load.
 
 triggers:
   file_patterns:
@@ -13,23 +14,22 @@ triggers:
   code_patterns:
     - "threading\\."
     - "multiprocessing\\."
-    - "asyncio\\."
     - "concurrent\\.futures"
-    - "async def"
-    - "await "
-    - "Lock\\(|RLock\\(|Semaphore\\("
+    - "(Lock|RLock|Semaphore|Event|Condition)\\("
+    - "asyncio\\.(gather|create_task|TaskGroup)"
 
 checklist:
-  - Are shared mutable variables protected by locks?
-  - Could there be a race condition in check-then-act patterns?
-  - Is lock acquisition order consistent to prevent deadlocks?
-  - Are async operations properly awaited?
-  - Could blocking calls starve the event loop?
+  - Is every read-modify-write of shared mutable state (counters, dicts, lists) performed while holding the lock that guards it?
+  - "Are check-then-act sequences (check existence, then create) atomic, or can another thread interleave between check and act?"
+  - When multiple locks exist, are they always acquired in the same global order to prevent deadlock?
+  - Are locks released on all paths, including exceptions (with-statement rather than manual acquire/release)?
+  - In async code, can shared state change across an await point in the middle of a compound operation?
 
 fix: |
-  Use locks to protect shared state. Avoid check-then-act patterns
-  or use atomic operations. Ensure consistent lock ordering.
-  Don't mix blocking I/O with async code without run_in_executor.
+  Guard each piece of shared state with one clearly-owned lock and hold it across
+  the whole read-modify-write, always via a with-statement. Replace check-then-act
+  with atomic primitives (queue.Queue, dict.setdefault, database constraints).
+  Establish and document a global lock-acquisition order.
 
 tags:
   - concurrency
@@ -39,9 +39,28 @@ tags:
 
 examples:
   bad: |
-    if self.counter < MAX:  # Race condition: check
-        self.counter += 1   # Race condition: act
+    import threading
+
+    class Downloads:
+        def __init__(self):
+            self.lock = threading.Lock()
+            self.counter = 0
+
+        def start(self):
+            if self.counter < MAX:   # check without lock
+                self.counter += 1    # another thread interleaves here
+                launch_download()
   good: |
-    with self.lock:
-        if self.counter < MAX:
-            self.counter += 1
+    import threading
+
+    class Downloads:
+        def __init__(self):
+            self.lock = threading.Lock()
+            self.counter = 0
+
+        def start(self):
+            with self.lock:
+                if self.counter >= MAX:
+                    return
+                self.counter += 1
+            launch_download()

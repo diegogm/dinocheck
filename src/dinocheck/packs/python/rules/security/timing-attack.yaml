@@ -3,29 +3,32 @@ name: Timing Attack Vulnerability
 level: critical
 category: security
 description: |
-  Detects string comparisons of secrets that are vulnerable to
-  timing attacks. Regular string comparison returns early on
-  first difference, leaking information about the secret.
+  Detects secrets - tokens, API keys, HMAC signatures, password hashes -
+  compared with == or !=. String comparison returns at the first differing
+  byte, so response times reveal how many leading characters matched, letting a
+  remote attacker recover the secret incrementally. Only comparisons of secret
+  material matter; ordinary string equality is fine.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "(token|secret|password|key|hash|signature).*=="
-    - "==.*(token|secret|password|key|hash|signature)"
-    - "!=.*(token|secret|password|key|hash)"
+    - "(?i)(token|secret|password|passwd|api_key|hash|signature|digest|hmac).{0,40}[=!]="
+    - "(?i)[=!]=.{0,40}(token|secret|password|api_key|hash|signature|digest)"
+    - "hmac\\.new\\("
 
 checklist:
-  - Are API keys or tokens compared with == operator?
-  - Are password hashes compared without constant-time function?
-  - Are HMAC signatures verified with regular comparison?
-  - Are webhook signatures checked timing-safely?
-  - Could an attacker measure response time differences?
+  - Is a token, API key, signature, or hash compared using == or != instead of a constant-time function?
+  - Is the compared value secret material an attacker would want to recover (not a public ID or enum that merely contains "key" in its name)?
+  - Can an attacker trigger the comparison repeatedly and observe timing (HTTP endpoint, webhook verification)?
+  - Are HMAC/webhook signatures verified with hmac.compare_digest() over bytes/str of the same type?
+  - Are password checks delegated to a proper hash library (bcrypt/argon2/check_password) rather than comparing digests manually?
 
 fix: |
-  Use hmac.compare_digest() for constant-time comparison of
-  secrets. Use secrets.compare_digest() in Python 3.x. Never
-  use == for comparing tokens, signatures, or hashes.
+  Use hmac.compare_digest(expected, received) (or secrets.compare_digest) for
+  all token and signature comparisons; ensure both arguments are the same type
+  (both str or both bytes). For passwords, use a password-hashing library's
+  verify function instead of comparing hashes yourself.
 
 tags:
   - security
@@ -36,8 +39,7 @@ examples:
   bad: |
     def verify_webhook(request):
         expected = compute_signature(request.body)
-        received = request.headers['X-Signature']
-        if expected == received:  # Timing attack!
+        if request.headers['X-Signature'] == expected:  # Timing attack!
             process_webhook(request)
   good: |
     import hmac

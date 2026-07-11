@@ -3,31 +3,35 @@ name: Missing Hook Dependencies
 level: major
 category: correctness
 description: |
-  Detects missing dependencies in useEffect, useMemo, and useCallback
-  dependency arrays. When a hook reads a value from props or state but
-  that value is not listed in the dependency array, the hook may use
-  stale data and produce incorrect behavior.
+  Detects missing dependencies in useEffect, useLayoutEffect, useMemo, and
+  useCallback dependency arrays. When the callback reads a prop, state
+  variable, or derived value that is not listed, the hook keeps using the
+  value captured on a previous render, producing stale data and effects that
+  never re-run when they should.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
     - "**/*.tsx"
   code_patterns:
-    - "useEffect\\("
-    - "useMemo\\("
-    - "useCallback\\("
+    - 'useEffect\('
+    - 'useLayoutEffect\('
+    - 'useMemo\('
+    - 'useCallback\('
 
 checklist:
-  - Does the hook reference any props or state variables inside its callback?
-  - Are all referenced props and state variables listed in the dependency array?
-  - Is the dependency array present but incomplete?
-  - Are there functions defined outside the hook that capture reactive values?
-  - Could a missing dependency cause the hook to use stale data?
+  - Which props, state variables, and locally derived values does the callback read?
+  - Are all of them present in the dependency array?
+  - Is an empty array ([]) used while the callback clearly reads reactive values?
+  - Are functions defined in the component body used inside the hook without being listed (or stabilized with useCallback)?
+  - Is a dependency deliberately omitted to "run once" where a ref or an effect-event pattern would be the correct fix?
 
 fix: |
-  Add all reactive values (props, state, and derived values) used inside the
-  hook to the dependency array. If a function is used as a dependency, wrap it
-  in useCallback or move it inside the hook.
+  List every reactive value the callback reads in the dependency array. For
+  functions, either move them inside the hook, hoist them out of the
+  component, or wrap them in useCallback and list that. To intentionally read
+  the latest value without re-triggering the effect, store it in a ref rather
+  than lying to the dependency array.
 
 tags:
   - hooks

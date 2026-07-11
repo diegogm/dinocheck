@@ -26,3 +26,19 @@ tags:
   - testing
   - security
   - authorization
+
+examples:
+  bad: |
+    class InvoiceViewSet(ModelViewSet):
+        permission_classes = [IsAuthenticated, IsInvoiceOwner]
+        queryset = Invoice.objects.all()
+    # No test anywhere asserts that another user's invoice returns 403
+  good: |
+    def test_cannot_read_other_users_invoice(api_client, invoice):
+        api_client.force_authenticate(UserFactory())  # not the owner
+        response = api_client.get(f"/api/invoices/{invoice.pk}/")
+        assert response.status_code == 403
+
+    def test_anonymous_gets_401(api_client, invoice):
+        response = api_client.get(f"/api/invoices/{invoice.pk}/")
+        assert response.status_code == 401

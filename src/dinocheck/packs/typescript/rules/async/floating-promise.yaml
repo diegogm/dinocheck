@@ -1,19 +1,24 @@
 id: typescript/floating-promise
 name: Unhandled floating promise
-level: critical
+level: major
 category: async
 description: |
-  A floating promise is a Promise that is not awaited, returned, or explicitly
-  handled. Errors from floating promises are silently swallowed, making bugs
-  hard to detect and debug. They can also cause race conditions.
+  Detects promises that are neither awaited, returned, nor given a .catch
+  handler. A floating promise swallows its errors as unhandled rejections and
+  breaks intended ordering: code after the call runs before the async work
+  finishes, causing races like navigating away before a save completes.
 checklist:
-  - Async function called without await or .then().
-  - Promise-returning function result not stored or awaited.
-  - Missing await in async function that should be sequential.
+  - Is an async or promise-returning function called without await, .then/.catch, or returning the promise?
+  - Does subsequent code assume the async operation already completed (navigation, state updates, cleanup)?
+  - If the promise rejects, is the error handled anywhere or does it become an unhandled rejection?
+  - For intentional fire-and-forget, is it marked explicitly (void operator) and given a .catch?
+  - Are promises created in loops or Array.map left uncollected instead of gathered with Promise.all?
 fix: |
-  Always await promises or explicitly handle them with .catch(). If you
-  intentionally want fire-and-forget, add void operator and a comment
-  explaining why: void doAsync().catch(console.error);
+  Await the promise (making the caller async if needed) or return it to the
+  caller. For deliberate fire-and-forget, be explicit and still handle
+  failure: `void doAsync().catch(reportError); // fire-and-forget: <why>`.
+  For parallel work, collect promises and `await Promise.all(...)`. Enable
+  @typescript-eslint/no-floating-promises to catch these automatically.
 
 tags:
   - typescript
@@ -25,21 +30,23 @@ triggers:
     - "**/*.ts"
     - "**/*.tsx"
     - "**/*.mts"
+    - "**/*.cts"
     - "**/*.js"
     - "**/*.jsx"
   code_patterns:
-    - "async "
-    - "\\.then\\("
-    - "Promise\\."
+    - '\basync\s'
+    - '\bawait\s'
+    - '\.then\('
+    - 'Promise\.(all|allSettled|race|resolve|reject)'
 
 examples:
   bad: |
-    function handleClick() {
-      saveData(formData); // Promise ignored!
-      navigate('/success');
+    async function handleSubmit() {
+      saveData(formData); // Floating promise: not awaited, errors lost
+      navigate('/success'); // Runs before the save finishes
     }
   good: |
-    async function handleClick() {
+    async function handleSubmit() {
       await saveData(formData);
       navigate('/success');
     }

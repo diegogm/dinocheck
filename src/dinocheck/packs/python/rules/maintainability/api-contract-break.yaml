@@ -1,33 +1,35 @@
 id: python/api-contract-break
 name: API Contract Breaking Change
-level: blocker
+level: major
 category: compatibility
 description: |
-  Detects changes that could break backward compatibility for
-  API consumers. This includes removing parameters, changing
-  return types, or modifying expected behavior.
+  Detects changes to public functions, methods, and classes that break existing
+  callers: new required parameters, removed/renamed public symbols, changed
+  return types, or exceptions raised where none were before. The code itself is
+  correct in isolation - the bug appears in every caller that was written
+  against the old contract.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "def \\w+\\(.*\\).*:"
-    - "class \\w+.*:"
+    - "def \\w+\\(\\w+, \\w+, \\w+"
+    - "__all__"
     - "@property"
-    - "return "
+    - "def \\w+\\(self, \\w+, \\w+"
 
 checklist:
-  - Are required parameters being added to existing functions?
-  - Is the return type changing in an incompatible way?
-  - Are exceptions being changed or removed?
-  - Is a previously public method being removed or renamed?
-  - Could existing callers break with this change?
-  - Is None being returned where a value was expected?
+  - Was a parameter added without a default value to a function that existing code already calls?
+  - Was a public function, method, class, or attribute removed or renamed without updating or deprecating all call sites?
+  - Did the return type or shape change (e.g. now returns None or a different structure) in a way existing callers don't expect?
+  - Did the exceptions raised change, so existing except clauses no longer catch failures?
+  - For externally consumed packages, is the break versioned/deprecated, and for internal code, were ALL callers updated in this change?
 
 fix: |
-  Use deprecation warnings before removing features. Add new
-  parameters with default values. Consider versioning for major
-  changes. Document breaking changes clearly.
+  Give new parameters a default value that preserves old behavior. For internal
+  code, update every caller in the same change (search for all usages). For
+  published APIs, emit DeprecationWarning for one release before removing, and
+  document the breaking change in the changelog with a major version bump.
 
 tags:
   - compatibility
@@ -37,9 +39,9 @@ tags:
 examples:
   bad: |
     # Before: def send_email(to, subject, body)
-    # After: Breaking change - new required parameter!
+    # After: breaking change - new required parameter!
     def send_email(to, subject, body, priority):
         ...
   good: |
     def send_email(to, subject, body, priority="normal"):
-        ...  # New parameter has default, backward compatible
+        ...  # New parameter has a default, backward compatible

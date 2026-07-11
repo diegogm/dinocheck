@@ -3,31 +3,32 @@ name: Inline Object Creation in JSX
 level: minor
 category: performance
 description: |
-  Detects inline object or array literals created directly in JSX props.
-  Every render creates a new object reference, causing child components
-  to re-render even if the actual values haven't changed. This defeats
-  React.memo and shallow comparison optimizations.
+  Detects object or array literals created inline in JSX props (style={{...}},
+  options={[...]}). Each render allocates a new reference, so memoized children
+  (React.memo, PureComponent) and dependency-compared hooks see a "changed"
+  prop and re-render or re-run even though the values are identical.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
     - "**/*.tsx"
   code_patterns:
-    - "style=\\{\\{"
-    - "=\\{\\[.*\\]\\}"
-    - "=\\{\\{.*\\}\\}"
+    - 'style=\{\{'
+    - '\w+=\{\{'
+    - '\w+=\{\['
 
 checklist:
-  - Are object literals passed directly as JSX props (e.g., style={{ ... }})?
-  - Are array literals created inline in JSX props?
-  - Is the component or its children wrapped in React.memo?
-  - Could the object be extracted to a constant or useMemo?
-  - Does this inline object cause measurable re-renders?
+  - Are object or array literals written directly inside JSX props (e.g. style={{ ... }}, config={{ ... }})?
+  - Is the receiving component memoized (React.memo) or does it use the prop in a dependency array, so the fresh reference actually causes work?
+  - Is the literal static (could be hoisted to a module-level constant) or derived (could be wrapped in useMemo)?
+  - For style objects, could a CSS class replace the inline object?
 
 fix: |
-  Extract inline objects to constants outside the component or memoize
-  them with useMemo. For style objects, define them as module-level
-  constants or use CSS classes instead.
+  Hoist static literals to module-level constants outside the component.
+  Memoize derived objects with useMemo keyed on their inputs. Replace static
+  inline style objects with CSS classes. Only bother where the consumer is
+  memoized or the prop feeds a dependency array; inline literals on plain DOM
+  elements are usually harmless.
 
 tags:
   - performance

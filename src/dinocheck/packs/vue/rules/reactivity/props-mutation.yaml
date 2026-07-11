@@ -3,15 +3,24 @@ name: Direct mutation of props
 level: major
 category: reactivity
 description: |
-  Vue treats props as immutable inputs. Mutating a prop directly can break
-  one-way data flow and create confusing reactivity bugs when parents re-render.
+  Detects components that assign to their own props (this.count = ... in the
+  Options API, props.count = ... with script setup). Vue enforces one-way
+  data flow: props belong to the parent, and local mutations are overwritten
+  on the next parent render, produce runtime warnings, and desynchronize
+  parent and child state.
 checklist:
-  - A prop is assigned to or mutated directly inside a component.
-  - The mutation is not copied into local state or emitted back to the parent.
-  - The component expects parent updates to stay in sync.
+  - Is a declared prop assigned to directly (this.propName = ... or props.propName = ...)?
+  - Are nested fields of an object/array prop mutated in place (props.item.name = ..., props.list.push(...))?
+  - Should the change instead be local state initialized from the prop (data/ref copy)?
+  - Should the change be sent to the owner via an emitted event (update:x / v-model)?
+  - Is a prop used as a v-model target inside the child template?
 fix: |
-  Use a local copy for editable state or emit an update to the parent with
-  v-model or an explicit event.
+  Never write to a prop. For local edits, copy the prop into local state
+  (data() { return { local: this.value } } or ref(props.value)) and use
+  that. To change the parent's value, emit an event: this.$emit('update:value',
+  next) (or defineEmits + emit in script setup) so the parent can bind with
+  v-model. For derived values, use a computed property instead of overwriting
+  the prop.
 
 tags:
   - vue
@@ -24,8 +33,9 @@ triggers:
     - "**/*.js"
     - "**/*.ts"
   code_patterns:
-    - "props:"
-    - 'this\.\w+\s*='
+    - 'props\.\w+(\.\w+)*\s*=[^=]'
+    - 'props:\s*[\s\S]{0,800}?this\.\w+\s*=[^=]'
+    - 'props\.\w+\.(push|splice|pop|shift|unshift|sort|reverse)\('
 
 examples:
   bad: |
@@ -38,6 +48,7 @@ examples:
   good: |
     export default {
       props: { count: Number },
+      emits: ['update:count'],
       data() {
         return { localCount: this.count }
       },
@@ -48,4 +59,3 @@ examples:
         }
       }
     }
-

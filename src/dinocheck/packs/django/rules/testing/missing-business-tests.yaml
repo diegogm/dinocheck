@@ -10,7 +10,8 @@ triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "def\\s+\\w+"
+    - "def\\s+(calculate|compute|process|apply|validate|charge|refund|transfer|approve|cancel|settle)"
+    - "class\\s+\\w+(Service|Manager|Policy)\\b"
 
 checklist:
   - Business logic without corresponding tests
@@ -22,3 +23,20 @@ fix: Write unit tests covering happy path, edge cases, and error conditions.
 tags:
   - testing
   - quality
+
+examples:
+  bad: |
+    # services.py - pricing logic with no test anywhere in the suite
+    def calculate_discount(order):
+        if order.total > 100 and order.customer.is_vip:
+            return order.total * Decimal("0.15")
+        return Decimal("0")
+  good: |
+    # test_services.py
+    def test_vip_discount_over_threshold():
+        order = OrderFactory(total=150, customer__is_vip=True)
+        assert calculate_discount(order) == Decimal("22.50")
+
+    def test_no_discount_below_threshold():
+        order = OrderFactory(total=99, customer__is_vip=True)
+        assert calculate_discount(order) == Decimal("0")

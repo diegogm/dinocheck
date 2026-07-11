@@ -1,31 +1,33 @@
 id: python/misleading-comment
 name: Misleading Comment Detection
-level: major
+level: minor
 category: maintainability
 description: |
-  Detects comments that contradict or no longer match the code
-  they describe. This happens when code is modified but comments
-  are not updated, leading to confusion and bugs.
+  Detects comments and docstrings that contradict the code they describe:
+  docstrings promising behavior the function doesn't implement, parameter or
+  return descriptions that no longer match the signature, and inline comments
+  describing removed logic. Readers act on these claims without re-reading the
+  code, so a wrong comment reliably produces wrong callers.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - '""".*"""'
-    - "'''.*'''"
-    - "# .*"
+    - '""".+"""'
+    - "'''.+'''"
+    - "(?i)#.*\\b(should|must|always|never|returns?|ensures?|apply|applies|handles?|note|assumes?)\\b"
 
 checklist:
-  - Does the docstring describe behavior the function doesn't have?
-  - Do parameter descriptions match actual parameters?
-  - Does the return type in docstring match actual return?
-  - Do inline comments describe what the code actually does?
-  - Are there comments about removed or changed functionality?
+  - Does the docstring claim behavior (discounts, retries, validation, defaults) that the body does not implement?
+  - Do documented parameters, types, and return values match the actual signature and returns?
+  - Do inline comments describe what the adjacent code actually does now, or an earlier version of it?
+  - When a comment and its code disagree, which one is right - is the comment stale, or is the code missing intended behavior?
 
 fix: |
-  Update comments to match current code behavior. Remove outdated
-  comments. Consider if the code or the comment is wrong - sometimes
-  the comment describes intended behavior that wasn't implemented.
+  Decide whether the comment or the code expresses the intent. If the comment is
+  stale, update or delete it. If the comment documents intended behavior that
+  was never implemented (or was lost in an edit), fix the code and add a test.
+  Prefer comments that explain WHY over comments restating WHAT.
 
 tags:
   - maintainability
@@ -40,5 +42,5 @@ examples:
         return sum(item.price for item in items)
   good: |
     def calculate_total(items):
-        """Returns the sum of all item prices."""
+        """Returns the sum of all item prices (no tax, no discounts)."""
         return sum(item.price for item in items)

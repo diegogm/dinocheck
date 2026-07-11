@@ -3,16 +3,21 @@ name: Missing :key in v-for
 level: major
 category: templates
 description: |
-  Vue requires a stable :key for list rendering to keep DOM updates predictable.
-  Missing keys can lead to incorrect component reuse, rendering bugs, and
-  performance issues when the list changes.
+  Detects v-for loops without a :key binding. Without keys Vue patches list
+  DOM in place by position, so when items are inserted, removed, or
+  reordered, component state and input values stick to the wrong rows. A
+  stable key lets Vue track each node's identity across updates.
 checklist:
-  - A v-for is rendering components or elements without a :key binding.
-  - The missing :key could cause stateful components to be reused incorrectly.
-  - The list is expected to reorder, insert, or delete items at runtime.
+  - Does every v-for element or component have a :key binding?
+  - Is the key a unique, stable identifier from the data (id, uuid) rather than the array index?
+  - Can the list reorder, filter, or insert/delete items at runtime, making index keys unsafe?
+  - When using v-for on <template>, is the :key placed on the <template> tag (Vue 3) or a child (Vue 2)?
+  - Do items contain form inputs or stateful components that would leak state across rows without keys?
 fix: |
-  Provide a stable, unique :key binding for each item in the v-for loop.
-  Prefer unique IDs from the data model rather than array indexes.
+  Add :key with a unique, stable identifier from the item, e.g.
+  v-for="user in users" :key="user.id". Avoid :key="index" for lists that
+  can change order or length; if the data has no id, generate one when the
+  data is created, not during rendering.
 
 tags:
   - vue
@@ -23,11 +28,10 @@ triggers:
   file_patterns:
     - "**/*.vue"
   code_patterns:
-    - "v-for=\""
+    - '<(?:(?!(?::|v-bind:)key=)[^>])*v-for\s*=(?:(?!(?::|v-bind:)key=)[^>])*>'
 
 examples:
   bad: |
     <li v-for="user in users">{{ user.name }}</li>
   good: |
     <li v-for="user in users" :key="user.id">{{ user.name }}</li>
-

@@ -23,3 +23,14 @@ fix: Group related database operations in a single atomic block.
 tags:
   - transactions
   - consistency
+
+examples:
+  bad: |
+    with transaction.atomic():
+        order = Order.objects.create(user=user, total=total)
+    # Outside the block: a crash here leaves an order without payment
+    Payment.objects.create(order=order, amount=total)
+  good: |
+    with transaction.atomic():
+        order = Order.objects.create(user=user, total=total)
+        Payment.objects.create(order=order, amount=total)

@@ -3,30 +3,32 @@ name: Unsafe dangerouslySetInnerHTML
 level: critical
 category: security
 description: |
-  Detects usage of dangerouslySetInnerHTML with unsanitized input.
-  This React prop bypasses the virtual DOM and injects raw HTML directly
-  into the page, creating a cross-site scripting (XSS) vulnerability if
-  the HTML content comes from user input or untrusted sources.
+  Detects dangerouslySetInnerHTML fed with unsanitized content. The prop
+  bypasses React's escaping and injects raw HTML into the DOM, so any user
+  input, API response, or URL parameter that reaches it becomes a stored or
+  reflected XSS: attacker scripts run with the user's session.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
     - "**/*.tsx"
   code_patterns:
-    - "dangerouslySetInnerHTML"
-    - "__html"
+    - 'dangerouslySetInnerHTML'
+    - '__html'
 
 checklist:
-  - Is dangerouslySetInnerHTML used in any component?
-  - Does the HTML content come from user input, URL parameters, or an API?
-  - Is the HTML sanitized with a library like DOMPurify before injection?
-  - Could the content be rendered using JSX instead of raw HTML?
-  - Is the content from a trusted, controlled source (e.g., CMS with sanitization)?
+  - Is dangerouslySetInnerHTML used anywhere in the file?
+  - Can the injected HTML originate from user input, URL/query parameters, or an external API?
+  - Is the content sanitized with DOMPurify (or equivalent) immediately before injection, with no unsanitized path?
+  - Could the same output be achieved with plain JSX or a markdown/HTML renderer that sanitizes by default?
+  - If the source is claimed trusted (own CMS), is that trust enforced server-side (sanitize-on-write)?
 
 fix: |
-  Avoid dangerouslySetInnerHTML when possible. If raw HTML rendering is
-  necessary, sanitize the content using DOMPurify or a similar library
-  before passing it to dangerouslySetInnerHTML.
+  Prefer rendering content through JSX so React escapes it. If raw HTML is
+  unavoidable, sanitize at the last step: DOMPurify.sanitize(html) and pass
+  the result to dangerouslySetInnerHTML; configure an allowlist of tags and
+  attributes if possible. Never build the HTML string by concatenating user
+  input.
 
 tags:
   - security

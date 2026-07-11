@@ -3,19 +3,23 @@ name: Use F() for Atomic Field Updates
 level: major
 category: transactions
 description: |
-  Read-modify-write patterns can cause race conditions.
-  Use F() expressions for atomic updates.
+  Detects read-modify-write updates of model fields in Python
+  (obj.field -= x; obj.save()). Under concurrency two requests read the
+  same value and one update is silently lost. F() expressions push the
+  arithmetic into SQL, making the update atomic.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "\\.\\w+\\s*[-+]=\\s*\\d+"
-    - "\\.\\w+\\s*=\\s*\\.\\w+\\s*[-+]"
+    - "\\.\\w+\\s*[-+]=\\s*\\w"
+    - "\\.(\\w+)\\s*=\\s*\\w+\\.\\1\\s*[-+]"
 
 checklist:
-  - Field increment/decrement without F()
-  - Read-modify-write pattern
+  - Is a model field read, modified in Python, and saved back (obj.field -= x; obj.save())?
+  - Could two concurrent requests run this read-modify-write and lose one update?
+  - Would F('field') + value express the same update atomically in SQL?
+  - If the new value is needed afterwards, is refresh_from_db() called after the update?
 
 fix: Use Model.objects.filter(pk=obj.pk).update(field=F('field') + value).
 

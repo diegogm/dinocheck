@@ -3,16 +3,25 @@ name: Using latest or unpinned base image
 level: major
 category: security
 description: |
-  Using :latest or untagged base images leads to unpredictable builds. The image
-  can change without notice, breaking builds or introducing vulnerabilities.
-  Pinning to specific versions ensures reproducibility and security auditing.
+  Detects FROM instructions that use the :latest tag or no tag at all
+  (which defaults to :latest). Such images can change silently between
+  builds, breaking reproducibility, reintroducing patched vulnerabilities,
+  and making rollbacks and security audits unreliable. Pinning to a specific
+  version (ideally with a digest) guarantees that every build uses the exact
+  same base.
 checklist:
-  - FROM instruction uses :latest tag explicitly.
-  - FROM instruction has no tag (implicitly :latest).
-  - Base image is not pinned to a specific digest or version.
+  - Does any FROM instruction use the :latest tag explicitly?
+  - Does any FROM instruction omit the tag entirely (implicit :latest)?
+  - Are mutable "rolling" tags used (e.g. python:3, node:lts) where a full version would be safer?
+  - For supply-chain-sensitive builds, is the image pinned to a digest (@sha256:...)?
+  - Do all stages of a multi-stage build (including builder stages) use pinned images?
 fix: |
-  Pin base images to specific versions or SHA digests. Prefer slim/alpine
-  variants when possible. Example: python:3.11.7-slim-bookworm
+  Pin every FROM to a specific version tag, and add a digest for strong
+  guarantees, e.g.:
+    FROM python:3.11.7-slim-bookworm
+    FROM node:20.10.0-alpine3.19@sha256:<digest>
+  Prefer slim/alpine variants to reduce attack surface. Update pins
+  deliberately (e.g. via Renovate/Dependabot) instead of relying on :latest.
 
 tags:
   - docker
@@ -25,8 +34,8 @@ triggers:
     - "**/Dockerfile.*"
     - "**/*.dockerfile"
   code_patterns:
-    - "FROM.*:latest"
-    - "^FROM [a-z]+$"
+    - "FROM\\s+[^\\s:]+:latest\\b"
+    - "FROM\\s+[A-Za-z0-9./_-]+(\\s+[Aa][Ss]\\s+\\S+)?\\s*(\\n|$)"
 
 examples:
   bad: |
@@ -34,4 +43,4 @@ examples:
     FROM node
   good: |
     FROM python:3.11.7-slim-bookworm
-    FROM node:20.10.0-alpine3.19@sha256:abc123...
+    FROM node:20.10.0-alpine3.19@sha256:8d2f6a1c0e5b4f7a9d3c6e8b1a0f4d7c9e2b5a8d1c4f7e0b3a6d9c2e5f8b1a4d

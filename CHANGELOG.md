@@ -2,13 +2,19 @@
 
 All notable changes to Dinocheck will be documented in this file.
 
-## [Unreleased]
+## [0.2.0] - 2026-07-11
 
 Dinocheck is now **agent-native only**. The host coding agent (Claude Code,
 Codex, Gemini CLI) performs the analysis; dinocheck never calls an LLM API.
 This decision is final - there is no API mode and none is planned.
 
 ### Added
+- **Full rule pack review**: all 125 rules audited and improved - clearer
+  descriptions, evaluable checklists, actionable fix guidance, bad/good
+  examples everywhere, and corrected trigger regexes (several were inert:
+  `^`/`$` anchors never match mid-file without MULTILINE, `.` never crosses
+  newlines). Rule quality is now enforced by ~750 per-rule tests, including
+  the invariant that each rule's own bad example trips its trigger
 - **Multi-language analysis**: discovery is driven by the enabled packs'
   file patterns instead of being hardcoded to `*.py` - react, vue, css,
   docker, compose, shell, and latex files are now actually discovered,

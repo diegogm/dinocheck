@@ -3,30 +3,32 @@ name: API Rate Limiting Review
 level: major
 category: reliability
 description: |
-  Reviews API endpoints for proper rate limiting configuration.
-  Beyond just checking for throttle_classes, semantic analysis
-  considers the endpoint's sensitivity and appropriate limits.
+  Reviews DRF endpoints for missing or inadequate rate limiting. Endpoints that
+  are expensive (reports, exports, search), abusable (login, password reset,
+  OTP), or anonymous need throttling; without it a single client can exhaust
+  workers and database capacity or brute-force credentials.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "ViewSet"
-    - "APIView"
+    - "ViewSet\\b"
+    - "APIView\\b"
     - "@api_view"
     - "throttle_classes"
 
 checklist:
-  - Are throttle classes configured for public endpoints?
-  - Are rate limits appropriate for the operation cost?
-  - Are there different limits for authenticated vs anonymous users?
-  - Could expensive operations be abused without throttling?
-  - Is there global rate limiting as a fallback?
+  - Do publicly reachable or anonymous endpoints have throttle_classes, or is there a DEFAULT_THROTTLE_CLASSES/RATES fallback in settings?
+  - Are authentication-adjacent endpoints (login, signup, password reset, OTP) throttled tightly enough to block brute force?
+  - Do expensive operations (report generation, exports, bulk writes, search) have stricter limits than cheap reads, e.g. via throttle_scope?
+  - Are anonymous and authenticated clients given different rates (AnonRateThrottle vs UserRateThrottle)?
+  - If throttling is deliberately absent (internal service, gateway-level limits), is that protection actually in place?
 
 fix: |
-  Configure throttle_classes per view or set DEFAULT_THROTTLE_RATES
-  in settings. Use different rates for different user types.
-  Consider operation cost when setting limits.
+  Set DEFAULT_THROTTLE_CLASSES and DEFAULT_THROTTLE_RATES in REST_FRAMEWORK
+  settings as a baseline, then add ScopedRateThrottle with a tight
+  throttle_scope on expensive or sensitive views. Rate-limit by user for
+  authenticated traffic and by IP for anonymous traffic.
 
 tags:
   - reliability
@@ -41,5 +43,6 @@ examples:
         queryset = Report.objects.all()
   good: |
     class ReportViewSet(ModelViewSet):
-        throttle_classes = [UserRateThrottle]
-        throttle_scope = 'reports'  # 10/hour limit
+        queryset = Report.objects.all()
+        throttle_classes = [ScopedRateThrottle]
+        throttle_scope = 'reports'  # e.g. '10/hour' in DEFAULT_THROTTLE_RATES

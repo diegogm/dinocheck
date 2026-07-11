@@ -3,34 +3,36 @@ name: Unsanitized User Input Rendering
 level: critical
 category: security
 description: |
-  Detects rendering of unsanitized user input in JSX that could lead to
-  injection attacks. While React auto-escapes strings in JSX, dangerous
-  patterns like constructing HTML strings, using eval, or inserting user
-  input into script tags can still create vulnerabilities.
+  Detects code paths that let user input escape React's auto-escaping:
+  eval()/new Function() on user data, direct innerHTML/document.write
+  assignments, or insertAdjacentHTML with concatenated strings. Any of these
+  turns user-controlled text into executable script or markup (XSS / code
+  injection), bypassing the protection JSX normally provides.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
     - "**/*.tsx"
   code_patterns:
-    - "eval\\("
-    - "new Function\\("
-    - "innerHTML"
-    - "document\\.write"
-    - "\\$\\{.*\\}.*<script"
+    - '\beval\('
+    - 'new Function\('
+    - '\.(innerHTML|outerHTML)\s*='
+    - 'insertAdjacentHTML\('
+    - 'document\.write'
 
 checklist:
-  - Is user input passed to eval() or new Function()?
-  - Is user input concatenated into HTML strings?
-  - Is innerHTML used directly instead of React's virtual DOM?
-  - Is user input inserted into script tags or event handler attributes?
-  - Could user input bypass React's built-in escaping?
-  - Is document.write() used with user-controlled content?
+  - Is user input (props, form values, URL params) ever passed to eval() or new Function()?
+  - Is innerHTML/outerHTML assigned or insertAdjacentHTML called with strings containing user data?
+  - Is document.write() used with any dynamic content?
+  - Is DOM manipulated directly (refs, getElementById) with HTML strings instead of going through JSX?
+  - If raw HTML is genuinely required, is it sanitized with DOMPurify right before insertion?
 
 fix: |
-  Always render user input through JSX expressions, which auto-escape
-  content. Never use eval(), new Function(), or innerHTML with user input.
-  If dynamic HTML is required, sanitize with DOMPurify first.
+  Render all user-provided text through JSX expressions ({value}), which
+  escape automatically. Replace eval/new Function with data structures
+  (lookup maps, JSON.parse). Replace innerHTML/document.write with React
+  state-driven rendering, or element.textContent for plain text; if raw HTML
+  is unavoidable, sanitize with DOMPurify first.
 
 tags:
   - security

@@ -3,18 +3,24 @@ name: Unescaped special characters in text
 level: major
 category: correctness
 description: |
-  Detects likely LaTeX compilation or formatting issues caused by special
-  characters used directly in normal text. Characters like _, %, $, #, and &
-  generally need escaping outside dedicated contexts.
+  Detects LaTeX special characters (_ % $ # & ~ ^) used literally in prose,
+  titles, or captions without escaping. Depending on the character this
+  either breaks compilation ("Missing $ inserted", "Misplaced alignment tab")
+  or silently corrupts output - an unescaped % comments out the rest of the
+  line, so text vanishes from the PDF without any error.
 
 checklist:
-  - Are _, %, $, #, or & used in prose without escaping?
-  - Are special characters intended as literals in section titles or captions?
-  - Could this cause compilation errors or missing text in output?
+  - Are underscores used in prose identifiers (value_name, my_column) outside math mode and without \_ or \texttt/\verb?
+  - Do literal percentages appear as 100% instead of 100\%, truncating the line into a comment?
+  - Are &, #, $ or ~ used literally in text, headings, or captions where they need escaping?
+  - Does code-like content (paths, identifiers, URLs) appear in plain prose where \texttt{}, \verb, \url{} or a listings environment would be safer?
+  - Could any of these appear in moving arguments (\section, \caption) where breakage also propagates to the ToC or list of figures?
 fix: |
-  Escape special characters in regular text (`\_`, `\%`, `\$`, `\#`, `\&`).
-  If the content is code-like, use \texttt{}, \verb, or a listings environment
-  to avoid repeated escaping and improve readability.
+  Escape special characters in normal text: \_ \% \$ \# \& , and use
+  \textasciitilde / \textasciicircum for ~ and ^. For code-like fragments
+  prefer \texttt{...}, \verb|...|, \url{...} or a listings/minted
+  environment, which handle most special characters without per-character
+  escaping. Check captions and section titles with particular care.
 
 tags:
   - latex
@@ -25,13 +31,13 @@ triggers:
   file_patterns:
     - "**/*.tex"
   code_patterns:
-    - "_"
-    - "%"
-    - '\\section\\{'
-    - '\\caption\\{'
+    - "[A-Za-z0-9]_[A-Za-z]"
+    - "[A-Za-z0-9]%"
+    - "[A-Za-z] & [A-Za-z]"
+    - "[A-Za-z]#[0-9]"
 
 examples:
   bad: |
     The value_name field stores 100% of samples.
   good: |
-    The value\_name field stores 100\% of samples.
+    The \texttt{value\_name} field stores 100\% of samples.

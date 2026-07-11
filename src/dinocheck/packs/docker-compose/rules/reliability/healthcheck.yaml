@@ -3,17 +3,31 @@ name: Missing health check configuration
 level: minor
 category: reliability
 description: |
-  Without health checks, Docker cannot determine if the application inside
-  the container is actually functioning. A container may be "running" while
-  the application is deadlocked, crashed, or unable to serve requests.
+  Detects long-running services without a healthcheck and depends_on
+  declarations that only wait for container start, not readiness. Without
+  health checks a container may be "running" while the app inside is
+  deadlocked or still booting, and dependent services will start too early
+  and crash on connection errors (the classic "web starts before the DB is
+  ready" failure).
 checklist:
-  - Service has no healthcheck configuration.
-  - Dependent services use depends_on without condition: service_healthy.
-  - Service exposes ports but has no health verification.
+  - Do long-running services (web apps, databases, queues) lack a healthcheck, either in the compose file or inherited from their image?
+  - Is depends_on used in short list form instead of with condition service_healthy for dependencies that must be ready?
+  - Does the healthcheck test real readiness (pg_isready, an HTTP /health endpoint) rather than mere process existence?
+  - Are interval, timeout, retries and start_period appropriate for how long the service takes to boot?
 fix: |
-  Add healthcheck to services. For HTTP services, use curl to hit a health
-  endpoint. Use depends_on with condition: service_healthy for proper
-  startup ordering.
+  Add a healthcheck to each long-running service and gate dependents on it:
+    db:
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U postgres"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+    web:
+      depends_on:
+        db:
+          condition: service_healthy
+  For HTTP services use curl/wget against a health endpoint; make sure the
+  binary exists in the image.
 
 tags:
   - docker-compose
@@ -27,26 +41,32 @@ triggers:
     - "**/compose*.yml"
     - "**/compose*.yaml"
   code_patterns:
-    - "ports:"
-    - "expose:"
-    - "depends_on:"
+    - "\\bdepends_on:"
+    - "\\bports:"
+    - "\\bexpose:"
 
 examples:
   bad: |
     services:
       web:
+        image: myapp
+        ports:
+          - "127.0.0.1:8000:8000"
         depends_on:
-          - db
+          - db     # waits only for container start, not readiness
       db:
-        image: postgres
+        image: postgres:16.1
   good: |
     services:
       web:
+        image: myapp
+        ports:
+          - "127.0.0.1:8000:8000"
         depends_on:
           db:
             condition: service_healthy
       db:
-        image: postgres
+        image: postgres:16.1
         healthcheck:
           test: ["CMD-SHELL", "pg_isready -U postgres"]
           interval: 10s

@@ -3,31 +3,34 @@ name: Permission vs Business Logic Mismatch
 level: critical
 category: security
 description: |
-  Detects cases where permission checks in views don't match
-  the authorization logic in business code, or where permissions
-  are checked at one layer but not enforced at another.
+  Detects gaps between declared permissions and what the code actually allows:
+  views whose permission_classes only check authentication while handlers
+  perform owner-sensitive operations, service functions reachable from multiple
+  entry points but authorized in only one, or checks present in one layer and
+  silently absent in another.
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
     - "permission_classes"
-    - "has_permission"
     - "has_object_permission"
     - "IsAuthenticated"
     - "request\\.user"
 
 checklist:
-  - Are view permissions consistent with service layer checks?
-  - Could business logic be called without permission check?
-  - Are object-level permissions enforced in services?
-  - Could a user bypass view permissions via another endpoint?
-  - Are permission checks duplicated inconsistently?
+  - Does the view mutate or delete objects that belong to a user while its permission_classes only verify authentication?
+  - If object permissions exist, are they actually evaluated - is self.get_object() (which runs check_object_permissions) used, instead of a manual Model.objects.get()?
+  - Can the same business function be reached from another endpoint, task, or admin action that skips the permission check done here?
+  - Do in-view conditions on request.user match what the permission classes claim (no branch quietly widening access)?
+  - Are checks consistent across list/detail/custom actions, or does one action leak what the others protect?
 
 fix: |
-  Centralize permission logic in services or decorators. Ensure
-  permissions are checked at the lowest level where data is
-  accessed. Use consistent permission patterns across views.
+  Enforce authorization where the data is accessed: object-level permission
+  classes plus get_queryset() scoped to request.user. Fetch objects via
+  self.get_object() so has_object_permission runs. If business logic is shared
+  across entry points, move the authorization into the service layer and pass
+  the acting user explicitly.
 
 tags:
   - security
@@ -40,13 +43,12 @@ examples:
         permission_classes = [IsAuthenticated]
 
         def destroy(self, request, pk):
-            article = self.get_object()
-            article.delete()  # Anyone can delete any article!
+            article = Article.objects.get(pk=pk)
+            article.delete()  # Any logged-in user can delete any article!
   good: |
     class ArticleViewSet(ModelViewSet):
         permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
 
         def destroy(self, request, pk):
-            article = self.get_object()
-            # IsOwnerOrAdmin checks ownership in has_object_permission
+            article = self.get_object()  # runs has_object_permission
             article.delete()

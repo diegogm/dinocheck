@@ -3,31 +3,33 @@ name: Missing Negative Test Cases
 level: major
 category: testing
 description: |
-  Detects test files that only test the happy path without
-  testing error conditions, edge cases, or invalid inputs.
-  Comprehensive testing requires both positive and negative cases.
+  Detects test suites that only exercise the happy path of the code under test:
+  no invalid inputs, no error responses, no boundary values, no permission
+  denials. Error-handling code that is never tested is where regressions hide,
+  and it is exactly the code that runs during incidents.
 
 triggers:
   file_patterns:
     - "**/test_*.py"
     - "**/*_test.py"
     - "**/tests.py"
+    - "**/tests/**/*.py"
   code_patterns:
     - "def test_"
-    - "class Test"
+    - "class Test\\w+"
 
 checklist:
-  - Are there tests for invalid input handling?
-  - Are error responses tested (4xx, 5xx)?
-  - Are exception paths tested?
-  - Are boundary conditions tested (empty, max, null)?
-  - Are permission denied cases tested?
-  - Are concurrent access scenarios tested?
+  - For each tested operation, is there at least one test with invalid/malformed input asserting the failure behavior?
+  - Are error statuses (400/401/403/404/409) asserted for endpoints, not just the 2xx path?
+  - Are exception paths exercised (pytest.raises / assertRaises) for functions that can raise?
+  - Are boundary values covered - empty collections, zero, negatives, maximum sizes, None?
+  - If the code enforces permissions or uniqueness, is the denied/duplicate case tested?
 
 fix: |
-  Add tests for error cases. Test invalid inputs. Test boundary
-  conditions. Test permission failures. Consider property-based
-  testing for edge case discovery.
+  For each behavior, add the mirror-image negative test: invalid input asserting
+  the specific error, denied permission asserting 401/403, duplicate asserting
+  409/IntegrityError, and boundary values (empty, zero, max). Name them after
+  the failure they verify (test_create_user_invalid_email).
 
 tags:
   - testing

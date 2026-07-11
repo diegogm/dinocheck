@@ -3,32 +3,33 @@ name: Stale Closure in Hook
 level: major
 category: correctness
 description: |
-  Detects stale closures where a hook callback captures outdated values
-  of state or props. This commonly happens with setInterval, setTimeout,
-  or event listeners set up in useEffect that reference state variables
-  without proper dependency tracking.
+  Detects stale closures where a long-lived callback (setInterval, setTimeout,
+  event listener) created inside useEffect keeps reading the state or props
+  values from the render in which it was created. The UI then acts on frozen
+  data: counters stick at the first value, handlers submit outdated form
+  state, and the bug only appears at runtime.
 
 triggers:
   file_patterns:
     - "**/*.jsx"
     - "**/*.tsx"
   code_patterns:
-    - "setInterval\\("
-    - "setTimeout\\("
-    - "addEventListener\\("
-    - "useEffect\\("
+    - 'useEffect\([\s\S]{0,400}?set(Interval|Timeout)\('
+    - 'useEffect\([\s\S]{0,400}?addEventListener\('
 
 checklist:
-  - Does a setInterval or setTimeout callback reference state or props?
-  - Is the interval/timeout set up in useEffect without the referenced values in deps?
-  - Does an event listener callback reference state that may change?
-  - Could using a ref or functional state update avoid the stale closure?
-  - Is useRef used to hold mutable values that need to be current?
+  - Does a setInterval/setTimeout or addEventListener callback created in useEffect read state or props?
+  - Is the effect's dependency array missing those values (often an empty [])?
+  - When state is updated from the callback, is the functional form (setX(prev => ...)) used instead of reading the state variable?
+  - Would a ref (kept current in a separate effect) be needed to read the latest value without re-subscribing?
+  - Is the interval/timeout/listener cleaned up in the effect's return function?
 
 fix: |
-  Use functional state updates (setState(prev => ...)) to avoid depending
-  on the current state value. Alternatively, store the current value in a
-  ref with useRef and read from the ref inside callbacks.
+  For state updates inside timers/listeners, use functional updates:
+  setCount(prev => prev + 1) so no state is captured. If the callback must
+  read the latest value, keep it in a ref (useRef) that another effect
+  updates, or add the value to the dependency array and re-create the
+  timer/listener, always cleaning up in the effect's return.
 
 tags:
   - hooks

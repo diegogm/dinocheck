@@ -3,32 +3,34 @@ name: Sensitive Data Exposure
 level: major
 category: security
 description: |
-  Detects code that might EXPOSE sensitive data (passwords, tokens, API keys,
-  PII) through logging, error messages, API responses, or insecure storage.
-
-  IMPORTANT: Just having a variable named "password" or "token" is NOT an issue.
-  Only flag when sensitive data is actually being exposed or mishandled.
+  Detects secrets and PII exposed through API responses, serialized payloads, or
+  insecure storage: password hashes and tokens returned in JSON, credentials
+  written to plaintext files, or sensitive fields included in exported data.
+  Merely naming a variable "password" is NOT an issue - only actual exposure is.
+  (Logging exposure is covered by python/log-sensitive-data; committed secrets
+  by python/hardcoded-secrets.)
 
 triggers:
   file_patterns:
     - "**/*.py"
   code_patterns:
-    - "log.*password|log.*token|log.*secret|log.*api_key"
-    - "print.*password|print.*token|print.*secret"
-    - "password\\s*=\\s*[\"']"
-    - "api_key\\s*=\\s*[\"']"
+    - "(?i)[\"'](password|passwd|token|secret|api_key|ssn|card_number)\\w*[\"']\\s*:"
+    - "(?i)return .{0,60}\\b(password|token|secret|api_key)"
+    - "(?i)\\.write\\(.{0,60}(password|token|secret|api_key)"
+    - "(?i)json\\.dumps?\\(.{0,60}(password|token|secret)"
 
 checklist:
-  - Is sensitive data being LOGGED or PRINTED? (issue if yes)
-  - Is sensitive data HARDCODED in source code? (issue if yes)
-  - Is sensitive data returned in API responses? (issue if yes)
-  - Just REFERENCING a variable called "password"? (NOT an issue)
-  - Loading from environment variables? (NOT an issue - that's correct)
+  - Does an API response, serialized dict, or export include passwords, hashes, tokens, API keys, or session identifiers?
+  - Is PII (SSN, full card numbers, addresses) returned or stored where the consumer doesn't need it?
+  - Are credentials written to plaintext files, spreadsheets, or unencrypted storage?
+  - Is the exposure reachable by parties who shouldn't see the data (other users, client-side code, third parties)?
+  - Is it just a variable named "password" being used internally (verification, env loading)? That is correct handling - do not report.
 
 fix: |
-  Load secrets from environment variables or a secrets manager.
-  Never log sensitive values. Use secure comparison for tokens.
-  Mask sensitive data in error messages and API responses.
+  Strip sensitive fields before returning or storing data: build response dicts
+  from an explicit allowlist of fields, mark serializer fields write_only, and
+  mask identifiers (last 4 digits) when partial display is needed. Store
+  credentials only in secret managers or encrypted storage.
 
 tags:
   - security
@@ -37,12 +39,17 @@ tags:
 
 examples:
   bad: |
-    logger.info(f"Authenticating user with token: {api_token}")
-    PASSWORD = "hardcoded_secret_123"  # Hardcoded!
+    def profile_view(request):
+        user = request.user
+        return JsonResponse({
+            "email": user.email,
+            "password_hash": user.password,   # exposes the hash!
+            "api_token": user.api_token,      # exposes a live credential!
+        })
   good: |
-    logger.info("Authenticating user with token: %s...", api_token[:4])
-    PASSWORD = os.environ["MY_PASSWORD"]  # From environment - OK
-  not_an_issue: |
-    # Just referencing a variable is fine
-    def verify_password(password: str) -> bool:
-        return check_password_hash(stored_hash, password)
+    def profile_view(request):
+        user = request.user
+        return JsonResponse({
+            "email": user.email,
+            "date_joined": user.date_joined.isoformat(),
+        })

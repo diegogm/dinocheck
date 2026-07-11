@@ -3,16 +3,22 @@ name: Unquoted variable expansion
 level: major
 category: security
 description: |
-  Unquoted variables undergo word splitting and glob expansion, which can lead
-  to unexpected behavior, security vulnerabilities, or broken scripts when
-  values contain spaces, wildcards, or special characters.
+  Detects variable expansions used without double quotes. Unquoted values
+  undergo word splitting and glob expansion, so a path with a space becomes
+  two arguments and a value containing * expands to file names. With
+  destructive commands this is dangerous: rm -rf $DIR with DIR="/tmp/build "
+  (trailing space) or an empty variable deletes the wrong things entirely.
 checklist:
-  - Variables used without double quotes in commands.
-  - Path variables that might contain spaces are unquoted.
-  - User input or external data used without quoting.
+  - Are variables passed unquoted to destructive or filesystem commands (rm, cp, mv, chmod, chown, cd)?
+  - Are paths or user-controlled values expanded unquoted anywhere they could contain spaces, globs, or leading dashes?
+  - Do for loops iterate over unquoted expansions (for f in $FILES) instead of arrays or globs?
+  - Is command substitution used unquoted, e.g. cd $(dirname $0) instead of cd "$(dirname "$0")"?
+  - "Where splitting is actually intended, is that made explicit (array, read -ra, documented shellcheck disable comment)?"
 fix: |
-  Always double-quote variable expansions: "$var" instead of $var.
-  Use "${var}" for clarity and to enable parameter expansion features.
+  Double-quote every expansion by default: "$var", "${arr[@]}",
+  "$(command)". Only omit quotes when word splitting is the deliberate goal,
+  and prefer arrays for that in bash. shellcheck flags these automatically
+  (SC2086); run it in CI.
 
 tags:
   - shell
@@ -25,16 +31,20 @@ triggers:
     - "**/*.bash"
     - "**/.*rc"
   code_patterns:
-    - "\\$[A-Za-z_][A-Za-z0-9_]*[^\"']"
-    - "rm.*\\$"
-    - "cd \\$"
+    - "\\b(rm|cp|mv|chmod|chown|cd|ln)\\s+(-[\\w-]+\\s+)*\\$"
+    - "\\b(echo|cat|touch|mkdir)\\s+[^\"'\\n]*\\$[A-Za-z_{]"
+    - "\\bfor\\s+\\w+\\s+in\\s+\\$"
 
 examples:
   bad: |
     rm -rf $DIRECTORY
-    cd $PATH_TO_PROJECT
-    echo $USER_INPUT
+    cd $PROJECT_PATH
+    for f in $FILES; do
+      echo $f
+    done
   good: |
     rm -rf "$DIRECTORY"
-    cd "$PATH_TO_PROJECT"
-    echo "$USER_INPUT"
+    cd "$PROJECT_PATH"
+    for f in "${FILES_ARRAY[@]}"; do
+      echo "$f"
+    done
